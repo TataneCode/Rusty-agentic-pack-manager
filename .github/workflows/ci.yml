@@ -32,6 +32,7 @@ jobs:
       - name: RPM
         run: |
           cargo install cargo-generate-rpm
+          python3 packaging/expand_rpm_assets.py
           cargo generate-rpm
       - name: DEB
         run: |

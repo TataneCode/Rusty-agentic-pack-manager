@@ -33,11 +33,12 @@ tempfile = "3"
 name = "rapm"
 path = "src/main.rs"
 
-# RPM packaging: binary + embedded packs directory (installed system-wide)
+# RPM packaging: binary + LICENSE. The packs/ files are added dynamically
+# by CI (cargo-generate-rpm does not support directory assets), see
+# .github/workflows/ci.yml.
 [package.metadata.generate-rpm]
 assets = [
     { source = "target/release/rapm", dest = "/usr/bin/rapm", mode = "755" },
-    { source = "packs/", dest = "/usr/share/rusty-agentic-pack-manager/packs/", mode = "644" },
     { source = "LICENSE", dest = "/usr/share/licenses/rapm/LICENSE", mode = "644", doc = true },
 ]
 
@@ -49,5 +50,6 @@ extended-description = "TUI to manage agentic packs (skills, agents, commands) f
 depends = "$auto"
 assets = [
     ["target/release/rapm", "usr/bin/", "755"],
-    ["packs/*", "usr/share/rusty-agentic-pack-manager/packs/", "644"],
+    ["packs/**", "usr/share/rusty-agentic-pack-manager/packs/", "644"],
+    ["LICENSE", "usr/share/doc/rusty-agentic-pack-manager/LICENSE", "644"],
 ]
