@@ -42,6 +42,7 @@ pub mod presentation {
         pub mod common;
         pub mod event;
         pub mod router;
+        pub mod split_view;
         pub mod packs {
             pub mod actions;
             pub mod presenter;
