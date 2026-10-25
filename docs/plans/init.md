@@ -1,6 +1,6 @@
 # Plan: rusty-agentic-pack-manager — v1 foundation (init)
 
-> Status: **implemented** — v1 complete on branch vibe/v1-implementation. Source: skills `/challenge` then `/plan`. User decisions are marked ✅.
+> Status: **implemented** — v1 complete on branch vibe/v1-implementation; review findings fixed (terminal raw mode, Ctrl-C quit, dead code, error variants, viewer scroll clamp, first-CLI doc). Source: skills `/challenge` then `/plan`. User decisions are marked ✅.
 
 ## Goal
 

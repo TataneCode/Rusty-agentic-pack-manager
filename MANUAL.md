@@ -63,7 +63,7 @@ Only these actions are available:
 | `Esc` | Cancel and go back to the packs |
 | `Space` | Contextual help |
 
-The installation copies every pack item to its manifest-declared destination, **under the chosen directory**. If a destination already exists, the install is refused (no silent overwrite) and an error message is shown.
+The installation copies every pack item to its manifest-declared destination, **under the chosen directory**. The install targets the **pack's first declared CLI** (all 13 shipped packs declare `["vibe", "gemini"]`, so Vibe destinations are used; a CLI picker is planned for v1.1). If a destination already exists, the install is refused (no silent overwrite) and an error message is shown.
 
 ### Viewer (after `V`)
 
