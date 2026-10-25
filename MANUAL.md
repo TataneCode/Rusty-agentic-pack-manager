@@ -16,12 +16,13 @@ The application starts in the current directory. Packs are searched in:
 
 ## The screen
 
-Split screen:
+Three sections, all in shared rounded boxes (rusty-console design):
 
-- **Left panel — Packs**: the pack list, grouped by target CLI.
-- **Right panel — Explorer**: the host machine file tree (folders in blue, listed first).
+- **Header**: application title + selected pack.
+- **Split screen**: **Packs** (left, grouped by target CLI) / **Explorer** (right, host file tree — folders in blue, listed first).
+- **Footer**: the two always-available commands — `Tab: Switch panel | Space: Help`. All contextual keys live in the Space help.
 
-The action bar at the bottom shows the available keys for the focused panel. The focused panel has a cyan border.
+The focused panel has a cyan border.
 
 ## Keys
 
@@ -31,8 +32,8 @@ The action bar at the bottom shows the available keys for the focused panel. The
 |---|---|
 | `Tab` | Move focus to the explorer |
 | `↑`/`↓` or `k`/`j` | Move in the pack list |
-| `A` | **Apply**: prepare the selected pack installation (focus moves to the explorer in install mode) |
-| `V` | **View**: open the pack viewer (`.md`, `.js`, `.toml` files, with syntax highlighting) |
+| `A` | **Install** the selected pack into the explorer's current directory (refreshes the explorer, shows a success popup) |
+| `V` | **View**: open the pack viewer on the pack's `pack.toml` (`.md`, `.js`, `.toml` files, with syntax highlighting) |
 | `Space` | Contextual help |
 | `Ctrl-C` | Quit |
 
@@ -50,22 +51,15 @@ The action bar at the bottom shows the available keys for the focused panel. The
 | `Space` | Contextual help |
 | `Ctrl-C` | Quit |
 
-### Install mode (after `A`)
+### Installation
 
-Only these actions are available:
+`A` on the packs panel installs immediately into the **explorer's current directory** and refreshes the explorer. Navigate the explorer first (Tab, Enter/Backspace) to choose the target directory.
 
-| Key | Action |
-|---|---|
-| `↑`/`↓` or `k`/`j` | Move in the list |
-| `Enter` | Open the selected folder |
-| `Backspace` | Go to the parent folder |
-| `I` | **Install the pack in the explorer's current directory** |
-| `Esc` | Cancel and go back to the packs |
-| `Space` | Contextual help |
-
-The installation copies every pack item to its manifest-declared destination, **under the chosen directory**. The install targets the **pack's first declared CLI** (all 13 shipped packs declare `["vibe", "gemini"]`, so Vibe destinations are used; a CLI picker is planned for v1.1). If a destination already exists, the install is refused (no silent overwrite) and an error message is shown.
+The install targets the **pack's first declared CLI** (all 13 shipped packs declare `["vibe", "gemini"]`, so Vibe destinations are used; a CLI picker is planned for v1.1). If a destination already exists, the install is refused (no silent overwrite) and an error message is shown.
 
 ### Viewer (after `V`)
+
+The viewer opens on the pack's `pack.toml` manifest.
 
 | Key | Action |
 |---|---|

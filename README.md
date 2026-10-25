@@ -19,15 +19,12 @@ A **pack** is a coherent combination of skills, agents and commands, applicable 
 |---|---|
 | `Tab` | Switch focus between panels |
 | `Enter` / `Backspace` | Navigate (down / up) in the list or the file system |
-| `A` | Apply a pack (focus moves to the explorer in install mode) |
-| `I` | Install the pack in the selected directory (install mode) |
-| `V` | View the pack files with syntax highlighting (packs panel only) |
+| `A` | Install the selected pack in the explorer's current directory |
+| `V` | View the pack files (opens on `pack.toml`) with syntax highlighting (packs panel only) |
 | `R` | Create a folder (explorer) |
 | `M` | Rename a folder/file (explorer) |
 | `D` | Delete a folder/file (explorer; `Shift-D` forces non-empty folders) |
 | `Space` | Contextual help (depending on the active panel / mode) |
-
-In install mode, only navigation, install (`I`) and help are available.
 
 ## Architecture
 
