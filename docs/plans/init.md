@@ -1,6 +1,6 @@
 # Plan : rusty-agentic-pack-manager — socle v1 (init)
 
-> Statut : **approuvé** (challenge + plan validés par l'utilisateur). Source : skills `/challenge` puis `/plan`. Les décisions actées par l'utilisateur sont notées ✅.
+> Statut : **implémenté** — v1 complète sur la branche vibe/v1-implementation. Source : skills `/challenge` puis `/plan`. Les décisions actées par l'utilisateur sont notées ✅.
 
 ## Objectif
 
