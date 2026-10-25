@@ -68,7 +68,8 @@ impl PackService {
             }
         }
         for copy in &plan {
-            self.destination.copy(&copy.source, &copy.destination)?;
+            self.destination
+                .copy(pack_name, &copy.source, &copy.destination)?;
             copied += 1;
         }
 
@@ -141,7 +142,7 @@ mod tests {
 
         let mut dest = MockInstallDestination::new();
         dest.expect_exists().returning(|_| false);
-        dest.expect_copy().times(1).returning(|_s, _d| Ok(()));
+        dest.expect_copy().times(1).returning(|_p, _s, _d| Ok(()));
 
         let service = PackService::new(Box::new(repo), Box::new(dest));
         let result = service.install("tdd", cli, "/repo", false).unwrap();
@@ -178,7 +179,7 @@ mod tests {
 
         let mut dest = MockInstallDestination::new();
         dest.expect_exists().returning(|_| true);
-        dest.expect_copy().times(1).returning(|_s, _d| Ok(()));
+        dest.expect_copy().times(1).returning(|_p, _s, _d| Ok(()));
 
         let service = PackService::new(Box::new(repo), Box::new(dest));
         assert!(service.install("tdd", cli, "/repo", true).is_ok());

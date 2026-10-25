@@ -65,7 +65,9 @@ impl App {
             AppAction::NavigateUp => self.pack_list.select_previous(),
             AppAction::NavigateDown => self.pack_list.select_next(),
             AppAction::Apply => self.start_install(),
+            AppAction::View => self.open_viewer(),
             AppAction::Help => self.popup = Some(Popup::Help),
+            AppAction::ToggleFocus => self.focus = Focus::Explorer,
             _ => {}
         }
     }
@@ -78,6 +80,7 @@ impl App {
             AppAction::Back => self.go_parent(),
             AppAction::CreateFolder => self.input = Some(Default::default()),
             AppAction::Help => self.popup = Some(Popup::Help),
+            AppAction::ToggleFocus => self.focus = Focus::Packs,
             _ => {}
         }
     }

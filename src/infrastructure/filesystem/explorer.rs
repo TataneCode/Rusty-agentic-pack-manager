@@ -53,14 +53,21 @@ impl FsInstallDestination {
     pub fn new(packs_dir: std::path::PathBuf) -> FsInstallDestination {
         FsInstallDestination { packs_dir }
     }
-
-    pub fn source_of(&self, pack_name: &str, source: &Path) -> std::path::PathBuf {
-        self.packs_dir.join(pack_name).join(source)
-    }
 }
 
 impl InstallDestination for FsInstallDestination {
-    fn copy(&self, source: &Path, destination: &Path) -> Result<(), ApplicationError> {
+    fn copy(
+        &self,
+        pack_name: &str,
+        source: &Path,
+        destination: &Path,
+    ) -> Result<(), ApplicationError> {
+        let source = if source.is_absolute() {
+            source.to_path_buf()
+        } else {
+            self.packs_dir.join(pack_name).join(source)
+        };
+        let source = source.as_path();
         if source.is_dir() {
             copy_dir(source, destination)
         } else {
@@ -140,14 +147,20 @@ mod tests {
         fs::create_dir_all(&target).unwrap();
 
         let dest = FsInstallDestination::new(tmp.path().join("packs"));
-        let source = dest.source_of("tdd", Path::new("skills/tdd/SKILL.md"));
-        dest.copy(&source, &target.join(".agents/skills/tdd/SKILL.md"))
-            .unwrap();
+        dest.copy(
+            "tdd",
+            Path::new("skills/tdd/SKILL.md"),
+            &target.join(".agents/skills/tdd/SKILL.md"),
+        )
+        .unwrap();
         assert!(target.join(".agents/skills/tdd/SKILL.md").is_file());
 
-        let tree_source = dest.source_of("tdd", Path::new("skills/tdd"));
-        dest.copy(&tree_source, &target.join(".agents/skills/tdd-tree"))
-            .unwrap();
+        dest.copy(
+            "tdd",
+            Path::new("skills/tdd"),
+            &target.join(".agents/skills/tdd-tree"),
+        )
+        .unwrap();
         assert!(target.join(".agents/skills/tdd-tree/SKILL.md").is_file());
     }
 }
