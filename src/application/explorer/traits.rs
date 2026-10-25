@@ -10,4 +10,8 @@ pub trait ExplorerRepository: Send {
     fn list(&self, path: &str) -> Result<DirectoryListingDto, ApplicationError>;
     /// Create a directory (non-recursive parents must exist) inside `parent`.
     fn create_dir(&self, parent: &str, name: &str) -> Result<(), ApplicationError>;
+    /// Rename `from` into `to`, both inside `parent`.
+    fn rename(&self, parent: &str, from: &str, to: &str) -> Result<(), ApplicationError>;
+    /// Recursively remove `name` inside `parent`.
+    fn remove(&self, parent: &str, name: &str) -> Result<(), ApplicationError>;
 }

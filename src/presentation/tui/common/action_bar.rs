@@ -41,6 +41,9 @@ pub fn explorer_panel_actions() -> Vec<Span<'static>> {
     vec![
         key_span("Tab", "Packs"),
         key_span("R", "New folder"),
+        key_span("M", "Rename"),
+        key_span("D", "Delete"),
+        key_span("Shift-D", "Force del"),
         key_span("Space", "Help"),
         key_span("Ctrl-C", "Quit"),
     ]
@@ -111,6 +114,9 @@ pub fn action_label(action: AppAction) -> &'static str {
         AppAction::Install => "Install here",
         AppAction::View => "View pack",
         AppAction::CreateFolder => "New folder",
+        AppAction::Rename => "Rename",
+        AppAction::Delete => "Delete",
+        AppAction::ForceDelete => "Force delete",
         AppAction::Help => "Help",
         AppAction::Close => "Close",
     }

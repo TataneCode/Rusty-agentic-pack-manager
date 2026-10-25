@@ -21,6 +21,9 @@ pub fn explorer_help() -> Vec<Line<'static>> {
         help_line("Enter", "Open the selected directory"),
         help_line("Backspace", "Go to the parent directory"),
         help_line("R", "Create a folder here"),
+        help_line("M", "Rename the selected folder/file"),
+        help_line("D", "Delete the selected folder/file (confirm)"),
+        help_line("Shift-D", "Force delete (non-empty folder, no confirm)"),
         help_line("Ctrl-C", "Quit"),
     ]
 }

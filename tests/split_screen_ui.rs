@@ -157,3 +157,82 @@ fn viewer_opens_with_v_and_lists_files() {
 fn key(code: crossterm::event::KeyCode) -> crossterm::event::KeyEvent {
     crossterm::event::KeyEvent::new(code, crossterm::event::KeyModifiers::NONE)
 }
+
+#[test]
+fn rename_opens_prefilled_input_and_renames() {
+    let tmp = TempDir::new().unwrap();
+    let mut app = build_app(&tmp);
+    fs::write(tmp.path().join("start/file.txt"), "x").unwrap();
+    app.refresh_dir();
+    app.focus = Focus::Explorer;
+
+    // select file.txt (dirs first: subdir at 0, file.txt at 1)
+    app.dir_entries.state.select(Some(1));
+    app.dispatch(&key(crossterm::event::KeyCode::Char('m')));
+    let (input, kind) = (app.input.as_ref().unwrap(), app.input_kind.clone());
+    assert_eq!(input.value, "file.txt");
+    assert!(matches!(
+        kind,
+        Some(rusty_agentic_pack_manager::presentation::tui::app::InputKind::Rename { .. })
+    ));
+
+    // type new name: clear with backspaces then type
+    for _ in 0..8 {
+        app.dispatch(&key(crossterm::event::KeyCode::Backspace));
+    }
+    for c in "renamed.txt".chars() {
+        app.dispatch(&key(crossterm::event::KeyCode::Char(c)));
+    }
+    app.dispatch(&key(crossterm::event::KeyCode::Enter));
+    assert!(tmp.path().join("start/renamed.txt").is_file());
+    assert!(app.input.is_none() && app.input_kind.is_none());
+}
+
+#[test]
+fn delete_shows_confirm_and_deletes_on_yes() {
+    let tmp = TempDir::new().unwrap();
+    let mut app = build_app(&tmp);
+    fs::write(tmp.path().join("start/file.txt"), "x").unwrap();
+    app.refresh_dir();
+    app.focus = Focus::Explorer;
+
+    app.dir_entries.state.select(Some(1));
+    app.dispatch(&key(crossterm::event::KeyCode::Char('d')));
+    assert!(app.confirm.is_some());
+
+    // default is No; select Yes with ArrowUp then confirm
+    app.dispatch(&key(crossterm::event::KeyCode::Up));
+    app.dispatch(&key(crossterm::event::KeyCode::Enter));
+    assert!(app.confirm.is_none());
+    assert!(!tmp.path().join("start/file.txt").exists());
+}
+
+#[test]
+fn delete_cancel_keeps_file() {
+    let tmp = TempDir::new().unwrap();
+    let mut app = build_app(&tmp);
+    fs::write(tmp.path().join("start/file.txt"), "x").unwrap();
+    app.refresh_dir();
+    app.focus = Focus::Explorer;
+
+    app.dir_entries.state.select(Some(1));
+    app.dispatch(&key(crossterm::event::KeyCode::Char('d')));
+    app.dispatch(&key(crossterm::event::KeyCode::Esc));
+    assert!(app.confirm.is_none());
+    assert!(tmp.path().join("start/file.txt").exists());
+}
+
+#[test]
+fn force_delete_deletes_non_empty_folder_directly() {
+    let tmp = TempDir::new().unwrap();
+    let mut app = build_app(&tmp);
+    fs::create_dir_all(tmp.path().join("start/subdir/inner")).unwrap();
+    fs::write(tmp.path().join("start/subdir/inner/x.md"), "#").unwrap();
+    app.refresh_dir();
+    app.focus = Focus::Explorer;
+
+    app.dir_entries.state.select(Some(0)); // subdir (dirs first)
+    app.dispatch(&key(crossterm::event::KeyCode::Char('D')));
+    assert!(app.confirm.is_none());
+    assert!(!tmp.path().join("start/subdir").exists());
+}

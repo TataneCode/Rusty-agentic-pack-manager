@@ -40,6 +40,30 @@ impl ExplorerRepository for FsExplorer {
         let target = Path::new(parent).join(name);
         std::fs::create_dir(&target).map_err(|e| io_err(&target.to_string_lossy(), e))
     }
+
+    fn rename(&self, parent: &str, from: &str, to: &str) -> Result<(), ApplicationError> {
+        let source = Path::new(parent).join(from);
+        let target = Path::new(parent).join(to);
+        std::fs::rename(&source, &target).map_err(|e| {
+            io_err(
+                &format!(
+                    "{} -> {}",
+                    source.to_string_lossy(),
+                    target.to_string_lossy()
+                ),
+                e,
+            )
+        })
+    }
+
+    fn remove(&self, parent: &str, name: &str) -> Result<(), ApplicationError> {
+        let target = Path::new(parent).join(name);
+        if target.is_dir() {
+            std::fs::remove_dir_all(&target).map_err(|e| io_err(&target.to_string_lossy(), e))
+        } else {
+            std::fs::remove_file(&target).map_err(|e| io_err(&target.to_string_lossy(), e))
+        }
+    }
 }
 
 /// The pack source files live in the packs dir; destinations are absolute.
@@ -125,6 +149,35 @@ mod tests {
     fn list_rejects_non_directory() {
         let err = FsExplorer.list("/definitely/not/here").unwrap_err();
         assert!(matches!(err, ApplicationError::NotADirectory(_)));
+    }
+
+    #[test]
+    fn rename_moves_entry() {
+        let tmp = TempDir::new().unwrap();
+        fs::write(tmp.path().join("old.txt"), "hi").unwrap();
+        FsExplorer
+            .rename(tmp.path().to_str().unwrap(), "old.txt", "new.txt")
+            .unwrap();
+        assert!(tmp.path().join("new.txt").is_file());
+        assert!(!tmp.path().join("old.txt").exists());
+    }
+
+    #[test]
+    fn remove_deletes_file_and_tree() {
+        let tmp = TempDir::new().unwrap();
+        fs::write(tmp.path().join("file.txt"), "hi").unwrap();
+        fs::create_dir_all(tmp.path().join("tree/inner")).unwrap();
+        fs::write(tmp.path().join("tree/inner/x.md"), "#").unwrap();
+
+        FsExplorer
+            .remove(tmp.path().to_str().unwrap(), "file.txt")
+            .unwrap();
+        assert!(!tmp.path().join("file.txt").exists());
+
+        FsExplorer
+            .remove(tmp.path().to_str().unwrap(), "tree")
+            .unwrap();
+        assert!(!tmp.path().join("tree").exists());
     }
 
     #[test]

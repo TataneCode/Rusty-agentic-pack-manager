@@ -1,4 +1,4 @@
-use crate::presentation::tui::app::{App, Focus, Mode, Popup};
+use crate::presentation::tui::app::{App, ConfirmDialog, Focus, InputKind, Mode, Popup};
 use crate::presentation::tui::common::keys::{map_key, AppAction, KeyContext};
 
 /// Screen routing: maps user actions to handlers (pattern rusty-console
@@ -26,6 +26,11 @@ impl App {
 
     pub fn dispatch(&mut self, key: &crossterm::event::KeyEvent) {
         let context = self.key_context();
+
+        if self.confirm.is_some() {
+            self.handle_confirm_key(key);
+            return;
+        }
 
         if self.input.is_some() {
             self.handle_input_key(key);
@@ -78,7 +83,13 @@ impl App {
             AppAction::NavigateDown => self.dir_entries.select_next(),
             AppAction::Enter => self.open_selected_dir(),
             AppAction::Back => self.go_parent(),
-            AppAction::CreateFolder => self.input = Some(Default::default()),
+            AppAction::CreateFolder => {
+                self.input = Some(Default::default());
+                self.input_kind = Some(InputKind::CreateFolder);
+            }
+            AppAction::Rename => self.start_rename(),
+            AppAction::Delete => self.ask_delete(false),
+            AppAction::ForceDelete => self.ask_delete(true),
             AppAction::Help => self.popup = Some(Popup::Help),
             AppAction::ToggleFocus => self.focus = Focus::Packs,
             _ => {}
@@ -97,6 +108,67 @@ impl App {
                 self.focus = Focus::Packs;
             }
             AppAction::Help => self.popup = Some(Popup::Help),
+            _ => {}
+        }
+    }
+
+    fn start_rename(&mut self) {
+        let Some((name, _)) = self.dir_entries.selected() else {
+            return;
+        };
+        let mut input = crate::presentation::tui::common::widgets::TextInput::new();
+        input.value = name.clone();
+        input.cursor = name.len();
+        self.input = Some(input);
+        self.input_kind = Some(InputKind::Rename {
+            original: name.clone(),
+        });
+    }
+
+    fn ask_delete(&mut self, force: bool) {
+        let Some((name, _)) = self.dir_entries.selected() else {
+            return;
+        };
+        if force {
+            let name = name.clone();
+            self.execute_delete(&name);
+        } else {
+            self.confirm = Some(ConfirmDialog {
+                message: format!("Delete '{name}'?"),
+                selected_yes: false,
+            });
+        }
+    }
+
+    fn execute_delete(&mut self, name: &str) {
+        let parent = self.current_dir.to_string_lossy().into_owned();
+        match self.explorer.remove(&parent, name) {
+            Ok(()) => self.refresh_dir(),
+            Err(err) => self.show_error(err.to_string()),
+        }
+    }
+
+    fn handle_confirm_key(&mut self, key: &crossterm::event::KeyEvent) {
+        use crossterm::event::KeyCode;
+        let Some(dialog) = &mut self.confirm else {
+            return;
+        };
+        match key.code {
+            KeyCode::Left | KeyCode::Right | KeyCode::Tab => {
+                dialog.selected_yes = !dialog.selected_yes;
+            }
+            KeyCode::Up | KeyCode::Char('k') => dialog.selected_yes = true,
+            KeyCode::Down | KeyCode::Char('j') => dialog.selected_yes = false,
+            KeyCode::Enter => {
+                let dialog = self.confirm.take().unwrap();
+                if dialog.selected_yes {
+                    if let Some((name, _)) = self.dir_entries.selected() {
+                        let name = name.clone();
+                        self.execute_delete(&name);
+                    }
+                }
+            }
+            KeyCode::Esc => self.confirm = None,
             _ => {}
         }
     }
@@ -148,11 +220,21 @@ impl App {
             return;
         }
         match key.code {
-            KeyCode::Esc => self.input = None,
+            KeyCode::Esc => {
+                self.input = None;
+                self.input_kind = None;
+            }
             KeyCode::Enter => {
                 if let Some(input) = self.input.take() {
+                    let kind = self.input_kind.take();
                     let parent = self.current_dir.to_string_lossy().into_owned();
-                    match self.explorer.create_dir(&parent, &input.value) {
+                    let result = match kind {
+                        Some(InputKind::Rename { original }) => {
+                            self.explorer.rename(&parent, &original, &input.value)
+                        }
+                        _ => self.explorer.create_dir(&parent, &input.value),
+                    };
+                    match result {
                         Ok(()) => self.refresh_dir(),
                         Err(err) => self.show_error(err.to_string()),
                     }

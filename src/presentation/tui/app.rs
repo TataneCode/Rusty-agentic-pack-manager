@@ -33,6 +33,20 @@ pub enum Popup {
     Success(String),
 }
 
+/// What a text-input dialog is being used for.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum InputKind {
+    CreateFolder,
+    Rename { original: String },
+}
+
+/// Yes/no confirmation dialog (destructive actions).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ConfirmDialog {
+    pub message: String,
+    pub selected_yes: bool,
+}
+
 /// Full application state (pattern rusty-console App, synchronous).
 pub struct App {
     pub packs: Vec<PackSummaryDto>,
@@ -46,6 +60,8 @@ pub struct App {
     pub mode: Mode,
     pub popup: Option<Popup>,
     pub input: Option<TextInput>,
+    pub input_kind: Option<InputKind>,
+    pub confirm: Option<ConfirmDialog>,
     /// Viewer screen state; Some => viewer is open.
     pub viewer: Option<ViewerState>,
     pub highlighter: crate::presentation::tui::viewer::highlight::Highlighter,
@@ -92,6 +108,8 @@ impl App {
             mode: Mode::Normal,
             popup: None,
             input: None,
+            input_kind: None,
+            confirm: None,
             viewer: None,
             highlighter: crate::presentation::tui::viewer::highlight::Highlighter::new(),
             quit: false,

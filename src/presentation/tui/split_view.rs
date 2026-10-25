@@ -37,6 +37,7 @@ pub fn render(frame: &mut Frame, app: &mut App) {
     action_bar::render(frame, chunks[1], spans);
 
     render_input(frame, app);
+    render_confirm(frame, app);
     render_popups(frame, app);
 }
 
@@ -108,9 +109,52 @@ fn render_input(frame: &mut Frame, app: &App) {
     let Some(input) = &app.input else {
         return;
     };
+    let title = match &app.input_kind {
+        Some(crate::presentation::tui::app::InputKind::Rename { .. }) => " New name ",
+        _ => " New folder name ",
+    };
     let area = action_bar::centered_rect(frame.area(), 50, 3);
     frame.render_widget(ratatui::widgets::Clear, area);
-    input.render(frame, area, " New folder name ");
+    input.render(frame, area, title);
+}
+
+fn render_confirm(frame: &mut Frame, app: &App) {
+    use ratatui::text::Span;
+    let Some(dialog) = &app.confirm else {
+        return;
+    };
+    let yes = Span::styled(
+        if dialog.selected_yes {
+            " [Yes] "
+        } else {
+            "  Yes  "
+        },
+        Theme::highlight_style(),
+    );
+    let no = Span::styled(
+        if dialog.selected_yes {
+            "  No  "
+        } else {
+            " [No] "
+        },
+        if dialog.selected_yes {
+            Theme::file_style()
+        } else {
+            Theme::highlight_style()
+        },
+    );
+    let lines = vec![
+        Line::from(Span::styled(
+            format!(" {} ", dialog.message),
+            Theme::error_style(),
+        )),
+        Line::from(vec![yes, no]),
+        Line::from(Span::styled(
+            " ←/→ select · Enter confirm · Esc cancel",
+            Theme::file_style(),
+        )),
+    ];
+    action_bar::render_popup(frame, frame.area(), " Confirm ", lines);
 }
 
 fn render_popups(frame: &mut Frame, app: &App) {
