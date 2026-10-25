@@ -1,4 +1,5 @@
-use crate::presentation::tui::app::{App, ConfirmDialog, Focus, InputKind, Mode, Popup};
+use crate::domain::pack::value_objects::TargetCli;
+use crate::presentation::tui::app::{App, ConfirmDialog, Focus, InputKind, Popup};
 use crate::presentation::tui::common::keys::{map_key, AppAction, KeyContext};
 
 /// Screen routing: maps user actions to handlers (pattern rusty-console
@@ -15,12 +16,9 @@ impl App {
         if self.viewer.is_some() {
             return KeyContext::Viewer;
         }
-        match self.mode {
-            Mode::Installing { .. } => KeyContext::InstallMode,
-            Mode::Normal => match self.focus {
-                Focus::Packs => KeyContext::PacksPanel,
-                Focus::Explorer => KeyContext::ExplorerPanel,
-            },
+        match self.focus {
+            Focus::Packs => KeyContext::PacksPanel,
+            Focus::Explorer => KeyContext::ExplorerPanel,
         }
     }
 
@@ -61,12 +59,9 @@ impl App {
             return;
         }
 
-        match self.mode {
-            Mode::Normal => match self.focus {
-                Focus::Packs => self.handle_packs_action(action),
-                Focus::Explorer => self.handle_explorer_action(action),
-            },
-            Mode::Installing { .. } => self.handle_install_action(action),
+        match self.focus {
+            Focus::Packs => self.handle_packs_action(action),
+            Focus::Explorer => self.handle_explorer_action(action),
         }
     }
 
@@ -74,7 +69,7 @@ impl App {
         match action {
             AppAction::NavigateUp => self.pack_list.select_previous(),
             AppAction::NavigateDown => self.pack_list.select_next(),
-            AppAction::Apply => self.start_install(),
+            AppAction::Apply => self.install_here(),
             AppAction::View => self.open_viewer(),
             AppAction::Help => self.popup = Some(Popup::Help),
             AppAction::ToggleFocus => self.focus = Focus::Explorer,
@@ -97,22 +92,6 @@ impl App {
             AppAction::ForceDelete => self.ask_delete(true),
             AppAction::Help => self.popup = Some(Popup::Help),
             AppAction::ToggleFocus => self.focus = Focus::Packs,
-            _ => {}
-        }
-    }
-
-    fn handle_install_action(&mut self, action: AppAction) {
-        match action {
-            AppAction::NavigateUp => self.dir_entries.select_previous(),
-            AppAction::NavigateDown => self.dir_entries.select_next(),
-            AppAction::Enter => self.open_selected_dir(),
-            AppAction::Back => self.go_parent(),
-            AppAction::Install => self.install_here(),
-            AppAction::Close => {
-                self.mode = Mode::Normal;
-                self.focus = Focus::Packs;
-            }
-            AppAction::Help => self.popup = Some(Popup::Help),
             _ => {}
         }
     }
@@ -199,17 +178,19 @@ impl App {
         }
     }
 
+    /// Install the selected pack in the explorer's current directory
+    /// (user decision: 'A' alone, no separate install mode).
     fn install_here(&mut self) {
-        let Mode::Installing { pack, cli } = &self.mode else {
+        let Some(pack) = self.selected_pack() else {
             return;
         };
-        let pack = pack.clone();
-        let cli = *cli;
+        let pack_name = pack.name.clone();
+        // Install for the pack's first target CLI (CLI picker is v1.1).
+        let cli = pack.clis.first().copied().unwrap_or(TargetCli::Vibe);
         let root = self.current_dir.to_string_lossy().into_owned();
-        match self.pack_service.install(&pack, cli, &root, false) {
+        match self.pack_service.install(&pack_name, cli, &root, false) {
             Ok(result) => {
-                self.mode = Mode::Normal;
-                self.focus = Focus::Packs;
+                self.refresh_dir();
                 self.popup = Some(Popup::Success(format!(
                     "{} installed: {} item(s) into {}",
                     result.pack_name, result.copied_count, result.target_root

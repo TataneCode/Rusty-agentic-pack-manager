@@ -62,5 +62,5 @@ pub fn render(frame: &mut Frame, app: &mut App) {
         frame.render_widget(p, inner);
     }
 
-    action_bar::render(frame, chunks[1], action_bar::viewer_actions());
+    action_bar::render_action_bar(frame, chunks[1], &action_bar::base_footer_text());
 }

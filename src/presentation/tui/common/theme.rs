@@ -1,5 +1,6 @@
 use ratatui::{
     style::{Color, Modifier, Style},
+    text::Line,
     widgets::{Block, BorderType, Padding},
 };
 
@@ -28,6 +29,36 @@ impl Theme {
         Style::default()
             .fg(Color::Yellow)
             .add_modifier(Modifier::BOLD)
+    }
+
+    pub fn action_key_style() -> Style {
+        Style::default()
+            .fg(Color::Yellow)
+            .add_modifier(Modifier::BOLD)
+    }
+
+    pub fn action_label_style() -> Style {
+        Style::default().fg(Color::White)
+    }
+
+    pub fn running_style() -> Style {
+        Style::default().fg(Color::Green)
+    }
+
+    pub fn stopped_style() -> Style {
+        Style::default().fg(Color::Red)
+    }
+
+    pub fn paused_style() -> Style {
+        Style::default().fg(Color::Yellow)
+    }
+
+    pub fn in_use_style() -> Style {
+        Style::default().fg(Color::Yellow)
+    }
+
+    pub fn dangling_style() -> Style {
+        Style::default().fg(Color::Red)
     }
 
     pub fn focused_border_style() -> ratatui::style::Style {
@@ -68,5 +99,18 @@ impl Theme {
             .border_type(BorderType::Rounded)
             .border_style(border)
             .padding(Padding::new(1, 1, 0, 0))
+    }
+
+    /// Shared rounded box for the layout sections (header, panels, action
+    /// bar) so borders stay homogeneous across screens (rusty-console).
+    pub fn section_block(title: Option<&str>) -> Block<'static> {
+        let mut block = Block::bordered()
+            .border_type(BorderType::Rounded)
+            .border_style(Self::focused_border_style())
+            .padding(Padding::horizontal(1));
+        if let Some(title) = title {
+            block = block.title(Line::from(title.to_string()).style(Self::title_style()));
+        }
+        block
     }
 }

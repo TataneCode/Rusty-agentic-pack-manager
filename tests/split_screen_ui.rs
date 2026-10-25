@@ -13,7 +13,7 @@ use rusty_agentic_pack_manager::infrastructure::filesystem::explorer::{
 };
 use rusty_agentic_pack_manager::infrastructure::pack::content::FsPackContentRepository;
 use rusty_agentic_pack_manager::infrastructure::pack::loader::FsPackRepository;
-use rusty_agentic_pack_manager::presentation::tui::app::{App, Focus, Mode};
+use rusty_agentic_pack_manager::presentation::tui::app::{App, Focus};
 use rusty_agentic_pack_manager::presentation::tui::split_view;
 use tempfile::TempDir;
 
@@ -113,15 +113,25 @@ fn tab_toggles_focus() {
 }
 
 #[test]
-fn apply_switches_to_install_mode_and_esc_cancels() {
+fn apply_installs_in_the_explorer_current_dir_and_refreshes() {
     let tmp = TempDir::new().unwrap();
     let mut app = build_app(&tmp);
     app.dispatch(&key(crossterm::event::KeyCode::Char('a')));
-    assert!(matches!(app.mode, Mode::Installing { .. }));
-    assert_eq!(app.focus, Focus::Explorer);
-    app.dispatch(&key(crossterm::event::KeyCode::Esc));
-    assert_eq!(app.mode, Mode::Normal);
-    assert_eq!(app.focus, Focus::Packs);
+    assert!(matches!(
+        app.popup,
+        Some(rusty_agentic_pack_manager::presentation::tui::app::Popup::Success(_))
+    ));
+    // files installed under the explorer's current dir (start/)
+    assert!(tmp
+        .path()
+        .join("start/.agents/skills/code-review/SKILL.md")
+        .is_file());
+    // explorer refreshed: the new .agents dir is listed
+    assert!(app
+        .dir_entries
+        .items
+        .iter()
+        .any(|(name, is_dir)| name == ".agents" && *is_dir));
 }
 
 #[test]
@@ -131,7 +141,7 @@ fn space_shows_contextual_help_and_closes() {
     app.dispatch(&key(crossterm::event::KeyCode::Char(' ')));
     let snapshot = render_snapshot(&mut app);
     assert!(snapshot.contains("Help"), "help popup missing");
-    assert!(snapshot.contains("Apply the selected pack"));
+    assert!(snapshot.contains("Install the selected pack"));
     app.dispatch(&key(crossterm::event::KeyCode::Char(' ')));
     assert!(app.popup.is_none());
 }
@@ -246,13 +256,9 @@ fn ctrl_c_quits_from_any_mode() {
     app.dispatch(&ctrl('c'));
     assert!(app.quit);
 
-    // from install mode
+    // from the explorer panel
     let mut app = build_app(&tmp);
-    app.dispatch(&key(crossterm::event::KeyCode::Char('a')));
-    assert!(matches!(
-        app.mode,
-        rusty_agentic_pack_manager::presentation::tui::app::Mode::Installing { .. }
-    ));
+    app.dispatch(&key(crossterm::event::KeyCode::Tab));
     app.dispatch(&ctrl('c'));
     assert!(app.quit);
 }

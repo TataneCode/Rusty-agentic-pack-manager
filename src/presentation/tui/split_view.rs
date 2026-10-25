@@ -1,10 +1,11 @@
 use ratatui::{
     layout::{Constraint, Layout, Rect},
     text::{Line, Span},
+    widgets::Paragraph,
     Frame,
 };
 
-use crate::presentation::tui::app::{App, Focus, Mode, Popup};
+use crate::presentation::tui::app::{App, Focus, Popup};
 use crate::presentation::tui::common::action_bar;
 use crate::presentation::tui::common::help;
 use crate::presentation::tui::common::theme::Theme;
@@ -19,24 +20,42 @@ pub fn render(frame: &mut Frame, app: &mut App) {
     }
 
     let area = frame.area();
-    let chunks = Layout::vertical([Constraint::Min(3), Constraint::Length(1)]).split(area);
+    let chunks = Layout::vertical([
+        Constraint::Length(3),
+        Constraint::Min(3),
+        Constraint::Length(3),
+    ])
+    .split(area);
+
+    render_header(frame, chunks[0], app);
 
     let panels = Layout::horizontal([Constraint::Percentage(50), Constraint::Percentage(50)])
-        .split(chunks[0]);
+        .split(chunks[1]);
 
     render_packs_panel(frame, panels[0], app);
     render_explorer_panel(frame, panels[1], app);
 
-    let spans = match (&app.mode, &app.focus) {
-        (Mode::Installing { .. }, _) => action_bar::install_mode_actions(),
-        (Mode::Normal, Focus::Packs) => action_bar::packs_panel_actions(),
-        (Mode::Normal, Focus::Explorer) => action_bar::explorer_panel_actions(),
-    };
-    action_bar::render(frame, chunks[1], spans);
+    action_bar::render_action_bar(frame, chunks[2], &action_bar::base_footer_text());
 
     render_input(frame, app);
     render_confirm(frame, app);
     render_popups(frame, app);
+}
+
+/// Application title header (rusty-console layout: header / content /
+/// action bar, all in shared section blocks).
+fn render_header(frame: &mut Frame, area: Rect, app: &App) {
+    let selected = app
+        .selected_pack()
+        .map(|p| format!(" — {} v{}", p.name, p.version))
+        .unwrap_or_default();
+    let title = format!(" Rusty Agentic Pack Manager{selected} ");
+    let header = Paragraph::new(ratatui::text::Text::from(Span::styled(
+        title,
+        Theme::title_style(),
+    )))
+    .block(Theme::section_block(None));
+    frame.render_widget(header, area);
 }
 
 fn render_packs_panel(frame: &mut Frame, area: Rect, app: &mut App) {
@@ -152,11 +171,10 @@ fn render_confirm(frame: &mut Frame, app: &App) {
 fn render_popups(frame: &mut Frame, app: &App) {
     match &app.popup {
         Some(Popup::Help) => {
-            let lines = match (&app.viewer.is_some(), &app.mode, &app.focus) {
-                (true, _, _) => help::viewer_help(),
-                (false, Mode::Installing { .. }, _) => help::install_help(),
-                (false, Mode::Normal, Focus::Packs) => help::packs_help(),
-                (false, Mode::Normal, Focus::Explorer) => help::explorer_help(),
+            let lines = match (&app.viewer.is_some(), &app.focus) {
+                (true, _) => help::viewer_help(),
+                (false, Focus::Packs) => help::packs_help(),
+                (false, Focus::Explorer) => help::explorer_help(),
             };
             action_bar::render_popup(frame, frame.area(), " Help ", lines);
         }

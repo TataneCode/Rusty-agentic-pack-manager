@@ -9,8 +9,7 @@ pub enum AppAction {
     NavigateDown,
     Enter,
     Back,
-    Apply,        // 'a' on packs panel
-    Install,      // 'i' in install mode
+    Apply,        // 'a' on packs panel: install in the explorer's current dir
     View,         // 'v' on packs panel
     CreateFolder, // 'r' on explorer panel
     Rename,       // 'm' on explorer panel
@@ -25,7 +24,6 @@ pub enum AppAction {
 pub enum KeyContext {
     PacksPanel,
     ExplorerPanel,
-    InstallMode,
     Viewer,
     Dialog,
 }
@@ -58,7 +56,6 @@ pub fn map_key(key: &KeyEvent, context: KeyContext) -> Option<AppAction> {
         (KeyCode::Char('r'), KeyContext::ExplorerPanel) => Some(AppAction::CreateFolder),
         (KeyCode::Char('m'), KeyContext::ExplorerPanel) => Some(AppAction::Rename),
         (KeyCode::Char('d'), KeyContext::ExplorerPanel) => Some(AppAction::Delete),
-        (KeyCode::Char('i'), KeyContext::InstallMode) => Some(AppAction::Install),
         (KeyCode::Char(' '), _) => Some(AppAction::Help),
         (KeyCode::Esc, _) => Some(AppAction::Close),
         _ => None,
@@ -98,23 +95,6 @@ mod tests {
         assert_eq!(
             map_key(&key(KeyCode::Char('d')), KeyContext::PacksPanel),
             None
-        );
-    }
-
-    #[test]
-    fn install_mode_is_restricted() {
-        for code in [
-            KeyCode::Char('a'),
-            KeyCode::Char('v'),
-            KeyCode::Char('r'),
-            KeyCode::Char('m'),
-            KeyCode::Char('d'),
-        ] {
-            assert_eq!(map_key(&key(code), KeyContext::InstallMode), None);
-        }
-        assert_eq!(
-            map_key(&key(KeyCode::Char('i')), KeyContext::InstallMode),
-            Some(AppAction::Install)
         );
     }
 }

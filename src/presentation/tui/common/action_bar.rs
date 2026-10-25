@@ -1,6 +1,6 @@
 use ratatui::{
     layout::Rect,
-    style::{Modifier, Style},
+    style::Style,
     text::{Line, Span},
     widgets::{Clear, Paragraph},
     Frame,
@@ -9,79 +9,52 @@ use ratatui::{
 use super::keys::AppAction;
 use super::theme::Theme;
 
-/// Bottom action bar: shows the contextual keys with highlighted letters
-/// (pattern rusty-console action_bar).
-pub fn key_span(key: &str, label: &str) -> Span<'static> {
-    Span::styled(
-        format!("[{key}] {label}  "),
-        Style::default()
-            .fg(ratatui::style::Color::Cyan)
-            .add_modifier(Modifier::BOLD),
-    )
+const SEPARATOR: &str = " | ";
+
+/// Splits a help string (" Tab: Switch panel | Space: Help ") into styled
+/// spans: keys in yellow bold, labels in white, separators dimmed
+/// (rusty-console action_bar pattern).
+pub fn action_bar_line(help_text: &str) -> Line<'static> {
+    let mut spans = Vec::new();
+    for (index, segment) in help_text.split('|').map(str::trim).enumerate() {
+        if index > 0 {
+            spans.push(Span::styled(SEPARATOR, Theme::help_style()));
+        }
+        match segment.split_once(':') {
+            Some((key, label)) => {
+                spans.push(Span::styled(key.to_string(), Theme::action_key_style()));
+                spans.push(Span::styled(
+                    format!(":{label}"),
+                    Theme::action_label_style(),
+                ));
+            }
+            None => spans.push(Span::styled(
+                segment.to_string(),
+                Theme::action_label_style(),
+            )),
+        }
+    }
+    Line::from(spans)
 }
 
-pub fn label_span(label: &str) -> Span<'static> {
-    Span::styled(
-        format!("{label}  "),
-        Style::default().fg(ratatui::style::Color::DarkGray),
-    )
+/// The two always-available commands (user decision: the contextual actions
+/// live in the Space help, not in the footer).
+pub fn base_footer_text() -> String {
+    "Tab: Switch panel | Space: Help".to_string()
 }
 
-pub fn packs_panel_actions() -> Vec<Span<'static>> {
-    vec![
-        key_span("Tab", "Explorer"),
-        key_span("A", "Apply"),
-        key_span("V", "View"),
-        key_span("Space", "Help"),
-        key_span("Ctrl-C", "Quit"),
-    ]
-}
-
-pub fn explorer_panel_actions() -> Vec<Span<'static>> {
-    vec![
-        key_span("Tab", "Packs"),
-        key_span("R", "New folder"),
-        key_span("M", "Rename"),
-        key_span("D", "Delete"),
-        key_span("Shift-D", "Force del"),
-        key_span("Space", "Help"),
-        key_span("Ctrl-C", "Quit"),
-    ]
-}
-
-pub fn install_mode_actions() -> Vec<Span<'static>> {
-    vec![
-        key_span("Enter", "Open"),
-        key_span("Bksp", "Up"),
-        key_span("I", "Install here"),
-        key_span("Esc", "Cancel"),
-        key_span("Space", "Help"),
-    ]
-}
-
-pub fn viewer_actions() -> Vec<Span<'static>> {
-    vec![
-        key_span("Tab", "Files/Content"),
-        key_span("↑↓", "Scroll"),
-        key_span("Esc", "Back"),
-    ]
-}
-
-pub fn render(frame: &mut Frame, area: Rect, spans: Vec<Span<'static>>) {
-    let line = Line::from(spans);
-    let bar = Paragraph::new(line).style(Theme::default_style());
+pub fn render_action_bar(frame: &mut Frame, area: Rect, help_text: &str) {
+    let bar = Paragraph::new(action_bar_line(help_text)).block(Theme::section_block(None));
     frame.render_widget(bar, area);
 }
 
-/// Full-width modal popup (help, errors).
 pub fn render_popup(frame: &mut Frame, area: Rect, title: &str, lines: Vec<Line<'static>>) {
     let block = Theme::block(title, true);
     let popup = Paragraph::new(lines)
         .block(block)
         .style(Theme::default_style());
     let popup_area = centered_rect(area, 60, 60);
-    let _ = Clear;
-    frame.render_widget(ratatui::widgets::Clear, popup_area);
+    frame.render_widget(Clear, popup_area);
     frame.render_widget(popup, popup_area);
 }
 
@@ -101,7 +74,8 @@ pub fn centered_rect(area: Rect, percent_x: u16, percent_y: u16) -> Rect {
     .split(popup_layout[1])[1]
 }
 
-/// Escape helper for action imports in widgets module.
+/// Escape helper kept for potential future use of key spans outside the
+/// parsed footer format.
 pub fn action_label(action: AppAction) -> &'static str {
     match action {
         AppAction::Quit => "Quit",
@@ -111,7 +85,6 @@ pub fn action_label(action: AppAction) -> &'static str {
         AppAction::Enter => "Open",
         AppAction::Back => "Parent",
         AppAction::Apply => "Apply pack",
-        AppAction::Install => "Install here",
         AppAction::View => "View pack",
         AppAction::CreateFolder => "New folder",
         AppAction::Rename => "Rename",
@@ -120,4 +93,9 @@ pub fn action_label(action: AppAction) -> &'static str {
         AppAction::Help => "Help",
         AppAction::Close => "Close",
     }
+}
+
+/// Style helper re-exported for popup renderers that need a raw style.
+pub fn error_style() -> Style {
+    Theme::error_style()
 }

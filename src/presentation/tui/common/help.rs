@@ -8,7 +8,10 @@ pub fn packs_help() -> Vec<Line<'static>> {
         help_line("Tab", "Switch to the explorer panel"),
         help_line("↑/↓ or k/j", "Move in the pack list"),
         help_line("Enter", "Expand pack details"),
-        help_line("A", "Apply the selected pack (choose target dir)"),
+        help_line(
+            "A",
+            "Install the selected pack in the explorer's current directory",
+        ),
         help_line("V", "View the pack files with syntax highlighting"),
         help_line("Ctrl-C", "Quit"),
     ]
@@ -25,16 +28,6 @@ pub fn explorer_help() -> Vec<Line<'static>> {
         help_line("D", "Delete the selected folder/file (confirm)"),
         help_line("Shift-D", "Force delete (non-empty folder, no confirm)"),
         help_line("Ctrl-C", "Quit"),
-    ]
-}
-
-pub fn install_help() -> Vec<Line<'static>> {
-    vec![
-        help_line("↑/↓ or k/j", "Move in the directory list"),
-        help_line("Enter", "Open the selected directory"),
-        help_line("Backspace", "Go to the parent directory"),
-        help_line("I", "Install the pack in this directory"),
-        help_line("Esc", "Cancel the installation"),
     ]
 }
 

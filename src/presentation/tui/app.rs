@@ -56,7 +56,6 @@ pub struct App {
     pub current_dir: PathBuf,
     pub dir_entries: SelectList<(String, bool)>,
     pub focus: Focus,
-    pub mode: Mode,
     pub popup: Option<Popup>,
     pub input: Option<TextInput>,
     pub input_kind: Option<InputKind>,
@@ -104,7 +103,6 @@ impl App {
             current_dir: start_dir,
             dir_entries,
             focus: Focus::Packs,
-            mode: Mode::Normal,
             popup: None,
             input: None,
             input_kind: None,
@@ -135,19 +133,6 @@ impl App {
 
     pub fn selected_pack(&self) -> Option<&PackSummaryDto> {
         self.pack_list.selected()
-    }
-
-    pub fn start_install(&mut self) {
-        let Some(pack) = self.selected_pack() else {
-            return;
-        };
-        // Install for the pack's first target CLI (v1: single-CLI packs).
-        let cli = pack.clis.first().copied().unwrap_or(TargetCli::Vibe);
-        self.mode = Mode::Installing {
-            pack: pack.name.clone(),
-            cli,
-        };
-        self.focus = Focus::Explorer;
     }
 
     pub fn show_error(&mut self, message: String) {
