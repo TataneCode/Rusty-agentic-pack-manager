@@ -20,8 +20,11 @@ anyhow = "1.0"
 serde = { version = "1.0", features = ["derive"] }
 toml = "0.8"
 
-[dev-dependencies]
+# Mockable repository boundaries (automock attribute is part of the trait
+# definitions)
 mockall = "0.14"
+
+[dev-dependencies]
 tempfile = "3"
 
 [[bin]]

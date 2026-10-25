@@ -7,6 +7,7 @@ pub mod domain {
 }
 
 pub mod application {
+    pub mod error;
     pub mod pack {
         pub mod dto;
         pub mod service;
