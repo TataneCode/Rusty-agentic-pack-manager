@@ -32,3 +32,22 @@ tempfile = "3"
 [[bin]]
 name = "rapm"
 path = "src/main.rs"
+
+# RPM packaging: binary + embedded packs directory (installed system-wide)
+[package.metadata.generate-rpm]
+assets = [
+    { source = "target/release/rapm", dest = "/usr/bin/rapm", mode = "755" },
+    { source = "packs/", dest = "/usr/share/rusty-agentic-pack-manager/packs/", mode = "644" },
+    { source = "LICENSE", dest = "/usr/share/licenses/rapm/LICENSE", mode = "644", doc = true },
+]
+
+# DEB packaging: same layout
+[package.metadata.deb]
+maintainer = "TataneCode"
+copyright = "2026, TataneCode"
+extended-description = "TUI to manage agentic packs (skills, agents, commands) for AI CLIs."
+depends = "$auto"
+assets = [
+    ["target/release/rapm", "usr/bin/", "755"],
+    ["packs/*", "usr/share/rusty-agentic-pack-manager/packs/", "644"],
+]
