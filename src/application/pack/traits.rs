@@ -4,7 +4,6 @@ use mockall::automock;
 
 use crate::application::error::ApplicationError;
 use crate::domain::pack::entity::Pack;
-use crate::domain::pack::value_objects::TargetCli;
 
 /// Read access to the pack library (directories with pack.toml manifests).
 #[automock]
@@ -29,13 +28,4 @@ pub trait InstallDestination: Send {
     ) -> Result<(), ApplicationError>;
     /// Check existence of a destination path (for collision warnings).
     fn exists(&self, destination: &Path) -> bool;
-}
-
-/// Which CLI an install targets.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct InstallRequest {
-    pub pack_name: String,
-    pub cli: TargetCli,
-    pub target_root: String,
-    pub overwrite: bool,
 }

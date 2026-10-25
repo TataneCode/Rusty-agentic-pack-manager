@@ -1,14 +1,12 @@
 use ratatui::{
     layout::{Constraint, Layout, Rect},
     text::{Line, Span},
-    widgets::Paragraph,
     Frame,
 };
 
 use crate::presentation::tui::app::{App, Focus, Mode, Popup};
 use crate::presentation::tui::common::action_bar;
 use crate::presentation::tui::common::help;
-use crate::presentation::tui::common::keys::AppAction;
 use crate::presentation::tui::common::theme::Theme;
 use crate::presentation::tui::common::widgets;
 
@@ -45,12 +43,6 @@ fn render_packs_panel(frame: &mut Frame, area: Rect, app: &mut App) {
     let block = Theme::block("Packs", app.focus == Focus::Packs);
     let inner = block.inner(area);
     frame.render_widget(block, area);
-
-    let title = match &app.mode {
-        Mode::Installing { pack, .. } => format!(" Packs — installing: {pack} "),
-        Mode::Normal => " Packs ".to_string(),
-    };
-    let _ = title;
 
     let mut lines = Vec::new();
     let mut current_cli: Option<String> = None;
@@ -184,16 +176,4 @@ fn render_popups(frame: &mut Frame, app: &App) {
         }
         None => {}
     }
-}
-
-/// Unused re-export guard for AppAction in this module.
-#[allow(dead_code)]
-fn _unused(action: AppAction) -> &'static str {
-    action_bar::action_label(action)
-}
-
-/// Paragraph re-export to keep imports tidy.
-#[allow(dead_code)]
-fn _paragraph(text: &str) -> Paragraph<'static> {
-    Paragraph::new(text.to_string())
 }

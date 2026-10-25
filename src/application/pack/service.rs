@@ -1,4 +1,4 @@
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 use crate::application::error::ApplicationError;
 use crate::application::pack::dto::{InstallResultDto, PackSummaryDto};
@@ -81,12 +81,6 @@ impl PackService {
     }
 }
 
-/// Resolve the pack directory backing a repository entry (helper for
-/// infrastructure wiring and the viewer).
-pub fn pack_dir_hint(_name: &str) -> PathBuf {
-    PathBuf::new()
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -95,6 +89,7 @@ mod tests {
     use crate::domain::pack::entity::{Pack, PackItem};
     use crate::domain::pack::error::DomainError;
     use crate::domain::pack::value_objects::{PackItemKind, PackName, PackVersion, TargetCliMap};
+    use std::path::PathBuf;
 
     fn sample_pack(name: &str, cli: TargetCli) -> Pack {
         Pack::new(
