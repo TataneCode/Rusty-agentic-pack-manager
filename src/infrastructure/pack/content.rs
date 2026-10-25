@@ -59,7 +59,7 @@ impl PackContentRepository for FsPackContentRepository {
         }
         let mut paths = Vec::new();
         self.collect_files(&pack_dir, &pack_dir, &mut paths);
-        paths.retain(|p| p != "pack.toml");
+        // pack.toml is included: the viewer opens on the manifest.
         Ok(paths
             .into_iter()
             .map(|path| PackFileDto {
@@ -88,7 +88,7 @@ mod tests {
     use tempfile::TempDir;
 
     #[test]
-    fn lists_and_reads_text_files_excluding_manifest() {
+    fn lists_and_reads_text_files_including_manifest() {
         let tmp = TempDir::new().unwrap();
         let pack = tmp.path().join("tdd");
         fs::create_dir_all(pack.join("skills/tdd")).unwrap();
@@ -98,7 +98,9 @@ mod tests {
 
         let repo = FsPackContentRepository::new(tmp.path().to_path_buf()).unwrap();
         let files = repo.list_files("tdd").unwrap();
-        assert_eq!(files.len(), 2);
+        assert_eq!(files.len(), 3);
+        let manifest = files.iter().find(|f| f.path == "pack.toml").unwrap();
+        assert!(manifest.is_text);
         let skill = files
             .iter()
             .find(|f| f.path == "skills/tdd/SKILL.md")

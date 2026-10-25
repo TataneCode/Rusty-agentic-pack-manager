@@ -11,11 +11,18 @@ impl PackViewService {
         PackViewService { repository }
     }
 
-    /// Files viewable in a pack: only text files, sorted.
+    /// Files viewable in a pack: only text files, sorted with the
+    /// manifest first (the viewer opens on pack.toml).
     pub fn list_viewable(&self, pack_name: &str) -> Result<Vec<PackFileDto>, ApplicationError> {
         let mut files = self.repository.list_files(pack_name)?;
         files.retain(|f| f.is_text);
-        files.sort_by(|a, b| a.path.cmp(&b.path));
+        files.sort_by(
+            |a, b| match (a.path == "pack.toml", b.path == "pack.toml") {
+                (true, true) | (false, false) => a.path.cmp(&b.path),
+                (true, false) => std::cmp::Ordering::Less,
+                (false, true) => std::cmp::Ordering::Greater,
+            },
+        );
         Ok(files)
     }
 
@@ -55,6 +62,13 @@ mod tests {
             files.iter().map(|f| f.path.clone()).collect::<Vec<_>>(),
             vec!["a/SKILL.md", "z/SKILL.md"]
         );
+        // with the manifest present, it sorts first
+        let mut repo = MockPackContentRepository::new();
+        repo.expect_list_files()
+            .returning(|_| Ok(vec![file("z/SKILL.md", true), file("pack.toml", true)]));
+        let service = PackViewService::new(Box::new(repo));
+        let files = service.list_viewable("tdd").unwrap();
+        assert_eq!(files[0].path, "pack.toml");
     }
 
     #[test]

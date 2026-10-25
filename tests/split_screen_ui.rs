@@ -290,3 +290,17 @@ fn input_dialog_shows_typed_text_even_when_long() {
     );
     assert!(snapshot.contains('_'), "cursor should be visible");
 }
+
+#[test]
+fn viewer_opens_on_pack_toml() {
+    let tmp = TempDir::new().unwrap();
+    let mut app = build_app(&tmp);
+    app.dispatch(&key(crossterm::event::KeyCode::Char('v')));
+    let viewer = app.viewer.as_ref().expect("viewer open");
+    assert_eq!(
+        viewer.files.selected().map(String::as_str),
+        Some("pack.toml"),
+        "viewer must open on the manifest"
+    );
+    assert!(!viewer.lines.is_empty(), "manifest content is loaded");
+}
