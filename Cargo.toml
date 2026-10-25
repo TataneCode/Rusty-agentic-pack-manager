@@ -1,0 +1,29 @@
+[package]
+name = "rusty_agentic_pack_manager"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.88"
+license = "MIT"
+description = "A TUI to manage agentic packs (skills, agents, commands) for AI CLIs"
+repository = "https://github.com/TataneCode/Rusty-agentic-pack-manager"
+
+[dependencies]
+# TUI framework
+ratatui = "0.30"
+crossterm = "0.29"
+
+# Error handling
+thiserror = "2.0"
+anyhow = "1.0"
+
+# Serialization (pack.toml manifests)
+serde = { version = "1.0", features = ["derive"] }
+toml = "0.8"
+
+[dev-dependencies]
+mockall = "0.14"
+tempfile = "3"
+
+[[bin]]
+name = "rapm"
+path = "src/main.rs"
