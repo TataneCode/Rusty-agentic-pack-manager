@@ -96,8 +96,19 @@ impl TextInput {
 
     pub fn render(&self, frame: &mut Frame, area: Rect, title: &str) {
         let block = super::theme::Theme::block(title, true);
+        let inner_width = block.inner(area).width.saturating_sub(1) as usize; // keep one column for the cursor
+                                                                              // Sliding window over the end of the value: the typed text and the
+                                                                              // cursor stay visible even when the value is longer than the field.
+        let visible: String = if self.value.chars().count() >= inner_width {
+            self.value
+                .chars()
+                .skip(self.value.chars().count() - inner_width)
+                .collect()
+        } else {
+            self.value.clone()
+        };
         let line = Line::from(vec![
-            Span::raw(self.value.clone()),
+            Span::raw(visible),
             Span::styled("_", super::theme::Theme::header_style()),
         ]);
         let p = Paragraph::new(line).block(block);

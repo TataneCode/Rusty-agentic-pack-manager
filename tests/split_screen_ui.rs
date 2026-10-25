@@ -269,3 +269,24 @@ fn ctrl(c: char) -> crossterm::event::KeyEvent {
         crossterm::event::KeyModifiers::CONTROL,
     )
 }
+
+#[test]
+fn input_dialog_shows_typed_text_even_when_long() {
+    let tmp = TempDir::new().unwrap();
+    let mut app = build_app(&tmp);
+    app.focus = Focus::Explorer;
+    app.dispatch(&key(crossterm::event::KeyCode::Char('r')));
+
+    let long_name = "a-very-long-folder-name-typed-by-the-user";
+    for c in long_name.chars() {
+        app.dispatch(&key(crossterm::event::KeyCode::Char(c)));
+    }
+    let snapshot = render_snapshot(&mut app);
+    // the tail of the typed text and the cursor must be visible
+    let tail: String = long_name.chars().skip(20).collect();
+    assert!(
+        snapshot.contains(&tail),
+        "typed text tail should be visible in the input dialog"
+    );
+    assert!(snapshot.contains('_'), "cursor should be visible");
+}

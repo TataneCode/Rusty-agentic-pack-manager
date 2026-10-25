@@ -124,7 +124,7 @@ fn render_input(frame: &mut Frame, app: &App) {
         Some(crate::presentation::tui::app::InputKind::Rename { .. }) => " New name ",
         _ => " New folder name ",
     };
-    let area = action_bar::centered_rect(frame.area(), 50, 3);
+    let area = action_bar::centered_rect(frame.area(), 60, 20);
     frame.render_widget(ratatui::widgets::Clear, area);
     input.render(frame, area, title);
 }
