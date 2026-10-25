@@ -1,0 +1,25 @@
+name = "code-review"
+version = "1.0.0"
+description = "Structured code review with severity-tagged findings"
+cli = ["vibe", "gemini"]
+
+[[items]]
+kind = "skill"
+source = "skills/code-review/SKILL.md"
+[items.destinations]
+vibe = ".agents/skills/code-review/SKILL.md"
+gemini = ".gemini/skills/code-review/SKILL.md"
+
+[[items]]
+kind = "agent"
+source = "agents/code-reviewer.toml"
+[items.destinations]
+vibe = ".vibe/agents/code-reviewer.toml"
+gemini = ".gemini/agents/code-reviewer.toml"
+
+[[items]]
+kind = "command"
+source = "commands/review.toml"
+[items.destinations]
+vibe = ".vibe/commands/review.toml"
+gemini = ".gemini/commands/review.toml"

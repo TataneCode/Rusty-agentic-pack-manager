@@ -1,0 +1,25 @@
+name = "planning"
+version = "1.0.0"
+description = "Plan-first feature development with written plans"
+cli = ["vibe", "gemini"]
+
+[[items]]
+kind = "skill"
+source = "skills/writing-plans/SKILL.md"
+[items.destinations]
+vibe = ".agents/skills/writing-plans/SKILL.md"
+gemini = ".gemini/skills/writing-plans/SKILL.md"
+
+[[items]]
+kind = "agent"
+source = "agents/backend-architect.toml"
+[items.destinations]
+vibe = ".vibe/agents/backend-architect.toml"
+gemini = ".gemini/agents/backend-architect.toml"
+
+[[items]]
+kind = "command"
+source = "commands/plan.toml"
+[items.destinations]
+vibe = ".vibe/commands/plan.toml"
+gemini = ".gemini/commands/plan.toml"

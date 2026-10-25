@@ -1,0 +1,11 @@
+name = "parallel-agents"
+version = "1.0.0"
+description = "Orchestrate several agents on independent tasks"
+cli = ["vibe", "gemini"]
+
+[[items]]
+kind = "skill"
+source = "skills/parallel-agents/SKILL.md"
+[items.destinations]
+vibe = ".agents/skills/parallel-agents/SKILL.md"
+gemini = ".gemini/skills/parallel-agents/SKILL.md"

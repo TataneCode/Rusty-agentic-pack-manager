@@ -1,0 +1,27 @@
+description = "Active/désactive le mode discipline : vérification systématique avant chaque claim de succès, cadrage avant code, revue avant merge. Usage : /discipline on|off|status"
+prompt = """
+Gère le mode discipline de cette session. Argument : {{args}}
+
+- `on` : active le mode discipline. Confirme en une ligne, puis applique les règles ci-dessous à chaque tour suivant.
+- `off` : désactive. Confirme en une ligne, reviens au comportement normal.
+- `status` (ou sans argument) : indique l'état actuel.
+
+Quand le mode discipline est ON, tu appliques ces portes automatiquement, sans que l'utilisateur te le demande :
+
+1. Porte de vérification (verification-gate)
+   Avant d'affirmer que quelque chose est terminé, corrigé ou passant : exécute la commande de vérification, lis la sortie, cite la preuve (commande + résultat). Aucune affirmation de succès sans preuve exécutée.
+
+2. Porte de cadrage (brainstorming)
+   Avant d'écrire du code pour une tâche non triviale : vérifie que le besoin, les contraintes et les critères de succès sont clairs. Si un choix structurant est ouvert, pose la question avant de coder.
+
+3. Porte de test (tdd)
+   Pour toute fonctionnalité ou correction de bug : test d'abord. Écris le test, vois-le échouer, écris le code minimal, vois-le passer. Pour un bug : test de reproduction d'abord.
+
+4. Porte de revue (code-review)
+   Avant de proposer un commit/merge : relis le diff comme un relecteur, exécute la suite de tests, résous les points bloquants.
+
+5. Porte de plan (writing-plans)
+   Pour une tâche en plusieurs étapes : plan structuré d'abord, tâches numérotées, chaque étape avec sa vérification, validation du plan avant exécution.
+
+Ces règles ne remplacent pas le jugement : pour une tâche triviale (correction d'une typo, question), applique la proportionnalité. En cas de conflit avec une instruction explicite de l'utilisateur, l'utilisateur gagne — mais signale le conflit en une ligne.
+"""

@@ -1,0 +1,6 @@
+agent_type = "subagent"
+display_name = "Backend Architect"
+description = "Architecte backend expert : design d'API, microservices, systèmes distribués, patterns REST/GraphQL/gRPC, résilience. À utiliser pour les nouveaux services et API."
+system_prompt_id = "backend-architect"
+safety = "safe"
+enabled_tools = ["read_file", "grep", "glob", "bash"]

@@ -3,7 +3,7 @@
 //! main.rs.
 
 use std::fs;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use rusty_agentic_pack_manager::application::explorer::service::ExplorerService;
 use rusty_agentic_pack_manager::application::pack::service::PackService;
@@ -108,4 +108,45 @@ fn missing_pack_is_reported() {
         err,
         rusty_agentic_pack_manager::application::error::ApplicationError::PackNotFound(_)
     ));
+}
+
+#[test]
+fn all_shipped_packs_load_and_install() {
+    let tmp = TempDir::new().unwrap();
+    let packs_dir = PathBuf::from("packs");
+    let repo = FsPackRepository::new(packs_dir.clone()).unwrap();
+    let packs = repo.list().unwrap();
+    assert!(
+        packs.len() >= 13,
+        "expected 13 shipped packs, got {}",
+        packs.len()
+    );
+
+    let target = tmp.path().join("repo");
+    fs::create_dir_all(&target).unwrap();
+    let destination = FsInstallDestination::new(packs_dir);
+    let service = PackService::new(Box::new(repo), Box::new(destination));
+
+    for cli in [TargetCli::Vibe, TargetCli::Gemini] {
+        let target = tmp.path().join(format!("{cli}"));
+        fs::create_dir_all(&target).unwrap();
+        for pack in &packs {
+            if !pack.supports(cli) {
+                continue;
+            }
+            let result = service
+                .install(pack.name.as_str(), cli, target.to_str().unwrap(), false)
+                .unwrap_or_else(|e| panic!("install {}/{} failed: {e}", pack.name, cli));
+            assert!(result.copied_count > 0, "{} copied nothing", pack.name);
+        }
+    }
+
+    let vibe_target = tmp.path().join("vibe");
+    assert!(vibe_target.join(".agents/skills/tdd/SKILL.md").is_file());
+    assert!(vibe_target
+        .join(".vibe/agents/tdd-orchestrator.toml")
+        .is_file());
+    let gemini_target = tmp.path().join("gemini");
+    assert!(gemini_target.join(".gemini/skills/tdd/SKILL.md").is_file());
+    assert!(gemini_target.join(".gemini/commands/tdd.toml").is_file());
 }

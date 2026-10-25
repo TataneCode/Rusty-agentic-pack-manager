@@ -1,0 +1,11 @@
+name = "prd"
+version = "1.0.0"
+description = "Product requirement documents for feature framing"
+cli = ["vibe", "gemini"]
+
+[[items]]
+kind = "skill"
+source = "skills/prd/SKILL.md"
+[items.destinations]
+vibe = ".agents/skills/prd/SKILL.md"
+gemini = ".gemini/skills/prd/SKILL.md"

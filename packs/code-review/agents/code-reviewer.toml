@@ -1,0 +1,6 @@
+agent_type = "subagent"
+display_name = "Code Reviewer"
+description = "Relecteur de code expert : qualité, sécurité, performance, fiabilité. Analyse statique et bonnes pratiques. À utiliser pour les revues de PR et l'évaluation qualité."
+system_prompt_id = "code-reviewer"
+safety = "safe"
+enabled_tools = ["read_file", "grep", "glob", "bash"]

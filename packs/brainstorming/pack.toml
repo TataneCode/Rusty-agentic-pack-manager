@@ -1,0 +1,25 @@
+name = "brainstorming"
+version = "1.0.0"
+description = "Divergent thinking and option generation"
+cli = ["vibe", "gemini"]
+
+[[items]]
+kind = "skill"
+source = "skills/brainstorming/SKILL.md"
+[items.destinations]
+vibe = ".agents/skills/brainstorming/SKILL.md"
+gemini = ".gemini/skills/brainstorming/SKILL.md"
+
+[[items]]
+kind = "command"
+source = "commands/brainstorm.toml"
+[items.destinations]
+vibe = ".vibe/commands/brainstorm.toml"
+gemini = ".gemini/commands/brainstorm.toml"
+
+[[items]]
+kind = "skill"
+source = "skills/thought-partner/SKILL.md"
+[items.destinations]
+vibe = ".agents/skills/thought-partner/SKILL.md"
+gemini = ".gemini/skills/thought-partner/SKILL.md"

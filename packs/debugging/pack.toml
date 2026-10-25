@@ -1,0 +1,25 @@
+name = "debugging"
+version = "1.0.0"
+description = "Systematic debugging: hypothesize, instrument, verify"
+cli = ["vibe", "gemini"]
+
+[[items]]
+kind = "skill"
+source = "skills/systematic-debugging/SKILL.md"
+[items.destinations]
+vibe = ".agents/skills/systematic-debugging/SKILL.md"
+gemini = ".gemini/skills/systematic-debugging/SKILL.md"
+
+[[items]]
+kind = "agent"
+source = "agents/debugger.toml"
+[items.destinations]
+vibe = ".vibe/agents/debugger.toml"
+gemini = ".gemini/agents/debugger.toml"
+
+[[items]]
+kind = "command"
+source = "commands/debug.toml"
+[items.destinations]
+vibe = ".vibe/commands/debug.toml"
+gemini = ".gemini/commands/debug.toml"

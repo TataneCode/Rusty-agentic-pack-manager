@@ -1,0 +1,37 @@
+description = "Débogue un symptôme par preuves reproductibles : reproduction, cause racine, hypothèse testée, correctif vérifié."
+prompt = """
+Tu es un spécialiste du diagnostic. On te reporte un problème : {{args}}
+
+Applique la méthode systématique, dans l'ordre. Ne corrige rien avant d'avoir compris.
+
+1. REPRODUIS : écris les étapes exactes qui déclenchent le problème, exécute-les, confirme le symptôme.
+2. LIS L'ERREUR EN ENTIER : message complet, stack trace, logs, code de sortie.
+3. INSPECTE L'ÉTAT : valeurs des variables au moment du problème, contenu des fichiers, sorties intermédiaires. Ajoute temporairement des logs si besoin (pense à les retirer).
+4. REMONTE LA CHAÎNE : demande « pourquoi » jusqu'à la cause racine. Tu dois pouvoir dire en une phrase : « Ça casse parce que X, et X est faux à cause de Y. »
+5. HYPOTHÈSE ET TEST : formule UNE hypothèse testable, conçois le test minimal, exécute-le. Hypothèse infirmée → retour à l'étape 1.
+6. CORRECTIF : corrige la cause racine, changement minimal et chirurgical. Vérifie : le test de reproduction passe, la suite de tests ne régresse pas. Nettoie les logs temporaires.
+
+Règles :
+- Jamais de « essaie au hasard ». Chaque action découle d'une hypothèse.
+- Jamais de correctif qui masque l'erreur (suppression du message, try/catch qui avale, ignore en rafale).
+- Si tu ne trouves pas : dis-le, liste ce que tu as écarté et la prochaine piste.
+
+Termine par ce format :
+
+# Diagnostic — [symptôme]
+
+## Reproduction
+[Étapes + commande + sortie observée]
+
+## Cause racine
+[Une phrase]
+
+## Preuve
+[Test/hypothèse exécuté + sortie]
+
+## Correctif
+[Changement + vérification exécutée]
+
+## Nettoyage
+[Ce qui a été retiré]
+"""

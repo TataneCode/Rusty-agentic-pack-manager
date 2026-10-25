@@ -1,0 +1,11 @@
+name = "focus-adhd"
+version = "1.0.0"
+description = "ADHD-friendly focus and task scaffolding"
+cli = ["vibe", "gemini"]
+
+[[items]]
+kind = "skill"
+source = "skills/i-have-adhd/SKILL.md"
+[items.destinations]
+vibe = ".agents/skills/i-have-adhd/SKILL.md"
+gemini = ".gemini/skills/i-have-adhd/SKILL.md"

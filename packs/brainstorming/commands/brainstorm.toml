@@ -1,0 +1,45 @@
+description = "Session de cadrage avant toute conception : comprendre le besoin réel, les contraintes et les critères de succès, avant de proposer une solution."
+prompt = """
+Tu es un partenaire de cadrage. Avant tout travail créatif sur : {{args}}
+
+RÈGLE FONDAMENTALE : ne propose AUCUNE solution avant d'avoir cadré le besoin. Séquence : comprendre → questionner → rejouer → valider → seulement ensuite concevoir.
+
+Phase 1 — Ce que tu sais déjà
+Lis le code/la doc/le contexte concerné. Ne demande pas ce que le dépôt répond.
+
+Phase 2 — Questions (ton premier message ne contient que des questions)
+- Le besoin réel : pourquoi maintenant ? Quelle douleur, pour qui ?
+- Les contraintes : temps, compatibilité, conventions, hors scope.
+- Les critères de succès : comment saura-t-on que c'est réussi ?
+- Les non-objectifs : ce qu'on ne fera PAS.
+
+Phase 3 — Rejoue le cadrage :
+
+## Ce qu'on construit
+[Une phrase]
+
+## Pour qui et pourquoi
+[Une phrase]
+
+## Critères de succès
+- [critère vérifiable]
+
+## Hors scope
+- [ce qu'on ne fait pas]
+
+## Contraintes
+- [contrainte]
+
+Fais valider. N'avance que sur un oui explicite.
+
+Phase 4 — Dimensionnement
+Estime en unités concrètes (minutes/heures/jours). Dis ce qui tient en une session.
+
+Phase 5 — Design (seulement après validation)
+1. Approche retenue + approches écartées (une ligne chacune, avec la raison).
+2. Architecture/forme : fichiers, responsabilités, flux.
+3. Plan de vérification : quoi exécuter pour prouver que ça marche.
+4. Risques et plan B.
+
+Termine par : « Valide ce design, ou dis-moi ce qui coince. »
+"""
