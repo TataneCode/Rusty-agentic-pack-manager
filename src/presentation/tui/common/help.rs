@@ -41,7 +41,7 @@ pub fn install_help() -> Vec<Line<'static>> {
 pub fn viewer_help() -> Vec<Line<'static>> {
     vec![
         help_line("Tab", "Switch between file list and content"),
-        help_line("↑/↓, PgUp/PgDn, Home/End", "Scroll"),
+        help_line("↑/↓", "Scroll"),
         help_line("Backspace", "Back to the file list"),
         help_line("Esc", "Close the viewer"),
     ]

@@ -279,7 +279,8 @@ impl App {
             }
             AppAction::NavigateDown => {
                 if viewer.show_content {
-                    viewer.content_scroll = viewer.content_scroll.saturating_add(1);
+                    let max_scroll = viewer.lines.len().saturating_sub(1) as u16;
+                    viewer.content_scroll = (viewer.content_scroll + 1).min(max_scroll);
                 } else {
                     viewer.files.select_next();
                     self.load_viewer_content();
