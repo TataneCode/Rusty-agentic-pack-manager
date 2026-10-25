@@ -1,60 +1,60 @@
 ---
 name: verification-gate
-description: "À utiliser avant d'affirmer qu'un travail est terminé, corrigé ou passant, avant tout commit ou merge : exige d'exécuter la commande de vérification et de constater la sortie. Aucune affirmation de succès sans preuve exécutée."
+description: "Use before claiming that work is finished, fixed or passing, before any commit or merge: require running the verification command and observing the output. No success claim without executed proof."
 license: MIT
 ---
 
-# Verification Gate — Porte de vérification
+# Verification Gate — Verification gate
 
-## La loi de fer
+## The iron rule
 
-**Aucune affirmation de succès sans preuve exécutée.** « Ça devrait marcher », « le fix est en place », « les tests passent » — ce ne sont pas des preuves. La seule preuve est une commande exécutée dans cette session dont tu as lu la sortie.
+**No success claim without executed proof.** "It should work", "the fix is in place", "the tests pass" — these are not proofs. The only proof is a command executed in this session whose output you have read.
 
-## La porte
+## The gate
 
-Avant de dire que quelque chose est terminé, corrigé ou vérifié, applique la fonction porte :
+Before saying something is finished, fixed or verified, apply the gate function:
 
-1. **Quelle commande prouve ce claim ?** (test, lint, build, requête, script)
-2. **Exécute-la.**
-3. **Lis la sortie.** Succès partiel, avertissements, sortie inattendue = pas de succès.
-4. **Cite la preuve** dans ta réponse : commande + résultat constaté.
+1. **Which command proves this claim?** (test, lint, build, request, script)
+2. **Run it.**
+3. **Read the output.** Partial success, warnings, unexpected output = not a success.
+4. **Cite the evidence** in your answer: command + observed result.
 
-Si aucune commande ne peut prouver le claim, dis-le : « Je n'ai pas pu vérifier X, parce que Y. » Ne fais pas semblant.
+If no command can prove the claim, say so: "I could not verify X, because Y." Do not pretend.
 
-## Ce qui compte comme preuve
+## What counts as proof
 
-- Sortie de test : `X passed, 0 failed` (lu, pas supposé).
-- Sortie de build/lint : code 0, pas d'erreur.
-- Requête exécutée : réponse observée (code HTTP, contenu).
-- Fichier produit : relu après écriture.
-- Reproduction d'un bug : le test de reproduction échoue AVANT le fix, passe APRÈS (preuve red-green).
+- Test output: `X passed, 0 failed` (read, not assumed).
+- Build/lint output: code 0, no errors.
+- Executed request: observed response (HTTP code, content).
+- Produced file: reread after writing.
+- Bug reproduction: the reproduction test fails BEFORE the fix, passes AFTER (red-green proof).
 
-Ce qui ne compte PAS : « le code est correct », « j'ai confiance », « ça a marché la dernière fois », un test que tu n'as pas lancé.
+What does NOT count: "the code is correct", "I am confident", "it worked last time", a test you did not run.
 
-## Table de rationalisation (interdictions)
+## Rationalization table (prohibitions)
 
-| Rationalisation | Réalité |
+| Rationalization | Reality |
 |-----------------|---------|
-| « C'est un petit changement, pas besoin de vérifier » | Les petits changements cassent aussi. La porte s'applique à tout. |
-| « J'ai vérifié dans une session précédente » | Cette session, cette preuve. Re-exécute. |
-| « Les tests sont sûrement verts » | « Sûrement » n'est pas une preuve. Exécute. |
-| « Le CI s'en chargera » | Le CI vérifie après coup ; toi, tu vérifies avant de claim. |
+| "It's a small change, no need to verify" | Small changes break too. The gate applies to everything. |
+| "I verified in a previous session" | This session, this proof. Re-run. |
+| "The tests are surely green" | "Surely" is not a proof. Execute. |
+| "CI will handle it" | CI verifies after the fact; you verify before claiming. |
 
 ## Red flags — STOP
 
-- Tu t'apprêtes à écrire « done », « fixed », « ça marche » sans avoir exécuté la vérification dans ce tour.
-- La commande de vérification a échoué et tu envisages de dire que c'est bon quand même.
-- Tu invoques une preuve que tu n'as pas sous les yeux.
+- You are about to write "done", "fixed", "it works" without having run the verification in this turn.
+- The verification command failed and you are considering saying it is fine anyway.
+- You cite evidence you do not have in front of you.
 
-## Quand s'applique la porte
+## When the gate applies
 
-- Fin de tâche, fin de bugfix, fin de feature.
-- Avant tout commit, push, merge, PR.
-- Avant de répondre « c'est bon » à l'utilisateur.
-- Exception : la tâche est purement conversationnelle (expliquer un concept, rédiger un texte sans exécution) — pas de porte, mais ne claim aucune exécution.
+- End of task, end of bugfix, end of feature.
+- Before any commit, push, merge, PR.
+- Before answering "it's fine" to the user.
+- Exception: the task is purely conversational (explaining a concept, drafting text without execution) — no gate, but claim no execution either.
 
-## Intégration avec les autres skills
+## Integration with the other skills
 
-- `tdd` : la porte est le « verify RED » et le « verify GREEN ».
-- `systematic-debugging` : la phase 4 (correctif) ne se termine que porte franchie.
-- `finish-branch` : étape 1 = exécuter la suite de tests, lire la sortie.
+- `tdd`: the gate is the "verify RED" and the "verify GREEN".
+- `systematic-debugging`: phase 4 (fix) only ends once the gate is passed.
+- `finish-branch`: step 1 = run the test suite, read the output.

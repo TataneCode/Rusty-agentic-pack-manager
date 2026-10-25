@@ -1,39 +1,39 @@
 # rusty-agentic-pack-manager — Project Map (CONTEXT.md)
 
-**Point d'entrée unique.** Lis ce fichier en premier ; il te dit quoi lire ensuite — et quoi ne PAS lire. Règle d'or : avant de parcourir le code, consulte la map ci-dessous et limite ta lecture au périmètre de la tâche.
+**Single entry point.** Read this file first; it tells you what to read next — and what NOT to read. Golden rule: before browsing the code, check the map below and limit your reading to the task's scope.
 
-## En 30 secondes
+## In 30 seconds
 
-TUI Rust pour gérer des **packs agentiques** : des ensembles de skills, agents et commands applicables à un CLI cible (Vibe CLI, Gemini CLI) et installables dans n'importe quel dépôt. Stack : `ratatui` + `crossterm` (TUI), `syntect` (coloration), `serde` + `toml` (manifestes). Édition 2021, **MSRV 1.88**. Aucun démon, aucun réseau : pur filesystem local. Le design, les patterns d'actions et l'outillage agentique viennent de [rusty-console](https://github.com/TataneCode/rusty-console).
+Rust TUI to manage **agentic packs**: sets of skills, agents and commands applicable to a target CLI (Vibe CLI, Gemini CLI) and installable in any repository. Stack: `ratatui` + `crossterm` (TUI), `syntect` (highlighting), `serde` + `toml` (manifests). Edition 2021, **MSRV 1.88**. No daemon, no network: pure local filesystem. The design, action patterns and agentic tooling come from [rusty-console](https://github.com/TataneCode/rusty-console).
 
-## Architecture — DDD 4 couches, flux strictement inward
+## Architecture — DDD 4 layers, strictly inward flow
 
 ```
 04_presentation (ui)  →  02_application  →  01_domain  ←  03_infrastructure
 ```
 
-Aucune couche externe ne peut importer une couche interne. L'UI ne voit jamais le domain : DTO + traits de service uniquement.
+No outer layer may import an inner layer. The UI never sees the domain: DTOs + service traits only.
 
-## Map de navigation — quoi lire, quand
+## Navigation map — what to read, when
 
-| Tu veux… | Lis | Ne lis PAS |
+| You want to… | Read | Do NOT read |
 |---|---|---|
-| Comprendre le projet | Ce fichier + [README.md](README.md) | AGENTS.md en entier, tout src/ |
-| Les touches / l'usage | [MANUAL.md](MANUAL.md) | — |
-| Cadrer une demande | Skill `/challenge` | — |
-| Planifier une feature | `/plan` + `rules/README.md` | tout src/ avant le cadrage |
-| Le format pack / manifeste | `packs/tdd/pack.toml` + [MANUAL.md](MANUAL.md#format-dun-pack) | — |
-| Coder — couche domain | `rules/domain.md` + `src/01_domain/pack/` | les autres couches |
-| Coder — couche application | `rules/application.md` + `src/02_application/{pack,pack_view,explorer}/traits.rs` | `03_infrastructure` |
-| Coder — couche infrastructure | `rules/infrastructure.md` + `src/03_infrastructure/` | `04_presentation` |
-| Coder — UI | `rules/presentation.md` + `src/04_presentation/tui/` | `01_domain` directement |
-| Écrire des tests | `rules/testing.md` + skill `rust-testing` | — |
-| Livraison / qualité | `rules/quality.md` (fmt, clippy, tests) | — |
-| Reviewer un diff / une PR | `/self-review` puis `/review` + `rules/` | — |
-| L'historique des plans | `docs/plans/` | — |
+| Understand the project | This file + [README.md](README.md) | All of AGENTS.md, all of src/ |
+| Keys / usage | [MANUAL.md](MANUAL.md) | — |
+| Frame a request | `/challenge` skill | — |
+| Plan a feature | `/plan` + `rules/README.md` | All of src/ before framing |
+| Pack format / manifest | `packs/tdd/pack.toml` + [MANUAL.md](MANUAL.md) | — |
+| Code — domain layer | `rules/domain.md` + `src/01_domain/pack/` | The other layers |
+| Code — application layer | `rules/application.md` + `src/02_application/{pack,pack_view,explorer}/traits.rs` | `03_infrastructure` |
+| Code — infrastructure layer | `rules/infrastructure.md` + `src/03_infrastructure/` | `04_presentation` |
+| Code — UI | `rules/presentation.md` + `src/04_presentation/tui/` | `01_domain` directly |
+| Write tests | `rules/testing.md` + `rust-testing` skill | — |
+| Delivery / quality | `rules/quality.md` (fmt, clippy, tests) | — |
+| Review a diff / a PR | `/self-review` then `/review` + `rules/` | — |
+| Plan history | `docs/plans/` | — |
 
-## État du projet
+## Project status
 
-**V1 en cours** — socle livré : split-screen packs/explorer, apply (`A`) + install (`i`), visionneuse (`v`) avec coloration syntaxique, création de dossier (`r`), aide contextuelle (Espace), 13 packs embarqués, packaging RPM/DEB/7z en CI. Plan : [docs/plans/init.md](docs/plans/init.md).
+**V1 in progress** — delivered foundation: packs/explorer split screen, apply (`A`) + install (`I`), viewer (`V`) with syntax highlighting, folder creation (`R`), rename (`M`), delete (`D`/`Shift-D`), contextual help (Space), 13 embedded packs, RPM/DEB/7z packaging in CI. Plan: [docs/plans/init.md](docs/plans/init.md).
 
-Hors périmètre v1 (prévu v2) : undeploy, rename (`m`), delete (`d`/`D`), packs 7z/tar, CLIs autres que vibe/gemini.
+Out of scope for v1 (planned v2): undeploy, 7z/tar packs, CLIs other than vibe/gemini.

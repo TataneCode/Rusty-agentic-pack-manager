@@ -1,90 +1,90 @@
 ---
 name: brainstorming
-description: "À utiliser avant tout travail créatif — nouvelle feature, composant, fonctionnalité, modification de comportement, ou planification de quoi que ce soit : cadre d'abord le besoin réel avec l'utilisateur, avant de proposer la moindre solution."
+description: "Use before any creative work — new feature, component, behavior change, or planning anything: first frame the real need with the user, before proposing any solution."
 license: MIT
 ---
 
-# Brainstorming — Cadrer avant de construire
+# Brainstorming — Frame before building
 
-## La règle
+## The rule
 
-**Ne propose pas de solution avant d'avoir compris le problème.** La séquence est : comprendre → questionner → rejouer → cadrer → seulement ensuite, concevoir.
+**Do not propose a solution before understanding the problem.** The sequence is: understand → question → play back → frame → only then, design.
 
-## Phase 1 — Ce que tu sais réellement
+## Phase 1 — What you actually know
 
-Avant de poser des questions, vérifie ce que tu sais déjà :
+Before asking questions, check what you already know:
 
-1. Lis le code/la doc/le contexte concerné. Ne demande pas ce que le dépôt répond.
-2. Note ce qui est connu, ce qui est incertain, ce qui est une contrainte.
+1. Read the relevant code/doc/context. Do not ask what the repository answers.
+2. Note what is known, what is uncertain, what is a constraint.
 
-## Phase 2 — Le premier message
+## Phase 2 — The first message
 
-Ton premier message pose des questions, pas de solution. Cible :
+Your first message asks questions, no solution. Target:
 
-- **Le besoin réel** : pourquoi maintenant ? Quel problème cela résout-il, pour qui ?
-- **Les contraintes** : budget de temps, compatibilité, conventions du dépôt, hors scope.
-- **Les critères de succès** : comment saura-t-on que c'est réussi ?
-- **Les non-objectifs** : ce qu'on ne fera PAS, explicitement.
+- **The real need**: why now? What problem does this solve, for whom?
+- **The constraints**: time budget, compatibility, repository conventions, out of scope.
+- **The success criteria**: how will we know it succeeded?
+- **The non-goals**: what we will NOT do, explicitly.
 
-Pose les questions en petit nombre, groupées. Pas 15 questions d'un coup.
+Ask a small number of questions, grouped. Not 15 questions at once.
 
-## Phase 3 — La conversation
+## Phase 3 — The conversation
 
-- Une question à la fois par tour si les réponses sont denses.
-- Reformule ce que tu as compris pour valider (« Si je résume : ... C'est bien ça ? »).
-- Pousse back quand une idée contredit une contrainte ou une bonne pratique — avec des arguments, pas un avis.
-- Si l'utilisateur dérive vers l'implémentation, ramène au besoin : « On verra le comment après le quoi. »
+- One question per turn if answers are dense.
+- Restate what you understood to validate ("To summarize: ... Is that right?").
+- Push back when an idea contradicts a constraint or a good practice — with arguments, not an opinion.
+- If the user drifts toward implementation, bring it back to the need: "The how comes after the what."
 
-## Phase 4 — Rejouer (playback)
+## Phase 4 — Playback
 
-Avant de passer à la conception, rejoue le cadrage :
+Before moving to design, play back the framing:
 
 ```markdown
-## Ce qu'on construit
-[Une phrase]
+## What we are building
+[One sentence]
 
-## Pour qui et pourquoi
-[Une phrase]
+## For whom and why
+[One sentence]
 
-## Critères de succès
-- [critère vérifiable 1]
-- [critère vérifiable 2]
+## Success criteria
+- [verifiable criterion 1]
+- [verifiable criterion 2]
 
-## Hors scope
-- [ce qu'on ne fait pas]
+## Out of scope
+- [what we are not doing]
 
-## Contraintes
-- [contrainte 1]
+## Constraints
+- [constraint 1]
 ```
 
-Fais valider ce cadrage. Ne passe à la suite que sur un « oui » explicite (ou une correction que tu intègres).
+Have this framing validated. Only proceed on an explicit "yes" (or a correction you integrate).
 
-## Phase 5 — Dimensionner le travail
+## Phase 5 — Sizing the work
 
-Estime en unités concrètes (minutes / heures / jours), pas « un peu de travail ». Dis ce qui tient dans une session et ce qui dépasse.
+Estimate in concrete units (minutes / hours / days), not "a bit of work". Say what fits in one session and what does not.
 
-## Phase 6 — Le design écrit
+## Phase 6 — The written design
 
-Seulement maintenant, propose la solution :
+Only now, propose the solution:
 
-1. **Approche retenue** + **approches écartées** (et pourquoi, en une ligne chacune).
-2. **Architecture/forme** : fichiers, responsabilités, flux de données.
-3. **Plan de vérification** : quoi exécuter pour prouver que ça marche.
-4. **Risques** : ce qui peut coincer, et le plan B.
+1. **Retained approach** + **rejected approaches** (and why, one line each).
+2. **Architecture/shape**: files, responsibilities, data flows.
+3. **Verification plan**: what to run to prove it works.
+4. **Risks**: what can block, and the plan B.
 
-Termine par : « Valide ce design, ou dis-moi ce qui coince. »
+Finish with: "Validate this design, or tell me what is blocking."
 
 ## Red flags
 
-- Tu as proposé une solution dans ton premier message.
-- Tu n'as pas lu le code existant avant de questionner.
-- Le cadrage n'a pas été validé et tu conçois quand même.
-- L'utilisateur dit « peu importe, fais au plus simple » → ce n'est pas un blanc-seing, c'est un signal pour réduire le scope, pas pour sauter le cadrage.
+- You proposed a solution in your first message.
+- You did not read the existing code before questioning.
+- The framing was not validated and you design anyway.
+- The user says "whatever, do the simplest" → that is not a blank check, it is a signal to reduce scope, not to skip framing.
 
-## Rationalisations interdites
+## Forbidden rationalizations
 
-| Rationalisation | Réalité |
+| Rationalization | Reality |
 |-----------------|---------|
-| « Le besoin est évident » | L'évidence de l'utilisateur n'est pas la tienne. 2 questions confirment. |
-| « Brainstormer ralentit » | Un mauvais départ coûte 10× un bon cadrage. |
-| « Je propose, il corrigera » | Il corrigera après coup, sur du code écrit. |
+| "The need is obvious" | The user's obviousness is not yours. 2 questions confirm. |
+| "Brainstorming slows us down" | A bad start costs 10× a good framing. |
+| "I propose, they will correct" | They will correct afterwards, on written code. |

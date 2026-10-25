@@ -1,101 +1,101 @@
 ---
 name: code-review
-description: "Revue de code rigoureuse : à utiliser pour demander une revue avant de merger (analyse du diff, gravité des remarques, points bloquants) ou pour recevoir des retours de revue (vérifier chaque remarque avant de l'implémenter, pousser back avec arguments quand c'est justifié)."
+description: "Rigorous code review: use to request a review before merging (diff analysis, finding severity, blocking points) or to handle review feedback (verify every finding before implementing it, push back with arguments when justified)."
 license: MIT
 ---
 
-# Code Review — Revue de code
+# Code Review — Code review
 
-Deux usages : **demander** une revue, et **recevoir** des retours.
+Two uses: **requesting** a review, and **handling** feedback.
 
-## Partie A — Demander une revue
+## Part A — Requesting a review
 
-### Quand
+### When
 
-- Tâche terminée, feature majeure, avant tout merge/PR.
-- La vérification locale est passée (voir `verification-gate`).
+- Task finished, major feature, before any merge/PR.
+- Local verification has passed (see `verification-gate`).
 
-### Comment
+### How
 
-1. **Prépare le terrain** : montre le diff (`git diff`), pas le fichier entier. Résume ce que tu as changé et pourquoi en 3–5 lignes.
-2. **Auto-revue d'abord** : relis ton propre diff comme un étranger. Corrige ce que tu vois avant de demander.
-3. **Guide le relecteur** : liste les points où tu veux un avis (décision d'architecture, zone risquée, compromis adopté).
-4. **Demande la revue structurée** :
+1. **Set the stage**: show the diff (`git diff`), not the whole file. Summarize what you changed and why in 3–5 lines.
+2. **Self-review first**: reread your own diff as a stranger. Fix what you see before asking.
+3. **Guide the reviewer**: list the points where you want an opinion (architecture decision, risky area, adopted trade-off).
+4. **Request the structured review**:
 
 ```markdown
-## Revue demandée : [titre]
+## Review requested: [title]
 
-### Contexte
-[2–3 lignes : quoi et pourquoi]
+### Context
+[2–3 lines: what and why]
 
 ### Diff
-[git diff ou lien]
+[git diff or link]
 
-### Vérifications faites
-- [commande] → [résultat]
+### Verifications done
+- [command] → [result]
 
-### Points à creuser
-1. [décision 1]
-2. [zone risquée 2]
+### Points to dig into
+1. [decision 1]
+2. [risky area 2]
 ```
 
-### Ce que la revue doit produire
+### What the review must produce
 
-Chaque remarque classée par gravité :
+Every finding ranked by severity:
 
-| Gravité | Signification | Action |
+| Severity | Meaning | Action |
 |---------|---------------|--------|
-| **Bloquant** | Bug, sécurité, régression, donnée perdue | Corriger avant merge |
-| **Majeur** | Mauvaise pratique, dette technique, lisibilité | Corriger ou ticket explicite |
-| **Mineur** | Style, nommage, commentaire | Corriger si rapide, sinon noter |
-| **Question** | Choix à valider, information manquante | Répondre, pas implémenter |
+| **Blocker** | Bug, security, regression, data loss | Fix before merge |
+| **Major** | Bad practice, technical debt, readability | Fix or explicit ticket |
+| **Minor** | Style, naming, comment | Fix if quick, otherwise note |
+| **Question** | Choice to validate, missing information | Answer, do not implement |
 
-Règle : un « Bloquant » non résolu = pas de merge.
+Rule: an unresolved **Blocker** = no merge.
 
-## Partie B — Recevoir une revue
+## Part B — Handling a review
 
-### La règle
+### The rule
 
-**Vérifie avant d'acquiescer.** Un retour de revue n'est pas un ordre. Comprends-le, évalue-le, puis réponds.
+**Verify before agreeing.** Review feedback is not an order. Understand it, evaluate it, then respond.
 
-### Le pattern de réponse
+### The response pattern
 
-Pour chaque remarque :
+For every finding:
 
-1. **Lis-la en entier.** Ne réponds pas à la première ligne seulement.
-2. **Vérifie le claim.** Le relecteur a-t-il raison ? Reproduis si c'est technique (lis le code, teste).
-3. **Classe** : d'accord / pas d'accord / pas clair / hors scope.
-4. **Réponds explicitement** : pas de « ok » muet, pas d'implémentation en silence.
+1. **Read it entirely.** Do not answer only the first line.
+2. **Verify the claim.** Is the reviewer right? Reproduce if technical (read the code, test).
+3. **Classify**: agree / disagree / unclear / out of scope.
+4. **Respond explicitly**: no silent "ok", no silent implementation.
 
-###Réponses interdites
+### Forbidden responses
 
-- « Bien vu, je corrige » (sans avoir vérifié que c'est vrai).
-- Corriger sans lire la remarque jusqu'au bout.
-- Ignorer une remarque Bloquant sans dire pourquoi.
-- « Ce n'est pas grave » sans argument.
+- "Good catch, I'll fix it" (without having verified it is true).
+- Fixing without reading the finding to the end.
+- Ignoring a Blocker finding without saying why.
+- "It's not a big deal" without an argument.
 
-### Quand pousser back
+### When to push back
 
-Pousse back quand :
-- Le claim est factuellement faux (preuve à l'appui : code, test, doc).
-- La remarque sort du scope de la branche (propose un ticket séparé).
-- Le « problème » est une préférence de style sans impact (référence la convention du dépôt si elle existe).
-- Le changement casserait autre chose (explique quoi, preuve à l'appui).
+Push back when:
+- The claim is factually false (with supporting evidence: code, test, doc).
+- The finding is out of the branch's scope (propose a separate ticket).
+- The "problem" is a style preference without impact (cite the repository convention if it exists).
+- The change would break something else (explain what, with evidence).
 
-Formule un pushback constructif : « Je ne suis pas d'accord parce que [preuve]. Par contre [contre-proposition]. Tu confirmes ? »
+Formulate constructive pushback: "I disagree because [evidence]. However [counter-proposal]. Can you confirm?"
 
-### Ordre d'implémentation des retours
+### Implementation order for feedback
 
-1. Bloquants d'abord.
-2. Majeurs ensuite.
-3. Mineurs si rapides.
-4. Questions : réponds, n'implémente pas.
-5. Hors scope : note-les, ne les fais pas dans cette branche.
+1. Blockers first.
+2. Majors next.
+3. Minors if quick.
+4. Questions: answer, do not implement.
+5. Out of scope: note them, do not do them in this branch.
 
-Après chaque correction : relance la vérification concernée (voir `verification-gate`), puis réponds au fil de revue point par point.
+After every fix: rerun the related verification (see `verification-gate`), then answer the review thread point by point.
 
-## Pièges
+## Pitfalls
 
-- **Accord performatif** : dire oui à tout pour aller vite. Chaque « oui » non tenu coûte plus cher plus tard.
-- **Revue de façade** : demander une revue sans diff ni contexte.
-- **Merge avec un Bloquant ouvert** : jamais.
+- **Performative agreement**: saying yes to everything to go fast. Every unkept "yes" costs more later.
+- **Facade review**: requesting a review without a diff or context.
+- **Merging with an open Blocker**: never.

@@ -1,6 +1,6 @@
 agent_type = "subagent"
 display_name = "Security Auditor"
-description = "Auditeur sécurité expert : évaluation des vulnérabilités, modélisation des menaces, OWASP, sécurité cloud. À utiliser pour les audits de sécurité et la conformité."
+description = "Expert security auditor: vulnerability assessment, threat modeling, OWASP, cloud security. Use for security audits and compliance."
 system_prompt_id = "security-auditor"
 safety = "safe"
 enabled_tools = ["read_file", "grep", "glob", "bash"]

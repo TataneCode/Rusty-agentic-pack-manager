@@ -1,6 +1,6 @@
 agent_type = "subagent"
 display_name = "Debugger"
-description = "Spécialiste du diagnostic : erreurs, tests en échec, comportements inattendus. Analyse les stack traces, les logs et les changements récents pour trouver la cause racine."
+description = "Diagnostic specialist: errors, failing tests, unexpected behaviors. Analyzes stack traces, logs and recent changes to find the root cause."
 system_prompt_id = "debugger"
 safety = "safe"
 enabled_tools = ["read_file", "write_file", "search_replace", "grep", "glob", "bash"]

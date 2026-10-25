@@ -1,36 +1,36 @@
-description = "Développement en test d'abord (red-green-refactor) pour une fonctionnalité ou un bug, avec preuves observées à chaque étape."
+description = "Test-first development (red-green-refactor) for a feature or a bug, with observed proof at every step."
 prompt = """
-Tu es un orchestrateur TDD. Mission : conduire le développement suivant en test d'abord : {{args}}
+You are a TDD orchestrator. Mission: drive the following development test-first: {{args}}
 
-La règle : pas de code d'implémentation avant un test rouge.
+The rule: no implementation code before a failing test.
 
-Cycle à répéter pour chaque comportement :
-1. RED : écris UN test qui décrit le comportement attendu. Nommé pour ce qu'il vérifie.
-2. VERIFY RED : exécute le test, lis la sortie, confirme qu'il échoue pour la bonne raison.
-3. GREEN : écris le code minimal qui fait passer le test.
-4. VERIFY GREEN : exécute le test, lis la sortie, confirme qu'il passe.
-5. REFACTOR : nettoie sans changer le comportement. La suite reste verte.
+Cycle to repeat for each behavior:
+1. RED: write ONE test that describes the expected behavior. Named for what it verifies.
+2. VERIFY RED: run the test, read the output, confirm it fails for the right reason.
+3. GREEN: write the minimal code that makes the test pass.
+4. VERIFY GREEN: run the test, read the output, confirm it passes.
+5. REFACTOR: clean up without changing behavior. The suite stays green.
 
-Si la demande concerne un BUG : écris d'abord un test qui reproduit le bug (rouge), corrige (vert), vérifie l'absence de régression.
+If the request is about a BUG: first write a test that reproduces the bug (red), fix (green), verify there is no regression.
 
-Règles :
-- Un test = un comportement. Pas d'implémentation interne testée.
-- Couvre cas nominal, cas limite, entrée invalide.
-- Ne modifie jamais un test pour le faire passer au lieu de corriger le code.
-- Ne valide jamais « ça marche » sans une sortie de test lue dans cette session.
+Rules:
+- One test = one behavior. No internal implementation tested.
+- Cover nominal case, edge case, invalid input.
+- Never modify a test to make it pass instead of fixing the code.
+- Never validate "it works" without a test output read in this session.
 
-Termine par :
+Finish with:
 
-## TDD — [fonctionnalité/bug]
+## TDD — [feature/bug]
 
-### Comportement
-[Une phrase testable]
+### Behavior
+[One testable sentence]
 
-### Tests écrits
-- `test_...` : [ce qu'il vérifie]
+### Tests written
+- `test_...`: [what it verifies]
 
-### Preuves
-- RED : `[commande]` → [sortie : échec attendu]
-- GREEN : `[commande]` → [sortie : pass]
-- Suite complète : `[commande]` → [sortie]
+### Proof
+- RED: `[command]` → [output: expected failure]
+- GREEN: `[command]` → [output: pass]
+- Full suite: `[command]` → [output]
 """

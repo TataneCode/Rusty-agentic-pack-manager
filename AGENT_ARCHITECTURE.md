@@ -1,83 +1,83 @@
-# Agent Architecture — rusty-console
+# Agent Architecture — rusty-agentic-pack-manager
 
-Arborescence exploitable par tout agent IA (Mistral Vibe, ou autre), sans dépendance à un écosystème propriétaire.
+Tree usable by any AI agent (Mistral Vibe, or other), without depending on a proprietary ecosystem.
 
 ```
-CONTEXT.md            project map : contexte général, navigation (quoi lire, quand), état du projet
-AGENTS.md             routeur de démarrage : confirmation gate + table de routage + sources de vérité
-rules/                règles par couche DDD, mutualisées entre agents et skills (source unique)
-  README.md                   index des règles + flux de dépendances
+CONTEXT.md            project map: general context, navigation (what to read, when), project status
+AGENTS.md             startup router: confirmation gate + routing table + sources of truth
+rules/                per-DDD-layer rules, shared between agents and skills (single source)
+  README.md                   rules index + dependency flow
   domain.md                   src/01_domain/
   application.md              src/02_application/
   infrastructure.md           src/03_infrastructure/
   presentation.md             src/04_presentation/
-  quality.md                  transverse : fmt, clippy, tests, MSRV, style
-  testing.md                  transverse : conventions UT & IT, seuil de décision
-.agents/skills/       procédures réutilisables (standard Agent Skills, découvertes par Vibe Code et Vibe CLI)
-  challenge/                  skill utilisateur /challenge (rôle Challenger, cadrage de la demande)
-  plan/                       skill utilisateur /plan (rôle Architecte, approbation du plan obligatoire)
-  implement/                  skill utilisateur /implement (rôle Développeur, protection commit/push)
-  self-review/                skill utilisateur /self-review (relire son diff avant review externe)
-  review/                     skill utilisateur /review (rôle Reviewer, PR GitHub ou diff de branche)
-  audit/                      skill utilisateur /audit (rôle Auditeur, analyse du code produit)
-  config-update/              skill utilisateur /update-config (faire évoluer cette configuration)
-  rust-architecture-planning/   conception et plans (+ references/plan-format.md)
-  rust-feature-ddd/             implémentation couche par couche (+ references/layer-checklists.md)
-  rust-refactoring/             refactoring comportement-preserving
-  rust-testing/                 conventions de tests (résumé de rules/testing.md)
-  rust-quality-gate/            contrôle qualité avant livraison
-  rust-bugfix/                  correction de bugs
-  rust-dependency/              gestion des dépendances Cargo
-  rust-code-review/             revue de pull requests
-  layer-rules/                  index des règles par couche (rules/)
-  confirmation-gate/            gate de confirmation obligatoire avant toute écriture
-agents/               définitions de rôles orchestrant les skills (agnostiques)
-  challenger.md               challenge la demande avant planification, jamais de plan ni de code
-  architect.md                produit les plans, jamais de code
-  developer.md                exploite les plans, produit et vérifie le code
-  reviewer.md                 relit les PR GitHub
-  auditor.md                  analyse le code produit, lecture seule, jamais de correction
-.vibe/agents/         agents Vibe CLI (TOML) : challenger.toml, architect.toml, developer.toml, reviewer.toml, auditor.toml
-.vibe/prompts/        prompts système des agents Vibe CLI
-.vibe/config.toml     modes intégrés désactivés (ne reste que ask + agents projet)
-AGENT_ARCHITECTURE.md (ce fichier) — comment tout s'articule
+  quality.md                  cross-cutting: fmt, clippy, tests, MSRV, style
+  testing.md                  cross-cutting: UT & IT conventions, decision threshold
+.agents/skills/       reusable procedures (Agent Skills standard, discovered by Vibe Code and Vibe CLI)
+  challenge/                  user skill /challenge (Challenger role, request framing)
+  plan/                       user skill /plan (Architect role, plan approval mandatory)
+  implement/                  user skill /implement (Developer role, commit/push protection)
+  self-review/                user skill /self-review (reread your diff before external review)
+  review/                     user skill /review (Reviewer role, GitHub PR or branch diff)
+  audit/                      user skill /audit (Auditor role, produced code analysis)
+  config-update/              user skill /update-config (evolve this configuration)
+  rust-architecture-planning/   design and plans (+ references/plan-format.md)
+  rust-feature-ddd/             layer-by-layer implementation (+ references/layer-checklists.md)
+  rust-refactoring/             behavior-preserving refactoring
+  rust-testing/                 test conventions (summary of rules/testing.md)
+  rust-quality-gate/            quality control before delivery
+  rust-bugfix/                  bug fixing
+  rust-dependency/              Cargo dependency management
+  rust-code-review/             pull request review
+  layer-rules/                  per-layer rules index (rules/)
+  confirmation-gate/            mandatory confirmation gate before any write
+agents/               role definitions orchestrating the skills (agnostic)
+  challenger.md               challenges the request before planning, never a plan nor code
+  architect.md                produces plans, never code
+  developer.md                exploits plans, produces and verifies code
+  reviewer.md                 reviews GitHub PRs
+  auditor.md                  analyzes the produced code, read-only, never fixes
+.vibe/agents/         Vibe CLI agents (TOML): challenger.toml, architect.toml, developer.toml, reviewer.toml, auditor.toml
+.vibe/prompts/        Vibe CLI agent system prompts
+.vibe/config.toml     built-in modes disabled (only ask + project agents remain)
+AGENT_ARCHITECTURE.md (this file) — how everything fits together
 ```
 
 ## Orchestration
 
-| Phase | Agent | Skills invoqués | Livrable |
+| Phase | Agent | Invoked skills | Deliverable |
 |---|---|---|---|
-| Cadrage | **Challenger** | `challenge` | Demande reformulée, ambiguïtés bloquantes, périmètre minimal |
-| Planification | **Architecte** | `rust-architecture-planning`, `rust-dependency` | Plan (objectif, décisions, étapes vérifiables, risques, hors périmètre) |
-| Implémentation | **Développeur** | `rust-feature-ddd` / `rust-refactoring` / `rust-bugfix`, `rust-testing`, `rust-dependency`, `rust-quality-gate`, `self-review` | Code + tests + gate vert + self-review |
-| Revue | **Reviewer** | `rust-code-review`, `rust-quality-gate` | Revue structurée sur la PR |
-| Analyse | **Auditeur** | `audit`, `layer-rules` | Rapport d'audit (findings 🔴/🟡/🟢, dette, pistes) |
+| Framing | **Challenger** | `challenge` | Restated request, blocking ambiguities, minimal scope |
+| Planning | **Architect** | `rust-architecture-planning`, `rust-dependency` | Plan (goal, decisions, verifiable steps, risks, out of scope) |
+| Implementation | **Developer** | `rust-feature-ddd` / `rust-refactoring` / `rust-bugfix`, `rust-testing`, `rust-dependency`, `rust-quality-gate`, `self-review` | Code + tests + green gate + self-review |
+| Review | **Reviewer** | `rust-code-review`, `rust-quality-gate` | Structured review on the PR |
+| Analysis | **Auditor** | `audit`, `layer-rules` | Audit report (findings 🔴/🟡/🟢, debt, leads) |
 
-Flux nominal : l'utilisateur exprime un besoin → **Challenger** cadre la demande → **Architecte** produit un plan → le plan est confié au **Développeur** qui implémente, passe le quality gate et le self-review → la PR ouverte est relue par le **Reviewer**. L'**Auditeur** intervient en lecture seule pour analyser une zone du code. Chaque agent est indépendant et peut aussi être invoqué seul.
+Nominal flow: the user expresses a need → the **Challenger** frames the request → the **Architect** produces a plan → the plan is handed to the **Developer** who implements, passes the quality gate and the self-review → the opened PR is reviewed by the **Reviewer**. The **Auditor** intervenes read-only to analyze a code zone. Each agent is independent and can also be invoked alone.
 
-Les points d'entrée utilisateur sont les skills user-invocables (slash-commands) :
-- `/challenge` — Challenger, lecture seule ; reformule, détecte ambiguïtés et scope creep, propose le périmètre minimal ; à utiliser **avant** `/plan` sur une demande non triviale.
-- `/plan` — Architecte, lecture seule sur les sources, tous les outils accessibles ; **approbation explicite du plan obligatoire** avant implémentation ; si approuvé, invoque `implement`.
-- `/implement` — Développeur, tous les outils accessibles ; **jamais de commit ni de push sans accord utilisateur** ; gate `cargo build/test/fmt/clippy` + self-review obligatoire avant livraison externe.
-- `/self-review` — Développeur, relit son propre diff (checklist `rules/`, imports inter-couches, gate local) avant `/review`.
-- `/review` — Reviewer, lecture seule stricte ; en Vibe Code, revue de la PR GitHub ; en CLI, diff de branche (courante vs `main` par défaut).
-- `/audit` — Auditeur, lecture seule stricte ; analyse une zone du code produit, rapport structuré.
-- `/update-config` — faire évoluer cette configuration (skills, règles, agents, commandes) en gardant la cohérence.
+The user entry points are the user-invocable skills (slash-commands):
+- `/challenge` — Challenger, read-only; restates, detects ambiguities and scope creep, proposes the minimal scope; use **before** `/plan` on a non-trivial request.
+- `/plan` — Architect, read-only on the sources, all tools accessible; **explicit plan approval mandatory** before implementation; if approved, invokes `implement`.
+- `/implement` — Developer, all tools accessible; **never commit nor push without user agreement**; `cargo build/test/fmt/clippy` gate + mandatory self-review before external delivery.
+- `/self-review` — Developer, rereads their own diff (rules checklist, cross-layer imports, local gate) before `/review`.
+- `/review` — Reviewer, strict read-only; in Vibe Code, GitHub PR review; in CLI, branch diff (current vs `main` by default).
+- `/audit` — Auditor, strict read-only; analyzes a zone of the produced code, structured report.
+- `/update-config` — evolve this configuration (skills, rules, agents, commands) while keeping consistency.
 
-## Contrat entre agents
+## Contract between agents
 
-- Le Challenger cadre la demande avant que l'Architecte ne planifie ; le plan de l'Architecte est le seul format d'entrée du Développeur pour un travail planifié — chaque étape doit être actionnable sans retour vers l'Architecte.
-- Le Développeur signale tout écart au plan au lieu de l'exécuter silencieusement, et self-review son diff avant toute review externe.
-- Le Reviewer et l'Auditeur jugent sur les skills et les règles de couche (`rules/` — règles de fait), pas sur des préférences personnelles ; leurs verdicts/findings sont toujours argumentés (`fichier:ligne` + suggestion).
+- The Challenger frames the request before the Architect plans; the Architect's plan is the only input format of the Developer for planned work — every step must be actionable without going back to the Architect.
+- The Developer flags any deviation from the plan instead of executing it silently, and self-reviews their diff before any external review.
+- The Reviewer and the Auditor judge against the skills and the layer rules (`rules/` — de facto rules), not against personal preferences; their verdicts/findings are always argued (`file:line` + suggestion).
 
-## Format des skills
+## Skill format
 
-Chaque skill vit dans `.agents/skills/<nom>/SKILL.md` avec un frontmatter YAML (`name`, `description` — qui sert de description d'invocation), une procédure systématique étape par étape, et une section d'anti-patterns interdits. Les détails verbeux vivent dans `references/` du skill, chargés à la demande (progressive disclosure).
+Every skill lives in `.agents/skills/<name>/SKILL.md` with a YAML frontmatter (`name`, `description` — which serves as the invocation description), a systematic step-by-step procedure, and a forbidden anti-patterns section. Verbose details live in the skill's `references/`, loaded on demand (progressive disclosure).
 
-Les règles de couche sont **mutualisées** dans `rules/` : agents et skills les référencent au lieu de dupliquer les instructions. Le skill `layer-rules` sert d'index.
+The layer rules are **shared** in `rules/`: agents and skills reference them instead of duplicating instructions. The `layer-rules` skill serves as the index.
 
-### Invocation depuis les runtimes
+### Invocation from runtimes
 
-- **Vibe Code (sandbox)** et **Vibe CLI** découvrent nativement les skills dans `.agents/skills/` (standard Agent Skills, dossier trusted). Le champ `user-invocable: true` du frontmatter expose un skill en slash-commande (`/<name>`).
-- **Vibe CLI** charge les agents depuis `.vibe/agents/*.toml` (sélection : `vibe --agent challenger|architect|developer|reviewer|auditor`, ou Shift+Tab en interactif). Les prompts système correspondants vivent dans `.vibe/prompts/`. `.vibe/config.toml` désactive les modes intégrés (`plan`, `accept-edits`, `auto-approve`, `smart-approve`, `lean`) : ne restent que `ask` et les agents projet, avec `ask` par défaut.
-- Tout autre runtime peut consommer les fichiers Markdown agnostiques (`agents/`, `rules/`, `.agents/skills/`) sans dépendre d'un écosystème propriétaire.
+- **Vibe Code (sandbox)** and **Vibe CLI** natively discover the skills in `.agents/skills/` (Agent Skills standard, trusted folder). The frontmatter `user-invocable: true` exposes a skill as a slash-command (`/<name>`).
+- **Vibe CLI** loads the agents from `.vibe/agents/*.toml` (selection: `vibe --agent challenger|architect|developer|reviewer|auditor`, or Shift+Tab interactively). The corresponding system prompts live in `.vibe/prompts/`. `.vibe/config.toml` disables the built-in modes (`plan`, `accept-edits`, `auto-approve`, `smart-approve`, `lean`): only `ask` and the project agents remain, with `ask` as default.
+- Any other runtime can consume the agnostic Markdown files (`agents/`, `rules/`, `.agents/skills/`) without depending on a proprietary ecosystem.

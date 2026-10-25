@@ -1,47 +1,44 @@
-# Règles de test — UT & IT (transverse, toutes couches)
+# Testing rules — UT & IT (cross-cutting, all layers)
 
-**Source unique de vérité** pour les conventions de test. La matrice des scénarios user-facing (quoi est couvert où) vit dans [docs/TESTING.md](../docs/TESTING.md). Le skill opérationnel est `rust-testing` ([.agents/skills/rust-testing/](../.agents/skills/rust-testing/)).
+**Single source of truth** for test conventions. The user-facing scenario matrix (what is covered where) lives in `docs/`. The operational skill is `rust-testing` ([.agents/skills/rust-testing/](../.agents/skills/rust-testing/)).
 
-## Seuil de décision : UT ou IT ?
+## Decision threshold: UT or IT?
 
-| Situation | Où | Pourquoi |
+| Situation | Where | Why |
 |---|---|---|
-| Logique pure (invariant, mapper, service avec mock, presenter, fonction de vue) | **UT** — `#[cfg(test)]` co-localisé dans le fichier | Rapide, isolé, pas de terminal ni de démon |
-| Comportement user-facing traversant les couches (écran × touche × état) | **IT** — scénario dans `tests/` | Valide le wiring réel, pas une copie |
-| Bugfix de logique métier | **UT** de régression d'abord (rouge), puis correction | La régression se fixe au niveau de la couche fautive |
-| Nouveau comportement visible à l'écran | **IT** + entrée dans la matrice de `docs/TESTING.md` | Garantit la couverture du contrat utilisateur |
+| Pure logic (invariant, mapper, service with mock, presenter, view function) | **UT** — co-located `#[cfg(test)]` in the file | Fast, isolated, no terminal needed |
+| User-facing behavior crossing layers (screen × key × state) | **IT** — scenario in `tests/` | Validates the real wiring, not a copy |
+| Business logic bugfix | **UT** regression first (red), then fix | The regression is fixed at the faulty layer's level |
+| New visible behavior on screen | **IT** + entry in the scenario matrix | Guarantees the user contract coverage |
 
-Règle : **1 comportement = 1 test**, nommé par le comportement (`rejects_zero_port_mapping`, pas `test_1`). Arrange / Act / Assert.
+Rule: **1 behavior = 1 test**, named after the behavior (`rejects_absolute_destination`, not `test_1`). Arrange / Act / Assert.
 
 ## UT — conventions
 
-- Co-localisés dans `#[cfg(test)]` **dans chaque fichier** — pas de répertoire `tests/` parallèle pour les tests unitaires.
-- **Domain** : pas de mock (couche pure) — tester les invariants, les rejets de `new()`.
-- **Application** : `#[cfg_attr(test, mockall::automock)]` sur le trait repository ; attentes explicites (`mock.expect_xxx().with(eq(...)).returning(...)`) ; `#[tokio::test]` pour les services async (`tokio-test` disponible en dev-dependency pour les helpers).
-- **Infrastructure** : tester les mappers bollard→domaine avec des fixtures construites à la main. **Jamais de test contre un vrai démon Docker** dans la suite standard.
-- **Presentation** : tester les fonctions pures de `view.rs` (références → widgets) et la logique de `presenter.rs` (sélection, scroll) sans mock lourd.
-- Si un bug est corrigé : écrire d'abord le test qui échoue (reproduction), puis corriger.
+- Co-located in `#[cfg(test)]` **in each file** — no parallel `tests/` directory for unit tests.
+- **Domain**: no mocks (pure layer) — test invariants, `new()` rejections.
+- **Application**: `#[automock]` on repository traits; explicit expectations (`mock.expect_xxx().with(eq(...)).returning(...)`); co-located tests in service files.
+- **Infrastructure**: test adapters on `tempfile::TempDir` fixtures. **Never** against system paths.
+- **Presentation**: test the pure functions of `view.rs` (references → widgets) and `presenter.rs` logic (selection, scroll) without heavy mocks.
+- If a bug is fixed: write the failing test first (reproduction), then fix.
 
 ## IT — conventions
 
-- Build du vrai `App` via `tests/common/mod.rs::build_app()` — vrais adapters, client bollard **lazy** : rendu et gestion d'actions ne nécessitent **pas** de démon Docker. Les suites liées au démon réel retournent tôt s'il est indisponible.
-- Pilotage : `app.handle_action(AppAction::…)` et `app.handle_filter_key(KeyCode::…)` (rendues publiques à cette fin).
-- Rendu : `ratatui::backend::TestBackend`, assertions sur le buffer aplati.
-- **Toute nouvelle fonctionnalité user-facing** ajoute un scénario à la matrice de [docs/TESTING.md](../docs/TESTING.md).
+- Build the real `App` as in `main.rs` — real adapters on tempdir packs; rendering and action handling need no daemon or network.
+- Driving: `app.dispatch(&KeyEvent)` (rendering via `ratatui::backend::TestBackend`, assertions on the flattened buffer).
+- **Every new user-facing feature** adds a scenario to the integration suites.
 
-## Vérification
+## Verification
 
 ```bash
-cargo test                 # tout (UT + IT)
-cargo test --lib           # UT seuls
-cargo test --test <suite>  # une suite IT seule
-cargo test <name>          # un test ciblé
-cargo llvm-cov             # couverture (min 70 %, courant ~91 %)
+cargo test                 # everything (UT + IT)
+cargo test --lib           # UT only
+cargo test --test <suite>  # one IT suite
+cargo test <name>          # one targeted test
 ```
 
-## Anti-patterns interdits
+## Forbidden anti-patterns
 
-- Mocker ce qu'on ne possède pas (types bollard entiers) — mapper à la main dans des fixtures.
-- Tests dépendant d'un environnement externe (démon Docker, réseau) dans la suite standard.
-- `#[ignore]` sans justification écrite.
-- Modifier un test pour « faire passer » un refactor (un refactor ne change pas les tests).
+- Testing against system paths or an external environment in the standard suite.
+- `#[ignore]` without a written justification.
+- Modifying a test to "make pass" a refactoring (a refactoring does not change tests).

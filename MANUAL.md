@@ -1,81 +1,83 @@
-# Manuel utilisateur — rapm
+# User manual — rapm
 
-`rapm` est le TUI de gestion de packs agentiques : lister, visualiser et installer des ensembles de skills, agents et commands dans un dépôt, pour un CLI cible (Vibe CLI, Gemini CLI).
+`rapm` is the TUI for managing agentic packs: list, view and install sets of skills, agents and commands in a repository, for a target CLI (Vibe CLI, Gemini CLI).
 
-## Démarrage
+## Startup
 
 ```bash
 rapm
 ```
 
-L'application démarre dans le répertoire courant. Les packs sont recherchés dans :
+The application starts in the current directory. Packs are searched in:
 
-1. `<répertoire du binaire>/packs/`
-2. `./packs` (répertoire courant)
-3. `/usr/share/rusty-agentic-pack-manager/packs/` (installation système RPM/DEB)
+1. `<binary directory>/packs/`
+2. `./packs` (current directory)
+3. `/usr/share/rusty-agentic-pack-manager/packs/` (RPM/DEB system install)
 
-## L'écran
+## The screen
 
-Split screen :
+Split screen:
 
-- **Panneau gauche — Packs** : liste des packs, groupés par CLI cible.
-- **Panneau droit — Explorer** : arborescence de fichiers de la machine hôte (dossiers en bleu, en premier).
+- **Left panel — Packs**: the pack list, grouped by target CLI.
+- **Right panel — Explorer**: the host machine file tree (folders in blue, listed first).
 
-La barre d'action en bas affiche les touches disponibles selon le panneau actif. Le panneau qui détient le focus a une bordure cyan.
+The action bar at the bottom shows the available keys for the focused panel. The focused panel has a cyan border.
 
-## Touches
+## Keys
 
-### Panneau Packs (focus gauche)
+### Packs panel (left focus)
 
-| Touche | Action |
+| Key | Action |
 |---|---|
-| `Tab` | Passer le focus sur l'explorer |
-| `↑`/`↓` ou `k`/`j` | Se déplacer dans la liste des packs |
-| `A` | **Apply** : préparer l'installation du pack sélectionné (le focus passe sur l'explorer en mode installation) |
-| `V` | **View** : ouvrir la visionneuse du pack (fichiers `.md`, `.js`, `.toml`, avec coloration syntaxique) |
-| `Espace` | Aide contextuelle |
-| `Ctrl-C` | Quitter |
+| `Tab` | Move focus to the explorer |
+| `↑`/`↓` or `k`/`j` | Move in the pack list |
+| `A` | **Apply**: prepare the selected pack installation (focus moves to the explorer in install mode) |
+| `V` | **View**: open the pack viewer (`.md`, `.js`, `.toml` files, with syntax highlighting) |
+| `Space` | Contextual help |
+| `Ctrl-C` | Quit |
 
-### Panneau Explorer (focus droit)
+### Explorer panel (right focus)
 
-| Touche | Action |
+| Key | Action |
 |---|---|
-| `Tab` | Passer le focus sur les packs |
-| `↑`/`↓` ou `k`/`j` | Se déplacer dans la liste |
-| `Entrée` | Ouvrir le dossier sélectionné |
-| `Retour arrière` | Remonter au dossier parent |
-| `R` | Créer un dossier dans le répertoire courant (dialog de saisie : nom, `Entrée` valide, `Esc` annule) |
-| `Espace` | Aide contextuelle |
-| `Ctrl-C` | Quitter |
+| `Tab` | Move focus to the packs |
+| `↑`/`↓` or `k`/`j` | Move in the list |
+| `Enter` | Open the selected folder |
+| `Backspace` | Go to the parent folder |
+| `R` | Create a folder in the current directory (input dialog: name, `Enter` validates, `Esc` cancels) |
+| `M` | Rename the selected folder/file (input dialog prefilled with the current name) |
+| `D` | Delete the selected folder/file (confirmation dialog; `Shift-D` forces a non-empty folder) |
+| `Space` | Contextual help |
+| `Ctrl-C` | Quit |
 
-### Mode installation (après `A`)
+### Install mode (after `A`)
 
-Seules ces actions sont disponibles :
+Only these actions are available:
 
-| Touche | Action |
+| Key | Action |
 |---|---|
-| `↑`/`↓` ou `k`/`j` | Se déplacer dans la liste |
-| `Entrée` | Ouvrir le dossier sélectionné |
-| `Retour arrière` | Remonter au dossier parent |
-| `I` | **Installer le pack dans le répertoire courant de l'explorer** |
-| `Esc` | Annuler et revenir aux packs |
-| `Espace` | Aide contextuelle |
+| `↑`/`↓` or `k`/`j` | Move in the list |
+| `Enter` | Open the selected folder |
+| `Backspace` | Go to the parent folder |
+| `I` | **Install the pack in the explorer's current directory** |
+| `Esc` | Cancel and go back to the packs |
+| `Space` | Contextual help |
 
-L'installation copie chaque item du pack à sa destination déclarée dans le manifeste, **sous le répertoire choisi**. Si une destination existe déjà, l'installation est refusée (aucun écrasement silencieux) et un message d'erreur s'affiche.
+The installation copies every pack item to its manifest-declared destination, **under the chosen directory**. If a destination already exists, the install is refused (no silent overwrite) and an error message is shown.
 
-### Visionneuse (après `V`)
+### Viewer (after `V`)
 
-| Touche | Action |
+| Key | Action |
 |---|---|
-| `Tab` | Basculer entre la liste des fichiers et le contenu |
-| `Entrée` | Afficher le contenu du fichier sélectionné |
-| `↑`/`↓` | Défiler / changer de fichier |
-| `Retour arrière` | Revenir à la liste des fichiers |
-| `Esc` | Fermer la visionneuse |
+| `Tab` | Switch between the file list and the content |
+| `Enter` | Show the selected file's content |
+| `↑`/`↓` | Scroll / change file |
+| `Backspace` | Go back to the file list |
+| `Esc` | Close the viewer |
 
-## Format d'un pack
+## Pack format
 
-Un pack est un répertoire dans `packs/` contenant un manifeste `pack.toml` :
+A pack is a directory in `packs/` containing a `pack.toml` manifest:
 
 ```toml
 name = "tdd"
@@ -85,16 +87,16 @@ cli = ["vibe", "gemini"]
 
 [[items]]
 kind = "skill"           # skill | agent | command
-source = "skills/tdd"   # chemin dans le pack (fichier ou répertoire)
+source = "skills/tdd"   # path in the pack (file or directory)
 [items.destinations]
 vibe = ".agents/skills/tdd"
 gemini = ".gemini/skills/tdd"
 ```
 
-- `name` : minuscules, chiffres, `-`, `_` ; commence par une lettre.
-- `version` : semver `MAJOR.MINOR.PATCH` (suffixe `-rc.1` autorisé).
-- `destinations` : chemins relatifs au répertoire cible choisi à l'installation ; les chemins absolus ou remontants (`..`) sont refusés.
+- `name`: lowercase, digits, `-`, `_`; starts with a letter.
+- `version`: semver `MAJOR.MINOR.PATCH` (`-rc.1` suffix allowed).
+- `destinations`: paths relative to the target directory chosen at install time; absolute or upward (`..`) paths are rejected.
 
-## Packs embarqués
+## Embedded packs
 
-13 packs livrés : `tdd`, `code-review`, `debugging`, `security`, `planning`, `brainstorming`, `quality-gate`, `prd`, `work-slicing`, `karpathy`, `parallel-agents`, `focus-adhd`, `rusty-agnostic`.
+13 packs shipped: `tdd`, `code-review`, `debugging`, `security`, `planning`, `brainstorming`, `quality-gate`, `prd`, `work-slicing`, `karpathy`, `parallel-agents`, `focus-adhd`, `rusty-agnostic`.

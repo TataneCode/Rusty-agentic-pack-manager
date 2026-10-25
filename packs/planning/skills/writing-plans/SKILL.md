@@ -1,81 +1,81 @@
 ---
 name: writing-plans
-description: "À utiliser quand une spec ou des exigences existent pour une tâche en plusieurs étapes, avant de toucher au code : rédige un plan d'implémentation structuré, en tâches numérotées, chaque étape avec sa commande de vérification."
+description: "Use when a spec or requirements exist for a multi-step task, before touching code: write a structured implementation plan, with numbered tasks, every step with its verification command."
 license: MIT
 ---
 
-# Writing Plans — Rédiger un plan
+# Writing Plans — Writing a plan
 
-## Quand l'utiliser
+## When to use
 
-- Tâche en plusieurs étapes (plus de ~3 actions non triviales).
-- Feature, migration, refactoring multi-fichiers.
-- Quand l'utilisateur demande explicitement un plan.
+- Multi-step task (more than ~3 non-trivial actions).
+- Feature, migration, multi-file refactoring.
+- When the user explicitly asks for a plan.
 
-Ne pas utiliser pour : une correction en un fichier, une question, une recherche.
+Do not use for: a one-file fix, a question, a search.
 
-## Structure du plan
+## Plan structure
 
 ```markdown
-# Plan : [Nom de la feature]
+# Plan: [Feature name]
 
-## Objectif
-Une phrase : ce que le lecteur pourra faire après.
+## Goal
+One sentence: what the reader will be able to do afterwards.
 
-## Prérequis
-- Outil/versions/dépendances nécessaires.
+## Prerequisites
+- Required tools/versions/dependencies.
 
-## Tâches
+## Tasks
 
-### Tâche 1 : [Composant]
-- Fichiers touchés : `chemin/vers/fichier`
-- Étapes :
+### Task 1: [Component]
+- Files touched: `path/to/file`
+- Steps:
   1. [action]
   2. [action]
-- Vérifie : `[commande]` → [résultat attendu]
+- Verify: `[command]` → [expected result]
 
-### Tâche 2 : [Composant]
+### Task 2: [Component]
 ...
 
-## Ordre et dépendances
-Tâche 2 dépend de la tâche 1, etc.
+## Order and dependencies
+Task 2 depends on task 1, etc.
 
-## Hors scope
-Ce que ce plan ne fait PAS (pour couper court aux dérives).
+## Out of scope
+What this plan does NOT do (to cut off drift).
 
-## Revue
-Points de vigilance pour la revue de code.
+## Review
+Vigilance points for code review.
 ```
 
-## Règles de taille
+## Size rules
 
-- **Une tâche = un composant** (un fichier, un module, une responsabilité).
-- **Une étape = une action vérifiable.** Si une étape ne peut pas être vérifiée, elle est trop grosse — découpe.
-- Chaque étape se termine par « Vérifie : [commande] → [attendu] » (voir `verification-gate`).
-- Pas de « et puis » en cascade dans une étape : c'est deux étapes.
+- **One task = one component** (one file, one module, one responsibility).
+- **One step = one verifiable action.** If a step cannot be verified, it is too big — split it.
+- Every step ends with "Verify: [command] → [expected]" (see `verification-gate`).
+- No cascading "and then" inside a step: that is two steps.
 
-## Granularité
+## Granularity
 
-- Trop gros (« implémenter l'auth ») → personne ne peut reprendre, tout est dans une tête.
-- Trop fin (« créer le fichier X ») → bruit, pas de plan.
-- Juste bien : une tâche tient en quelques minutes à une heure, se lit seule, se vérifie seule.
+- Too big ("implement auth") → nobody can pick it up, everything lives in one head.
+- Too fine ("create file X") → noise, not a plan.
+- Just right: a task takes a few minutes to an hour, reads standalone, verifies standalone.
 
-## Avant d'écrire le plan
+## Before writing the plan
 
-1. Vérifie que la demande est claire. Si un choix structurant est ouvert (approche A ou B), pose la question ou présente les 2 options avec recommandation — n'écris pas un plan sur une fondation floue.
-2. Lis le code concerné (ne planifie pas dans le vide).
-3. Liste les contraintes globales (style du dépôt, pas de nouvelle dépendance, compatibilité...).
+1. Verify the request is clear. If a structural choice is open (approach A or B), ask the question or present both options with a recommendation — do not write a plan on a fuzzy foundation.
+2. Read the relevant code (do not plan in a vacuum).
+3. List global constraints (repository style, no new dependency, compatibility...).
 
-## Après le plan
+## After the plan
 
-- Fais-le valider par l'utilisateur avant d'exécuter.
-- Range le plan dans le dépôt si le projet le prévoit (ex. `docs/plans/<date>-<sujet>.md`).
-- Exécute tâche par tâche, en cochant au fur et à mesure. Ne saute pas de vérification.
+- Have it validated by the user before executing.
+- Store the plan in the repository if the project expects it (e.g. `docs/plans/<date>-<topic>.md`).
+- Execute task by task, checking off as you go. Do not skip verifications.
 
-## Auto-revue du plan (avant de le présenter)
+## Plan self-review (before presenting it)
 
-- [ ] Chaque étape a sa vérification.
-- [ ] Chaque tâche tient seule (fichiers nommés).
-- [ ] L'ordre respecte les dépendances.
-- [ ] Le hors scope est explicite.
-- [ ] Aucun « on verra bien en chemin ».
+- [ ] Every step has its verification.
+- [ ] Every task stands alone (files named).
+- [ ] The order respects dependencies.
+- [ ] The out-of-scope section is explicit.
+- [ ] No "we'll see along the way".

@@ -1,81 +1,81 @@
 ---
 name: tdd
-description: "À utiliser pour toute fonctionnalité ou correction de bug, avant d'écrire le code d'implémentation : cycle Red-Green-Refactor avec vérification observée du RED puis du GREEN. Test d'abord, code ensuite, preuve à chaque étape."
+description: "Use for any feature or bug fix, before writing implementation code: Red-Green-Refactor cycle with observed verification of RED then GREEN. Test first, code second, proof at every step."
 license: MIT
 ---
 
-# TDD — Test d'abord
+# TDD — Test First
 
-## La loi de fer
+## The iron rule
 
-**Pas de code d'implémentation avant un test rouge.** Si tu écris du code fonctionnel avant le test, ce n'est plus du TDD, c'est du « tester après » — moins fiable, plus coûteux.
+**No implementation code before a failing test.** If you write functional code before the test, it is no longer TDD, it is "test after" — less reliable, more expensive.
 
-## Le cycle Red-Green-Refactor
+## The Red-Green-Refactor cycle
 
-### RED — Écris un test rouge
+### RED — Write a failing test
 
-1. Écris UN test qui décrit le comportement attendu.
-2. Il doit être petit, nommé pour ce qu'il vérifie (`should reject expired token`).
-3. Il doit échouer pour la bonne raison (fonctionnalité absente), pas pour une erreur de setup.
+1. Write ONE test that describes the expected behavior.
+2. It must be small, named for what it verifies (`should reject expired token`).
+3. It must fail for the right reason (feature missing), not for a setup error.
 
-### VERIFY RED — Regarde-le échouer
+### VERIFY RED — Watch it fail
 
-Exécute le test. **Lis la sortie.** Confirme qu'il échoue avec le message attendu. C'est la preuve que le test teste bien quelque chose.
+Run the test. **Read the output.** Confirm it fails with the expected message. This is the proof that the test actually tests something.
 
-### GREEN — Code minimal
+### GREEN — Minimal code
 
-Écris le minimum de code pour faire passer le test. Pas d'élégance, pas de généralisation, pas de fonctionnalité voisine.
+Write the minimum code that makes the test pass. No elegance, no generalization, no neighboring feature.
 
-### VERIFY GREEN — Regarde-le passer
+### VERIFY GREEN — Watch it pass
 
-Exécute le test. **Lis la sortie.** Il passe. La `verification-gate` s'applique ici.
+Run the test. **Read the output.** It passes. The `verification-gate` applies here.
 
-### REFACTOR — Nettoie
+### REFACTOR — Clean up
 
-Améliore le code (noms, structure) sans changer le comportement. La suite de tests doit rester verte après chaque petit pas.
+Improve the code (names, structure) without changing behavior. The test suite must stay green after each small step.
 
-### Répète
+### Repeat
 
-Un cycle par comportement. Le prochain test rouge démarre le cycle suivant.
+One cycle per behavior. The next failing test starts the next cycle.
 
-## Un test de qualité
+## A quality test
 
-- Teste un comportement, pas une implémentation (ne couple pas le test aux détails internes).
-- Un seul concept par test ; nom explicite.
-- Données de test claires (cas nominal, limite, invalide).
-- Rapide et indépendant (pas d'ordre, pas d'état partagé).
+- Tests a behavior, not an implementation (do not couple the test to internal details).
+- One concept per test; explicit name.
+- Clear test data (nominal case, edge case, invalid input).
+- Fast and independent (no ordering, no shared state).
 
-## Pour un bug (TDD rétrospectif)
+## For a bug (retrospective TDD)
 
-1. Écris un test qui **reproduit** le bug (il échoue = RED).
-2. Corrige (GREEN).
-3. Vérifie que le test passe et que la suite ne régresse pas.
+1. Write a test that **reproduces** the bug (it fails = RED).
+2. Fix (GREEN).
+3. Verify the test passes and the suite has no regression.
 
-## Rationalisations interdites
+## Forbidden rationalizations
 
-| Rationalisation | Réalité |
+| Rationalization | Reality |
 |-----------------|---------|
-| « C'est trop petit pour un test » | C'est souvent le petit qui casse le grand. |
-| « J'écris le test après, je connais le code » | Le test après confirme tes biais. |
-| « Le test est trivial » | Un test trivial qui échoue puis passe prouve le fix. |
-| « Pas le temps » | Le temps perdu à debugger du code non testé dépasse le temps du test. |
+| "It's too small for a test" | The small thing is often what breaks the big thing. |
+| "I'll write the test after, I know the code" | Testing after confirms your biases. |
+| "The test is trivial" | A trivial test that fails then passes proves the fix. |
+| "No time" | Time lost debugging untested code exceeds the time of the test. |
 
-## Red flags — STOP et recommence
+## Red flags — STOP and start over
 
-- Le code existe déjà et aucun test ne l'a vu échouer.
-- Tu modifies le test pour qu'il passe au lieu de corriger le code.
-- Tu écris plusieurs fonctionnalités avant de faire passer le premier test.
+- The code already exists and no test has seen it fail.
+- You modify the test to make it pass instead of fixing the code.
+- You write several features before making the first test pass.
 
-## Check-list de vérification
+## Verification checklist
 
-- [ ] Chaque comportement ajouté a son test écrit AVANT l'implémentation.
-- [ ] J'ai vu le test échouer (sortie lue).
-- [ ] J'ai vu le test passer (sortie lue).
-- [ ] La suite complète passe (sortie lue).
-- [ ] Le refactor garde la suite verte.
+- [ ] Every added behavior has its test written BEFORE the implementation.
+- [ ] I saw the test fail (output read).
+- [ ] I saw the test pass (output read).
+- [ ] The full suite passes (output read).
+- [ ] Refactoring keeps the suite green.
 
-## Si on est bloqué
+## When stuck
 
-- Test qui ne veut pas être rouge → le comportement existe déjà peut-être ; vérifie ce que le test mesure vraiment.
-- Test rouge qui ne devient pas vert → réduis le pas : code encore plus minimal, ou reviens à `systematic-debugging`.
-- Trop de tests qui échouent en cascade → corrige dans l'ordre des dépendances, un à un.
+- Test refuses to go red → the behavior may already exist; check what the test really measures.
+- Red test that won't go green → reduce the step: even more minimal code, or fall back to `systematic-debugging`.
+- Too many tests failing in cascade → fix in dependency order, one by one.

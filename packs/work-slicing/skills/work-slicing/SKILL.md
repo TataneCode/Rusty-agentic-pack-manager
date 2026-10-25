@@ -1,68 +1,68 @@
 ---
 name: work-slicing
-description: "À utiliser quand un plan ou une spec existe et doit être découpé en morceaux actionnables : produit une liste de tranches verticales, chacune autonome et vérifiable, avec ses dépendances déclarées."
+description: "Use when a plan or spec exists and must be broken into actionable pieces: produces a list of vertical slices, each autonomous and verifiable, with declared dependencies."
 license: MIT
 ---
 
-# Work Slicing — Découper le travail
+# Work Slicing — Slicing the work
 
-Transforme un plan ou une spec en un ensemble de tranches actionnables. C'est l'étape entre « on sait ce qu'on construit » et « quelqu'un peut prendre un morceau ».
+Turns a plan or spec into a set of actionable slices. It is the step between "we know what we are building" and "someone can pick up a piece".
 
-## Quand l'utiliser
+## When to use
 
-- Un plan ou une spec existe et doit être découpé en travaux fileables.
-- Une tâche est trop grosse pour une seule session et doit être partagée.
-- Plusieurs personnes ou sessions vont travailler en parallèle et ont besoin de frontières claires.
+- A plan or spec exists and must be broken into queueable work.
+- A task is too big for a single session and must be shared.
+- Several people or sessions will work in parallel and need clear boundaries.
 
-## Quand ne pas l'utiliser
+## When not to use
 
-- Les décisions sont encore ouvertes : découper un travail non tranché produit des tranches qui seront rouvertes. Utilise d'abord `brainstorming` ou `thought-partner`.
-- Le travail tient en une session : une tranche, voire aucune.
-- Tu veux de l'exécution parallèle tout de suite : utilise `parallel-agents`.
+- Decisions are still open: slicing undecided work produces slices that will be reopened. Use `brainstorming` or `thought-partner` first.
+- The work fits in one session: one slice, or none.
+- You want parallel execution right now: use `parallel-agents`.
 
-## Méthode
+## Method
 
-### 1. Découper verticalement
+### 1. Slice vertically
 
-Chaque tranche coupe un chemin étroit mais **complet** à travers toutes les couches qu'elle touche — schéma, API, UI, tests. Ce n'est PAS une tranche horizontale d'une seule couche.
+Every slice cuts a narrow but **complete** path through all the layers it touches — schema, API, UI, tests. It is NOT a horizontal slice of a single layer.
 
-- Une tranche terminée est démontrable ou vérifiable seule.
-- Chaque tranche tient dans une fenêtre de contexte fraîche (quelques fichiers, pas un demi-projet).
+- A finished slice is demonstrable or verifiable on its own.
+- Every slice fits in a fresh context window (a few files, not half a project).
 
-### 2. Déclarer ce qui bloque quoi
+### 2. Declare what blocks what
 
-Pour chaque tranche, liste les tranches dont elle dépend. Une tranche sans dépendance est prête. Une dépendance en cycle bloque les deux — recoupe.
+For every slice, list the slices it depends on. A slice with no dependency is ready. A cyclic dependency blocks both — re-cut.
 
-### 3. Produire la sortie
+### 3. Produce the output
 
-Pour chaque tranche, un bloc :
+For every slice, one block:
 
 ```markdown
-## Tranche N : [titre]
-- Objectif : [ce qui marche à la fin, en une phrase]
-- Fichiers : `chemin/a`, `chemin/b`
-- Dépend de : Tranche M (ou « aucune — prête »)
-- Vérification : `[commande]` → [résultat attendu]
-- Estimation : [temps concret]
+## Slice N: [title]
+- Goal: [what works at the end, in one sentence]
+- Files: `path/a`, `path/b`
+- Depends on: Slice M (or "none — ready")
+- Verification: `[command]` → [expected result]
+- Estimate: [concrete time]
 ```
 
-### 4. Classer
+### 4. Order
 
-Donne l'ordre d'exécution : d'abord les tranches sans dépendance, puis par chaîne de dépendances.
+Give the execution order: slices with no dependency first, then by dependency chain.
 
-## Règles d'arrêt
+## Stopping rules
 
-- Si découper révèle une décision non prise, arrête-toi et reviens à la phase de cadrage.
-- Si une tranche grossit en cours de route, recoupe-la plutôt que de la laisser gonfler.
-- Ne découpe pas au-delà du utile : 5–8 tranches pour un projet moyen, pas 30 micro-tâches.
+- If slicing reveals an undecided point, stop and return to the framing phase.
+- If a slice grows along the way, re-cut it rather than letting it bloat.
+- Do not slice beyond usefulness: 5–8 slices for a medium project, not 30 micro-tasks.
 
-## Contrat de sortie
+## Output contract
 
-- Liste numérotée de tranches, chacune avec objectif, fichiers, dépendances, vérification, estimation.
-- Ordre d'exécution explicite.
-- Ce qui est volontairement hors scope.
+- Numbered list of slices, each with goal, files, dependencies, verification, estimate.
+- Explicit execution order.
+- What is deliberately out of scope.
 
-## Vérification
+## Verification
 
-- Chaque tranche se lit seule : un lecteur qui la prend sans le reste comprend quoi faire et comment vérifier.
-- La somme des tranches couvre le plan initial sans trou ni chevauchement.
+- Every slice reads standalone: a reader picking it without the rest understands what to do and how to verify.
+- The sum of the slices covers the initial plan with no hole and no overlap.

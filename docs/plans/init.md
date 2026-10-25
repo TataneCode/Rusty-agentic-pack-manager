@@ -1,60 +1,66 @@
-# Plan : rusty-agentic-pack-manager — socle v1 (init)
+# Plan: rusty-agentic-pack-manager — v1 foundation (init)
 
-> Statut : **implémenté** — v1 complète sur la branche vibe/v1-implementation. Source : skills `/challenge` puis `/plan`. Les décisions actées par l'utilisateur sont notées ✅.
+> Status: **implemented** — v1 complete on branch vibe/v1-implementation. Source: skills `/challenge` then `/plan`. User decisions are marked ✅.
 
-## Objectif
+## Goal
 
-Livrer un TUI Rust (split-screen) qui permet de parcourir une liste de packs agentiques embarqués (triés par CLI), de naviguer le filesystem hôte, et d'installer le contenu d'un pack dans le répertoire choisi — en reprenant l'architecture DDD 4 couches, le design (thème, widgets, triade presenter/view/actions, event loop) et les patterns d'actions de rusty-console.
+Deliver a Rust TUI (split screen) to browse a list of embedded agentic packs (sorted by CLI), navigate the host filesystem, and install a pack's content in the chosen directory — reusing the DDD 4-layer architecture, design (theme, widgets, presenter/view/actions triad, event loop) and action patterns from rusty-console.
 
-## Contexte de cadrage (challenge)
+## Framing context (challenge)
 
-- Reformulation : TUI de gestion du cycle de vie de packs agentiques (skills/agents/commands par CLI cible), déployables et supprimables dans n'importe quel dépôt.
-- Décisions utilisateur :
-  - ✅ **Pack = répertoire + `pack.toml`** (archives 7z/tar en v2).
-  - ✅ **Granularité thématique (option B)** : packs regroupant skills + agents + commands liés (ex. `tdd`), plus packs solo ; environ 6-8 packs + solos.
-  - ✅ **Flow apply** : `A` sur un pack → focus sur le panel explorer en mode installation ; seules actions possibles : navigation (Entrée/Retour arrière), `i` = installer dans le répertoire sélectionné, Espace = aide contextuelle.
-- Scope creep écarté en v1 : rename (`m`), delete (`d`/`D`) sur le FS hôte ; undeploy complet (mitigation : copier le manifeste dans la cible à l'install pour le rendre possible en v2).
+- Restatement: TUI managing the lifecycle of agentic packs (skills/agents/commands per target CLI), deployable and removable in any repository.
+- User decisions:
+  - ✅ **Pack = directory + `pack.toml`** (7z/tar archives in v2).
+  - ✅ **Thematic granularity (option B)**: packs grouping related skills + agents + commands (e.g. `tdd`), plus solo packs; about 6-8 packs + solos.
+  - ✅ **Apply flow**: `A` on a pack → focus on the explorer panel in install mode; only available actions: navigation (Enter/Backspace), `I` = install in the selected directory, Space = contextual help.
+- Scope creep dropped from v1: rename (`M`), delete (`D`/`Shift-D`) on the host FS — **later re-included by user decision**; full undeploy (mitigation: copy the manifest into the target at install to make it possible in v2).
 
-## Décisions d'architecture
+## Architecture decisions
 
-- **D1 : Application synchrone, pas de tokio/bollard** — le périmètre v1 est purement local (FS + TUI) ; on ne reprend pas tokio, bollard, async-trait, futures-util, chrono, base64. `std::fs` + event loop crossterm suffisent (pattern `EventHandler` de rusty-console conservé, sans async).
-- **D2 : Pack = répertoire + `pack.toml`** ✅ — dépendances `toml` + `serde`. Schéma du manifeste : `name`, `description`, `version`, `cli` (liste cible : `vibe`/`gemini`), `[[items]]` (kind `skill|agent|command`, source locale, destination par CLI : ex. `.agents/skills/<name>/` pour vibe, `.gemini/commands/` pour gemini).
-- **D3 : Découverte des packs sur disque** — recherche dans `<dir_du_binaire>/packs/` puis `/usr/share/rusty-agentic-pack-manager/packs/`. Rend le packaging trivial (RPM/DEB embarquent `packs/` comme asset ; le 7z Windows = binaire + `packs/` à côté).
-- **D4 : Domain `pack`** — entité `Pack` (identité = nom + version), value objects `PackName`, `PackVersion`, `TargetCli` (enum extensible), `PackItemKind` ; erreurs dédiées dans `01_domain/error.rs`. La **planification d'installation** (calcul des copies source→destination, détection de collisions) est une règle du domain, testable sans FS.
-- **D9 : Visionneuse de pack (`v`, panel packs uniquement)** ✅ — `v` sur un pack sélectionné ouvre un écran de visualisation des fichiers du pack : `.md`, `.js`, `.toml` (tout fichier texte au sens large ; les fichiers non textuels sont refusés proprement). La visionneuse reprend le pattern « écran de logs » de rusty-console : plein écran, navigation (flèches, PgUp/PgDn, Home/End), retour par `Esc` à l'écran split-screen, `Tab` bascule entre la liste des fichiers du pack et l'aperçu du contenu. **Coloration syntaxique** via `syntect` (lecteurs de syntaxe `.md`, `.js`, `.toml` fournis par le crate) ; rendu adapté aux 16 couleurs du terminal via le thème de rusty-console. Nouvelle area application `pack_view` : trait `PackContentRepository` (list, read), DTO `PackFile { path, kind, content }`, adapter en `03_infrastructure/pack/`. Dépendance ajoutée : `syntect` (justifiée : coloration syntaxique exigée ; features par défaut sans onig — utiliser les regex du std si disponibles, sinon `default-onig`).
-- **D5 : Deux areas application** — `pack` (service de listage/chargement, trait `PackRepository`) et `explorer` (service de navigation FS, traits `ExplorerRepository` : list, create_dir ; DTO `FileNode`). Adapters en `03_infrastructure/filesystem/` (std::fs) et `03_infrastructure/pack/` (lecture `pack.toml`). Frontières mockées avec `mockall` en tests, comme rusty-console.
-- **D6 : UI = un seul écran à deux panneaux** — état `Focus::Packs | Focus::Explorer` basculé par Tab. La flow « apply » introduit un mode `Installing { pack }` qui force `Focus::Explorer` et restreint les actions à : navigation, `i` = installer, Espace = aide. Triade presenter/view/actions par panneau + `common/` repris de rusty-console (`theme`, `keys`, `action_bar`, aide en popup contextuel, `confirm`). `App`/`router.rs` séquencent les `AppAction`, pattern identique à rusty-console.
-- **D7 : Touches v1** — Tab (focus), Entrée/Retour (navigation des deux côtés), `A` (apply → mode install), `i` (installer ici), `r` (créer dossier), `v` (visionneuse de pack, panel packs uniquement), Espace (aide contextuelle selon panneau/mode). `m`/`d`/`D` reportés v2.
-- **D8 : Contenu des packs initiaux — granularité thématique** ✅, uniquement vibe + gemini, agnostiques des libs tierces. Packs prévus : `tdd`, `review`, `planning`, `debugging`, `security`, `architecture`, `quality-gate`, plus packs solo (`prd`, `work-slicing`, `thought-partner`, `brainstorming`, `karpathy-guidelines`, `parallel-agents`, `i-have-adhd`) depuis docs-tech/llm-cli ; pack `rusty-agnostic` depuis les skills/agents/commands de rusty-console. Composition exacte figée à l'étape 10.
+- **D1: Synchronous application, no tokio/bollard** — the v1 scope is purely local (FS + TUI); tokio, bollard, async-trait, futures-util, chrono, base64 are not carried over. `std::fs` + the crossterm event loop suffice (rusty-console `EventHandler` pattern kept, without async).
+- **D2: Pack = directory + `pack.toml`** ✅ — `toml` + `serde` dependencies. Manifest schema: `name`, `description`, `version`, `cli` (target list: `vibe`/`gemini`), `[[items]]` (kind `skill|agent|command`, local source, per-CLI destination: e.g. `.agents/skills/<name>/` for vibe, `.gemini/commands/` for gemini).
+- **D3: Pack discovery on disk** — search in `<binary dir>/packs/` then `/usr/share/rusty-agentic-pack-manager/packs/`. Makes packaging trivial (RPM/DEB embed `packs/` as an asset; the Windows 7z = binary + `packs/` side by side).
+- **D4: Domain `pack`** — entity `Pack` (identity = name + version), value objects `PackName`, `PackVersion`, `TargetCli` (extensible enum), `PackItemKind`; dedicated errors in `01_domain/error.rs`. **Install planning** (source→destination copy computation, collision detection) is a domain rule, testable without the FS.
+- **D5: Two application areas** — `pack` (list/load service, `PackRepository` trait) and `explorer` (FS navigation service, `ExplorerRepository` traits: list, create_dir; `FileNode` DTO). Adapters in `03_infrastructure/filesystem/` (std::fs) and `03_infrastructure/pack/` (`pack.toml` reading). Boundaries mocked with `mockall` in tests, like rusty-console.
+- **D6: UI = one screen with two panels** — state `Focus::Packs | Focus::Explorer` toggled by Tab. The "apply" flow introduces an `Installing { pack }` mode forcing `Focus::Explorer` and restricting actions to: navigation, `I` = install, Space = help. Presenter/view/actions triad per panel + `common/` from rusty-console (`theme`, `keys`, `action_bar`, contextual help popup, `confirm`). `App`/`router.rs` sequence the `AppAction`, pattern identical to rusty-console.
+- **D7: v1 keys** — Tab (focus), Enter/Backspace (navigation on both sides), `A` (apply → install mode), `I` (install here), `R` (create folder), `V` (pack viewer, packs panel only), `M` (rename, explorer), `D`/`Shift-D` (delete, explorer — user decision added post-challenge), Space (contextual help per panel/mode).
+- **D8: Initial pack content — thematic granularity** ✅, vibe + gemini only, library-agnostic. Packs shipped: `tdd`, `code-review`, `debugging`, `security`, `planning`, `brainstorming`, `quality-gate`, plus solo packs (`prd`, `work-slicing`, `karpathy`, `parallel-agents`, `focus-adhd`) from docs-tech/llm-cli; `rusty-agnostic` pack from rusty-console skills/agents/commands.
+- **D9: Pack viewer (`V`, packs panel only)** ✅ — `V` on a selected pack opens a file-viewing screen: `.md`, `.js`, `.toml` (any text file in the broad sense; non-text files are cleanly refused). The viewer reuses the rusty-console "logs screen" pattern: full screen, navigation (arrows, PgUp/PgDn, Home/End), `Esc` returns to the split screen, `Tab` switches between the pack file list and the content preview. **Syntax highlighting** via `syntect` (`.md`, `.js`, `.toml` syntax readers) ; rendering adapted to the terminal 16 colors via the rusty-console theme.
+- **D10: Rename and delete in the explorer (v1)** ✅ (user decision) — `M` renames the selected file/folder via the input dialog prefilled with the current name; `D` deletes with a confirmation dialog; `Shift-D` forces the deletion of a non-empty folder. The application service validates names (no path separators, no `..`); deletion is recursive and confined to the explorer's current directory.
 
-## Étapes
+## Steps
 
-1. **Squelette** — `Cargo.toml` (déps : ratatui 0.30, crossterm 0.29, thiserror, anyhow, serde, toml ; dev : mockall), `src/lib.rs`, `src/main.rs`, modules des 4 couches vides — *vérif : `cargo check`*
-2. **Domain pack** — `01_domain/pack/{entity,value_objects}.rs`, `01_domain/error.rs` + tests unitaires (validation manifeste, plan d'installation, collision) — *vérif : `cargo test --lib pack`*
-3. **Application** — `02_application/{pack,explorer}/` (traits, DTO, services, mappers) + tests avec mocks `mockall` — *vérif : `cargo test --lib`*
-4. **Infrastructure** — `03_infrastructure/pack/` (loader `pack.toml`) et `03_infrastructure/filesystem/` (explorer, create_dir) + tests sur fichiers temporaires — *vérif : `cargo test --lib`*
-5. **Socle TUI** — `04_presentation/tui/{app,event,router}.rs` + `common/` (theme, keys, action_bar) repris de rusty-console ; split-screen avec deux panneaux, Tab bascule le focus, rendu vide — *vérif : `cargo test --lib presentation`*
-6. **Panneau packs** — triade `packs/{presenter,view,actions}.rs` : liste groupée par CLI, sélection, `A` passe en mode install — tests TestBackend — *vérif : `cargo test packs`*
-7. **Panneau explorer** — triade `explorer/{presenter,view,actions}.rs` : navigation Entrée/Retour, `r` (créer dossier, dialog input repris de rusty-console), mode install restreint + `i` installe (confirm dialog) — tests TestBackend — *vérif : `cargo test explorer`*
-8. **Aide contextuelle** — popup Espace selon focus/mode — test TestBackend — *vérif : `cargo test help`*
-9. **Visionneuse de pack (`v`)** — application `pack_view` (trait + DTO + service + tests mockall) ; infrastructure `03_infrastructure/pack/content.rs` (lecture fichiers du pack) ; presentation `04_presentation/tui/viewer/` (triade presenter/view/actions : liste fichiers ↔ aperçu, coloration `syntect`, navigation logs-like) + tests TestBackend — *vérif : `cargo test viewer`*
-10. **Tests d'intégration** — `tests/pack_install.rs` (pack réel → répertoire temp : fichiers copiés aux bonnes destinations), `tests/split_screen_ui.rs` (focus Tab, rendu des panneaux) — *vérif : `cargo test`*
-11. **Données : rédaction des packs** — `packs/<name>/pack.toml` + contenus depuis docs-tech/llm-cli et rusty-console, adaptés vibe/gemini, agnostiques — *vérif : `cargo test --test pack_install` + revue manuelle des manifestes*
-12. **Packaging** — `cargo-generate-rpm` (assets : binaire + `packs/`), `cargo-deb`, artefact 7z Windows (binaire + `packs/`) dans CI — *vérif : `cargo generate-rpm` local*
-13. **Docs** — `README.md` (fait), `MANUAL.md` (touches), `CONTEXT.md`/`AGENTS.md` adaptés à ce projet, plan archivé dans `docs/plans/` (ce fichier) — *vérif : `cargo fmt --check && cargo clippy --all-targets -- -D warnings && cargo test`*
+1. **Skeleton** — `Cargo.toml` (deps: ratatui 0.30, crossterm 0.29, thiserror, anyhow, serde, toml; dev: mockall), `src/lib.rs`, `src/main.rs`, empty 4-layer modules — *check: `cargo check`*
+2. **Domain pack** — `01_domain/pack/{entity,value_objects}.rs`, `01_domain/error.rs` + unit tests (manifest validation, install plan, collisions) — *check: `cargo test --lib pack`*
+3. **Application** — `02_application/{pack,pack_view,explorer}/` (traits, DTOs, services, mappers) + tests with `mockall` mocks — *check: `cargo test --lib`*
+4. **Infrastructure** — `03_infrastructure/pack/` (`pack.toml` loader) and `03_infrastructure/filesystem/` (explorer, create_dir) + tempdir tests — *check: `cargo test --lib`*
+5. **TUI foundation** — `04_presentation/tui/{app,event,router}.rs` + `common/` (theme, keys, action_bar) from rusty-console; split screen with two panels, Tab toggles focus, empty render — *check: `cargo test --lib presentation`*
+6. **Packs panel** — triad `packs/{presenter,view,actions}.rs`: CLI-grouped list, selection, `A` enters install mode — TestBackend tests — *check: `cargo test packs`*
+7. **Explorer panel** — triad `explorer/{presenter,view,actions}.rs`: Enter/Backspace navigation, `R` (create folder, input dialog), restricted install mode + `I` installs (confirm dialog) — TestBackend tests — *check: `cargo test explorer`*
+8. **Contextual help** — Space popup per focus/mode — TestBackend test — *check: `cargo test help`*
+9. **Pack viewer (`V`)** — application `pack_view` (trait + DTO + service + mockall tests); infrastructure `03_infrastructure/pack/content.rs`; presentation `04_presentation/tui/viewer/` (triad: file list ↔ highlighted preview, syntect, logs-like navigation) + TestBackend tests — *check: `cargo test viewer`*
+10. **Integration tests** — `tests/pack_install.rs` (real pack → temp dir: files copied to the right destinations), `tests/split_screen_ui.rs` (Tab focus, panel rendering) — *check: `cargo test`*
+11. **Data: pack writing** — `packs/<name>/pack.toml` + content from docs-tech/llm-cli and rusty-console, vibe/gemini-adapted, agnostic — *check: `cargo test --test pack_install` + manual manifest review*
+12. **Packaging** — `cargo-generate-rpm` (assets: binary + `packs/`), `cargo-deb`, Windows 7z artifact (binary + `packs/`) in CI — *check: `cargo generate-rpm` local*
+13. **Docs** — `README.md` (done), `MANUAL.md` (keys), `CONTEXT.md`/`AGENTS.md` adapted to this project, plan archived in `docs/plans/` (this file) — *check: `cargo fmt --check && cargo clippy --all-targets -- -D warnings && cargo test`*
+14. **Rename / delete (v1 addition)** — application: `rename`, `remove` (recursive, confined) on `ExplorerRepository`; infrastructure: `FsExplorer` implementations; UI: `M` (prefilled input dialog), `D` (confirm dialog), `Shift-D` (force non-empty folder); docs and help updated; TestBackend + tempdir tests — *check: `cargo test`*
 
-## Risques et mitigations
+## Risks and mitigations
 
-- **Chemin d'installation gemini exact** (`.gemini/commands/` à confirmer) → manifeste par pack = source de vérité modifiable sans recompiler ; vérification à l'étape 10.
-- **Patterns de rusty-console à dé-asyncifier** (tokio supprimé) → mitigé en gardant l'event loop synchrone simple dès l'étape 5.
-- **`toml` crate vs MSRV 1.88** → vérifier la version résolue à l'étape 1, épingler si nécessaire.
-- **7z Windows en CI** → nécessite `7z` dans le runner ; fallback : archive zip si l'outil manque.
-- **`syntect` vs MSRV 1.88 / taille binaire** → `syntect` entraîne des dumps de syntaxe embarqués (≈2-3 Mo) ; si le MSRV ou la taille posent problème, fallback : coloration lexicale maison (regex std) limitée à `.md`/`.js`/`.toml`, décidée à l'étape 9.
-- **Coloration 16 couleurs terminal** → `syntect` sort des couleurs 24-bits ; mapping vers la palette du thème ; test TestBackend sur des spans stylés.
+- **Exact gemini install path** (`.gemini/commands/` to confirm) → per-pack manifest = source of truth editable without recompiling; check at step 11.
+- **rusty-console patterns to de-asyncify** (tokio removed) → mitigated by keeping the synchronous event loop simple from step 5.
+- **`toml` crate vs MSRV 1.88** → check the resolved version at step 1, pin if needed.
+- **7z on Windows in CI** → requires `7z` on the runner; fallback: zip archive if the tool is missing.
+- **`syntect` vs MSRV 1.88 / binary size** → syntect pulls embedded syntax dumps (~2-3 MB); if MSRV or size becomes a problem, fallback: homegrown lexical highlighting (std regex) limited to `.md`/`.js`/`.toml`, decided at step 9.
+- **16-color terminal mapping** → syntect outputs 24-bit colors; map to the theme palette; TestBackend test on styled spans.
+- **Destructive delete on the host FS** → confirmation dialog, recursive delete confined under the explorer's current directory, no `..` or absolute paths accepted by the service.
 
-## Hors périmètre (v1)
+## Out of scope (v1)
 
-- Rename (`m`), delete (`d`/`D`) sur le FS hôte — v2
-- Undeploy/suppression d'un pack appliqué — v2 (le manifeste copié dans la cible à l'install le rendra possible)
-- Packs aux formats 7z/tar — v2
-- CLIs autres que vibe et gemini — structure prête (enum `TargetCli`), contenu non fourni
+- Full undeploy of an applied pack — v2 (the manifest copied into the target at install will make it possible)
+- 7z/tar pack formats — v2
+- CLIs other than vibe and gemini — structure ready (`TargetCli` enum), content not provided
+
+## Translations (v1 addition)
+
+All project resources are translated to English, pack skills included: `packs/` (manifests stay language-neutral TOML; SKILL.md/commands/agents content), `rules/`, `agents/`, `.vibe/` (prompts, agent descriptions, config), `README.md`, `MANUAL.md`, `AGENTS.md`, `AGENT_ARCHITECTURE.md`, `CONTEXT.md`, this plan.

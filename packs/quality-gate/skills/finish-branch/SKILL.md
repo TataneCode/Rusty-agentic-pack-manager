@@ -1,90 +1,90 @@
 ---
 name: finish-branch
-description: "À utiliser quand l'implémentation est terminée et qu'il faut décider comment intégrer le travail : vérifie les tests, détermine la branche de base, présente les options (merge local ou PR), exécute le choix, nettoie l'espace de travail."
+description: "Use when the implementation is done and the work must be integrated: verify the tests, determine the base branch, present the options (local merge or PR), execute the choice, clean up the workspace."
 license: MIT
 ---
 
-# Finish Branch — Terminer une branche
+# Finish Branch — Finishing a branch
 
-## Quand l'utiliser
+## When to use
 
-Implémentation terminée, travail prêt à être intégré. Ne s'applique pas à un travail en cours.
+Implementation finished, work ready to be integrated. Does not apply to work in progress.
 
-## Le processus
+## The process
 
-### Étape 1 — Vérifier que les tests passent
+### Step 1 — Verify the tests pass
 
-Exécute la suite de tests du projet (détecte la commande : `npm test`, `pytest`, `go test`, `cargo test`...). **Lis la sortie.**
+Run the project's test suite (detect the command: `npm test`, `pytest`, `go test`, `cargo test`...). **Read the output.**
 
-- Tout vert → passe à l'étape 2.
-- Au rouge → retourne au travail (`systematic-debugging` ou `tdd`). Ne termine pas une branche qui casse.
+- All green → go to step 2.
+- Red → back to work (`systematic-debugging` or `tdd`). Do not finish a branch that breaks.
 
-### Étape 2 — Revue du diff
+### Step 2 — Diff review
 
-Montre le diff complet (`git diff <base>...HEAD` ou `git status` + `git diff`). Relis-le comme un relecteur (voir `code-review`, partie auto-revue). Corrige ce qui bloque.
+Show the full diff (`git diff <base>...HEAD` or `git status` + `git diff`). Reread it like a reviewer (see `code-review`, self-review part). Fix what blocks.
 
-### Étape 3 — Déterminer la branche de base
+### Step 3 — Determine the base branch
 
-- Branche par défaut du dépôt : `main` ou `master` (vérifie : `git remote show origin` ou la config).
-- Branche cible explicite (feature branch upstream) : celle-là.
-- En cas de doute, demande.
+- Repository default branch: `main` or `master` (check: `git remote show origin` or the config).
+- Explicit target branch (upstream feature branch): that one.
+- In doubt, ask.
 
-Vérifie que la base est à jour (`git fetch`) et note s'il y a des conflits à prévoir.
+Verify the base is up to date (`git fetch`) and note any conflicts to expect.
 
-### Étape 4 — Présenter les options
+### Step 4 — Present the options
 
-Présente à l'utilisateur, ne décide pas à sa place :
+Present to the user, do not decide for them:
 
-| Option | Quand | Effet |
+| Option | When | Effect |
 |--------|-------|-------|
-| **1. Merge local** | Branche de feature locale, base = main locale | Merge dans la base, tests re-vérifiés sur le résultat |
-| **2. Push + PR** | Dépôt partagé, revue requise | Push la branche, ouvre la PR, branche le suivi revue |
-| **3. Laisser tel quel** | Travail expérimental, pas prêt | Ne touche à rien, résume l'état |
+| **1. Local merge** | Local feature branch, base = local main | Merge into the base, tests re-verified on the result |
+| **2. Push + PR** | Shared repository, review required | Push the branch, open the PR, branch review tracking |
+| **3. Leave as is** | Experimental work, not ready | Touch nothing, summarize the state |
 
-### Étape 5 — Exécuter le choix
+### Step 5 — Execute the choice
 
-**Option 1 — Merge local :**
+**Option 1 — Local merge:**
 
 ```bash
 git checkout <base>
 git pull
-# merge --no-ff pour garder l'historique de la branche, ou merge classique selon la convention du dépôt
-git merge <branche>
-# revérifie les tests sur le résultat mergé
+# merge --no-ff to keep the branch history, or a plain merge per the repository convention
+git merge <branch>
+# re-verify the tests on the merged result
 ```
 
-**Option 2 — Push + PR :**
+**Option 2 — Push + PR:**
 
 ```bash
-git push -u origin <branche>
-# ouvre la PR (gh pr create ou lien) avec : titre, résumé du diff, vérifications exécutées, points de revue
+git push -u origin <branch>
+# open the PR (gh pr create or link) with: title, diff summary, executed verifications, review points
 ```
 
-**Option 3 — Laisser tel quel :** résume l'état en 3 lignes (quoi, où, prochaine étape).
+**Option 3 — Leave as is:** summarize the state in 3 lines (what, where, next step).
 
-### Étape 6 — Nettoyer l'espace de travail
+### Step 6 — Clean up the workspace
 
-- Si le travail a utilisé un worktree : le supprimer (`git worktree remove <chemin>`).
-- Supprimer les branches locales mortes si mergées.
-- Vérifier qu'aucun fichier temporaire, log de debug ou instrumentation ne reste (`git status` propre).
+- If the work used a worktree: remove it (`git worktree remove <path>`).
+- Delete dead local branches if merged.
+- Verify no temporary file, debug log or instrumentation remains (`git status` clean).
 
-## Si l'utilisateur demande d'abandonner le travail
+## If the user asks to abandon the work
 
-Ne supprime rien sans confirmation explicite. Propose : `git checkout <base>` + branche conservée, ou `git branch -D <branche>` si vraiment jeté. Détruire du travail non commité est irréversible.
+Delete nothing without explicit confirmation. Propose: `git checkout <base>` + branch kept, or `git branch -D <branch>` if truly discarded. Destroying uncommitted work is irreversible.
 
-## Rationalisations interdites
+## Forbidden rationalizations
 
-| Rationalisation | Réalité |
+| Rationalization | Reality |
 |-----------------|---------|
-| « Les tests passaient avant, pas besoin de revérifier » | Le merge change le résultat. Revérifie (étape 1 et 5). |
-| « Le diff est gros, pas le temps de le relire » | C'est justement le gros diff qui mérite la relecture. |
-| « Je merge directement, la revue viendra après » | Non. Revue avant merge, ou merge local explicite. |
+| "The tests passed before, no need to re-verify" | The merge changes the result. Re-verify (steps 1 and 5). |
+| "The diff is big, no time to reread it" | It is precisely the big diff that deserves the reread. |
+| "I merge directly, review will come after" | No. Review before merge, or explicit local merge. |
 
-## Check-list finale
+## Final checklist
 
-- [ ] Suite de tests exécutée et verte (sortie lue).
-- [ ] Diff relu, auto-revue faite.
-- [ ] Branche de base identifiée et à jour.
-- [ ] Option choisie par l'utilisateur, exécutée.
-- [ ] En cas de merge : tests revérifiés sur le résultat.
-- [ ] Espace de travail nettoyé, `git status` propre.
+- [ ] Test suite executed and green (output read).
+- [ ] Diff reread, self-review done.
+- [ ] Base branch identified and up to date.
+- [ ] Option chosen by the user, executed.
+- [ ] In case of merge: tests re-verified on the result.
+- [ ] Workspace cleaned, `git status` clean.

@@ -1,6 +1,6 @@
 agent_type = "agent"
 display_name = "Reviewer"
-description = "Relit les développements rusty-console (skill review) : PR GitHub en Vibe Code, diff de branche en CLI. Lecture seule stricte, vérification contre rules/. Ne produit ni plan ni code."
+description = "Reviews rusty-agentic-pack-manager developments (review skill): GitHub PR in Vibe Code, branch diff in CLI. Strict read-only, verification against rules/. Produces neither plan nor code."
 safety = "safe"
 system_prompt_id = "reviewer"
 

@@ -1,102 +1,102 @@
 ---
 name: prd
-description: "Rédige un PRD (Product Requirements Document) optimisé pour un agent : clarification obligatoire avec l'utilisateur, recherche rapide limitée, rédaction structurée, auto-évaluation. À utiliser pour cadrer une nouvelle feature ou un produit."
+description: "Write a PRD (Product Requirements Document) optimized for an agent: mandatory clarification with the user, limited quick research, structured writing, self-assessment. Use to frame a new feature or product."
 license: MIT
 ---
 
 # PRD — Product Requirements Document
 
-## Phase 0 — Clarification (obligatoire)
+## Phase 0 — Clarification (mandatory)
 
-Avant d'écrire la moindre ligne de PRD, pose ces questions à l'utilisateur :
+Before writing a single line of PRD, ask the user these questions:
 
-1. **Utilisateurs cibles** : qui va s'en servir ? (développeurs, utilisateurs finaux, admins...)
-2. **Problème central** : quel douleur cela résout-il ? Chiffres si disponibles.
-3. **Critères de succès** : comment mesure-t-on que ça réussit ?
-4. **Contraintes** : techniques, budget, délai.
-5. **Contexte** : greenfield ou intégration dans un système existant ?
+1. **Target users**: who will use it? (developers, end users, admins...)
+2. **Core problem**: what pain does it solve? Numbers if available.
+3. **Success criteria**: how do we measure success?
+4. **Constraints**: technical, budget, deadline.
+5. **Context**: greenfield or integration into an existing system?
 
-**Attends la réponse avant de continuer.** Si l'utilisateur dit « skip » ou donne la description en ligne, extrais ce que tu peux et note les hypothèses.
+**Wait for the answer before continuing.** If the user says "skip" or gives the description inline, extract what you can and note the assumptions.
 
-## Phase 1 — Recherche rapide (max 2 recherches)
+## Phase 1 — Quick research (max 2 searches)
 
-Uniquement si le domaine est inconnu :
+Only if the domain is unknown:
 
-- 1 recherche pour le contexte domaine/marché.
-- 1 recherche pour les patterns techniques éventuels.
+- 1 search for domain/market context.
+- 1 search for possible technical patterns.
 
-Pas plus. 60 secondes max pour cette phase. Ne fais pas de recherche approfondie.
+No more. 60 seconds max for this phase. No deep research.
 
-## Phase 2 — Rédaction du PRD
+## Phase 2 — Writing the PRD
 
 ```markdown
-# PRD : [Nom]
+# PRD: [Name]
 
 ## 1. Vision
-Une phrase : ce que le produit/feature accomplit.
+One sentence: what the product/feature accomplishes.
 
-## 2. Utilisateurs cibles
-- [Profil 1] : besoin, contexte d'usage.
+## 2. Target users
+- [Profile 1]: need, usage context.
 
-## 3. Problème
-Quel douleur, pour qui, aujourd'hui. Fréquence et impact.
+## 3. Problem
+What pain, for whom, today. Frequency and impact.
 
-## 4. Objectifs et critères de succès
-- [Objectif 1] → mesurable : [métrique]
+## 4. Goals and success criteria
+- [Goal 1] → measurable: [metric]
 
-## 5. Fonctionnalités
+## 5. Features
 
 ### Must have (MVP)
-- [Fonctionnalité] : description, utilisateur, critère d'acceptation.
+- [Feature]: description, user, acceptance criterion.
 
 ### Should have
 - ...
 
-### Won't have (hors scope)
+### Won't have (out of scope)
 - ...
 
-## 6. Contraintes et hypothèses
-- Contraintes : [technique, budget, délai]
-- Hypothèses : [à valider]
+## 6. Constraints and assumptions
+- Constraints: [technical, budget, deadline]
+- Assumptions: [to validate]
 
-## 7. Questions ouvertes
-- [Question] → qui décide, quand.
+## 7. Open questions
+- [Question] → who decides, when.
 
-## 8. Prochaines étapes
-1. [Étape concrète, ex. : valider ce PRD, puis découper en plan (`writing-plans`)]
+## 8. Next steps
+1. [Concrete step, e.g.: validate this PRD, then slice into a plan (`writing-plans`)]
 ```
 
-## Phase 2.5 — Revue adversariale (recommandée)
+## Phase 2.5 — Adversarial review (recommended)
 
-Relis ton propre PRD avec un œil hostile :
+Reread your own PRD with a hostile eye:
 
-- Chaque « must have » est-il vraiment indispensable au MVP ?
-- Chaque critère de succès est-il mesurable, pas flou ?
-- Y a-t-il une fonctionnalité « au cas où » à reclasser en « won't have » ?
-- Les hypothèses sont-elles testables ?
+- Is every "must have" truly indispensable to the MVP?
+- Is every success criterion measurable, not fuzzy?
+- Is there a "just in case" feature to reclassify as "won't have"?
+- Are the assumptions testable?
 
-Corrige ce que la revue révèle. Marque les changements.
+Fix what the review reveals. Mark the changes.
 
-## Phase 3 — Auto-évaluation
+## Phase 3 — Self-assessment
 
-Note le PRD sur 10 avec cette grille, et justifie chaque note en une ligne :
+Score the PRD out of 10 with this grid, and justify every score in one line:
 
-| Critère | Note /10 |
+| Criterion | Score /10 |
 |---------|----------|
-| Clarté du problème | |
-| Utilisateurs bien définis | |
-| Critères de succès mesurables | |
-| Scope MVP réaliste | |
-| Questions ouvertes identifiées | |
+| Problem clarity | |
+| Well-defined users | |
+| Measurable success criteria | |
+| Realistic MVP scope | |
+| Open questions identified | |
 
-Si une note est < 7, corrige avant de présenter. Si tout est ≥ 7, présente.
+If a score is < 7, fix before presenting. If all are ≥ 7, present.
 
-## Phase 4 — Sauvegarde
+## Phase 4 — Save
 
-Range le PRD dans le dépôt (proposition : `docs/prd/<date>-<sujet>.md`) et résume en 5 lignes : vision, MVP, métrique clé, contrainte principale, prochaine étape.
+Store the PRD in the repository (proposal: `docs/prd/<date>-<topic>.md`) and summarize in 5 lines: vision, MVP, key metric, main constraint, next step.
 
-## Règles
+## Rules
 
-- Le PRD décrit le **quoi** et le **pourquoi**, jamais le **comment** (pas de choix techniques d'implémentation).
-- Un critère de succès se mesure. « Les utilisateurs aiment » n'est pas un critère.
-- Le MVP est le plus petit ensemble qui prouve la valeur. Coupe sans pitié.
+- The PRD describes the **what** and the **why**, never the **how** (no technical implementation choices).
+- A success criterion is measurable. "Users love it" is not a criterion.
+- The MVP is the smallest set that proves value. Cut without mercy.

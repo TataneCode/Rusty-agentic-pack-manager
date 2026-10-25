@@ -1,70 +1,70 @@
 ---
 name: systematic-debugging
-description: "À utiliser dès qu'un bug, un test en échec ou un comportement inattendu apparaît, avant de proposer le moindre correctif : enquête en 4 phases — cause racine, analyse de pattern, hypothèse testée, puis fix. Ne corrige jamais sans avoir compris."
+description: "Use as soon as a bug, failing test or unexpected behavior appears, before proposing any fix: a 4-phase investigation — root cause, pattern analysis, tested hypothesis, then fix. Never fix without having understood."
 license: MIT
 ---
 
-# Systematic Debugging — Débogage systématique
+# Systematic Debugging — Systematic debugging
 
-## La loi de fer
+## The iron rule
 
-**Ne corrige pas sans avoir compris.** Un fix appliqué à un symptôme est un nouveau bug en préparation. La séquence est obligatoire : cause racine d'abord, correctif ensuite.
+**Do not fix without having understood.** A fix applied to a symptom is a new bug in the making. The sequence is mandatory: root cause first, fix second.
 
-## Les 4 phases
+## The 4 phases
 
-### Phase 1 — Enquête sur la cause racine
+### Phase 1 — Root cause investigation
 
-Objectif : comprendre pourquoi le comportement se produit, pas seulement où.
+Goal: understand why the behavior occurs, not just where.
 
-1. **Reproduis** : écris les étapes exactes qui déclenchent le problème. Lance-les. Confirme le symptôme.
-2. **Lis l'erreur en entier** : message complet, stack trace, logs, code de sortie. Ne tronque pas.
-3. **Inspecte l'état** : valeurs des variables au moment du crash, contenu des fichiers, sortie des commandes intermédiaires.
-4. **Localise** : ajoute temporairement des logs/prints si besoin, ou lis le code du chemin d'exécution.
-5. **Demande « pourquoi » 5 fois** : remonte la chaîne causale jusqu'à la cause première (pas seulement le maillon le plus proche).
+1. **Reproduce**: write the exact steps that trigger the problem. Run them. Confirm the symptom.
+2. **Read the entire error**: full message, stack trace, logs, exit code. Do not truncate.
+3. **Inspect the state**: variable values at crash time, file contents, intermediate command outputs.
+4. **Locate**: temporarily add logs/prints if needed, or read the code of the execution path.
+5. **Ask "why" 5 times**: walk up the causal chain to the first cause (not just the nearest link).
 
-Règle : à la fin de la phase 1, tu dois pouvoir dire en une phrase : « Ça casse parce que X, et X est faux à cause de Y. »
+Rule: at the end of phase 1, you must be able to say in one sentence: "It breaks because X, and X is wrong because of Y."
 
-### Phase 2 — Analyse de pattern
+### Phase 2 — Pattern analysis
 
-1. Ce bug ressemble-t-il à un bug passé dans ce dépôt ? Cherche (`grep`, historique git).
-2. Le pattern est-il local (une fonction) ou systémique (plusieurs endroits) ?
-3. Y a-t-il d'autres endroits avec le même défaut latent ? Liste-les sans les corriger encore.
+1. Does this bug resemble a past bug in this repository? Search (`grep`, git history).
+2. Is the pattern local (one function) or systemic (several places)?
+3. Are there other places with the same latent defect? List them without fixing them yet.
 
-### Phase 3 — Hypothèse et test
+### Phase 3 — Hypothesis and test
 
-1. Formule UNE hypothèse testable pour la cause racine.
-2. Conçois le test minimal qui la confirme ou l'infirme (test de reproduction, requête, script).
-3. Exécute-le. Si l'hypothèse est infirmée, retourne à la phase 1. Ne « essaie pas des trucs » au hasard.
+1. Formulate ONE testable hypothesis for the root cause.
+2. Design the minimal test that confirms or disproves it (reproduction test, request, script).
+3. Run it. If the hypothesis is disproved, go back to phase 1. Do not "try things" at random.
 
-### Phase 4 — Implémentation
+### Phase 4 — Implementation
 
-1. Corrige la cause racine, pas le symptôme.
-2. Le fix est minimal et chirurgical (voir `karpathy-guidelines`).
-3. **Vérifie** (voir `verification-gate`) : le test de reproduction passe, la suite de tests ne régresse pas.
-4. Nettoie : supprime les logs/prints temporaires, les fichiers de test jetables.
-5. Si le pattern était systémique (phase 2), signale les autres sites concernés — corrige-les si c'est dans le scope, mentionne-les sinon.
+1. Fix the root cause, not the symptom.
+2. The fix is minimal and surgical (see `karpathy-guidelines`).
+3. **Verify** (see `verification-gate`): the reproduction test passes, the test suite has no regression.
+4. Clean up: remove temporary logs/prints, disposable test files.
+5. If the pattern was systemic (phase 2), flag the other affected sites — fix them if in scope, mention them otherwise.
 
-## Red flags — STOP et reviens au processus
+## Red flags — STOP and return to the process
 
-- Tu t'apprêtes à modifier du code sans avoir reproduit le bug.
-- Tu as changé 3 choses et « peut-être que ça marche maintenant ».
-- Tu ne peux pas expliquer la cause racine en une phrase.
-- Le « fix » consiste à supprimer un message d'erreur ou à ajouter un `try/catch` qui avale l'exception.
+- You are about to modify code without having reproduced the bug.
+- You changed 3 things and "maybe it works now".
+- You cannot explain the root cause in one sentence.
+- The "fix" consists of removing an error message or adding a `try/catch` that swallows the exception.
 
-## Signaux que l'utilisateur t'indique que tu dérapes
+## Signals that the user gives you when you are drifting
 
-- « On a déjà essayé ça » → tu proposes une variation sans nouvelle hypothèse.
-- « Pourquoi tu modifies encore » → tu itères sans preuve.
-- « Ce n'est pas ça le problème » → tu n'as pas écouté le symptôme réel.
+- "We already tried that" → you propose a variation without a new hypothesis.
+- "Why are you changing this again" → you iterate without proof.
+- "That's not the problem" → you did not listen to the real symptom.
 
-## Rationalisations interdites
+## Forbidden rationalizations
 
-| Rationalisation | Contre-argument |
+| Rationalization | Counter-argument |
 |-----------------|-----------------|
-| « C'est évident, pas besoin d'enquêter » | L'évidence est le parent du faux fix. 2 minutes d'enquête. |
-| « Je vais corriger et on verra » | Non. Hypothèse d'abord, test, puis fix. |
-| « Le bug est intermittent, on ne peut pas le reproduire » | Rends-le reproductible (logs, seed, environnement), ou dis-le honnêtement. |
+| "It's obvious, no need to investigate" | Obviousness is the parent of the false fix. 2 minutes of investigation. |
+| "I'll fix it and we'll see" | No. Hypothesis first, test, then fix. |
+| "The bug is intermittent, it cannot be reproduced" | Make it reproducible (logs, seed, environment), or say so honestly. |
 
-## Si le processus ne trouve pas de cause racine
+## If the process does not find a root cause
 
-Dis-le explicitement : « Je n'ai pas trouvé la cause racine. Voici ce que j'ai écarté : [...]. Prochaine piste : [...]. » Ne fabrique pas un fix au hasard pour sauver la face.
+Say it explicitly: "I did not find the root cause. Here is what I ruled out: [...]. Next lead: [...]." Do not fabricate a random fix to save face.

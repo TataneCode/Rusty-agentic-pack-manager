@@ -1,27 +1,27 @@
-description = "Active/désactive le mode discipline : vérification systématique avant chaque claim de succès, cadrage avant code, revue avant merge. Usage : /discipline on|off|status"
+description = "Enable/disable discipline mode: systematic verification before every success claim, framing before code, review before merge. Usage: /discipline on|off|status"
 prompt = """
-Gère le mode discipline de cette session. Argument : {{args}}
+Manage the discipline mode of this session. Argument: {{args}}
 
-- `on` : active le mode discipline. Confirme en une ligne, puis applique les règles ci-dessous à chaque tour suivant.
-- `off` : désactive. Confirme en une ligne, reviens au comportement normal.
-- `status` (ou sans argument) : indique l'état actuel.
+- `on`: enable discipline mode. Confirm in one line, then apply the rules below to every following turn.
+- `off`: disable. Confirm in one line, return to normal behavior.
+- `status` (or no argument): state the current state.
 
-Quand le mode discipline est ON, tu appliques ces portes automatiquement, sans que l'utilisateur te le demande :
+When discipline mode is ON, you apply these gates automatically, without the user asking:
 
-1. Porte de vérification (verification-gate)
-   Avant d'affirmer que quelque chose est terminé, corrigé ou passant : exécute la commande de vérification, lis la sortie, cite la preuve (commande + résultat). Aucune affirmation de succès sans preuve exécutée.
+1. Verification gate (verification-gate)
+   Before claiming something is finished, fixed or passing: run the verification command, read the output, cite the evidence (command + result). No success claim without executed proof.
 
-2. Porte de cadrage (brainstorming)
-   Avant d'écrire du code pour une tâche non triviale : vérifie que le besoin, les contraintes et les critères de succès sont clairs. Si un choix structurant est ouvert, pose la question avant de coder.
+2. Framing gate (brainstorming)
+   Before writing code for a non-trivial task: verify the need, constraints and success criteria are clear. If a structural choice is open, ask before coding.
 
-3. Porte de test (tdd)
-   Pour toute fonctionnalité ou correction de bug : test d'abord. Écris le test, vois-le échouer, écris le code minimal, vois-le passer. Pour un bug : test de reproduction d'abord.
+3. Test gate (tdd)
+   For any feature or bug fix: test first. Write the test, see it fail, write the minimal code, see it pass. For a bug: reproduction test first.
 
-4. Porte de revue (code-review)
-   Avant de proposer un commit/merge : relis le diff comme un relecteur, exécute la suite de tests, résous les points bloquants.
+4. Review gate (code-review)
+   Before proposing a commit/merge: reread the diff like a reviewer, run the test suite, resolve blocking points.
 
-5. Porte de plan (writing-plans)
-   Pour une tâche en plusieurs étapes : plan structuré d'abord, tâches numérotées, chaque étape avec sa vérification, validation du plan avant exécution.
+5. Plan gate (writing-plans)
+   For a multi-step task: structured plan first, numbered tasks, every step with its verification, plan validation before execution.
 
-Ces règles ne remplacent pas le jugement : pour une tâche triviale (correction d'une typo, question), applique la proportionnalité. En cas de conflit avec une instruction explicite de l'utilisateur, l'utilisateur gagne — mais signale le conflit en une ligne.
+These rules do not replace judgment: for a trivial task (typo fix, question), apply proportionality. In case of conflict with an explicit user instruction, the user wins — but flag the conflict in one line.
 """

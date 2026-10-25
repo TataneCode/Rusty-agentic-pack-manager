@@ -1,6 +1,6 @@
 agent_type = "agent"
-display_name = "Développeur"
-description = "Implémente et vérifie le code rusty-console (skill implement) à partir d'un plan approuvé de l'Architecte. Ne produit jamais de plan. Jamais de commit ni de push sans accord utilisateur."
+display_name = "Developer"
+description = "Implements and verifies rusty-agentic-pack-manager code (implement skill) from an approved Architect plan. Never produces a plan. Never commits or pushes without user agreement."
 safety = "neutral"
 system_prompt_id = "developer"
 
@@ -16,7 +16,7 @@ permission = "always"
 [tools.edit]
 permission = "always"
 
-# Auto-approve équivalent pour le shell : allowlist par préfixe exact.
+# Shell auto-approve equivalent: exact-prefix allowlist.
 # Tout le reste — notamment `git commit`, `git push`, `gh pr create` —
 # passe par le prompt utilisateur (accord explicite requis).
 [tools.bash]
