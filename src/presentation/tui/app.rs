@@ -48,6 +48,7 @@ pub struct App {
     pub input: Option<TextInput>,
     /// Viewer screen state; Some => viewer is open.
     pub viewer: Option<ViewerState>,
+    pub highlighter: crate::presentation::tui::viewer::highlight::Highlighter,
     pub quit: bool,
 }
 
@@ -55,7 +56,7 @@ pub struct App {
 pub struct ViewerState {
     pub pack: String,
     pub files: SelectList<String>,
-    pub content: Vec<String>,
+    pub lines: Vec<Vec<ratatui::text::Span<'static>>>,
     pub content_scroll: u16,
     pub show_content: bool,
 }
@@ -92,6 +93,7 @@ impl App {
             popup: None,
             input: None,
             viewer: None,
+            highlighter: crate::presentation::tui::viewer::highlight::Highlighter::new(),
             quit: false,
         }
     }

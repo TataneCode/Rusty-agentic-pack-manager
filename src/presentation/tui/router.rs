@@ -4,6 +4,10 @@ use crate::presentation::tui::common::keys::{map_key, AppAction, KeyContext};
 /// Screen routing: maps user actions to handlers (pattern rusty-console
 /// router.rs, synchronous). Screens: split screen, viewer, dialogs.
 impl App {
+    pub fn highlighter(&self) -> &crate::presentation::tui::viewer::highlight::Highlighter {
+        &self.highlighter
+    }
+
     pub fn key_context(&self) -> KeyContext {
         if self.input.is_some() {
             return KeyContext::Dialog;
@@ -200,12 +204,17 @@ impl App {
     }
 
     fn load_viewer_content(&mut self) {
-        let Some(viewer) = &mut self.viewer else {
+        let Some(viewer) = &self.viewer else {
             return;
         };
-        if let Some(path) = viewer.files.selected() {
-            if let Ok(content) = self.view_service.read(&viewer.pack, path) {
-                viewer.content = content.lines().map(|l| l.to_string()).collect();
+        let Some(path) = viewer.files.selected().cloned() else {
+            return;
+        };
+        let pack = viewer.pack.clone();
+        if let Ok(content) = self.view_service.read(&pack, &path) {
+            let lines = self.highlighter.highlight(&path, &content);
+            if let Some(viewer) = &mut self.viewer {
+                viewer.lines = lines;
                 viewer.content_scroll = 0;
             }
         }
@@ -222,13 +231,13 @@ impl App {
                 let mut viewer = crate::presentation::tui::app::ViewerState {
                     pack: pack_name.clone(),
                     files: crate::presentation::tui::common::widgets::SelectList::new(paths),
-                    content: Vec::new(),
+                    lines: Vec::new(),
                     content_scroll: 0,
                     show_content: false,
                 };
                 if let Some(first) = viewer.files.items.first().cloned() {
                     if let Ok(content) = self.view_service.read(&pack_name, &first) {
-                        viewer.content = content.lines().map(|l| l.to_string()).collect();
+                        viewer.lines = self.highlighter.highlight(&first, &content);
                     }
                 }
                 self.viewer = Some(viewer);

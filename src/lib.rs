@@ -53,10 +53,6 @@ pub mod presentation {
             pub mod presenter;
             pub mod view;
         }
-        pub mod viewer {
-            pub mod actions;
-            pub mod presenter;
-            pub mod view;
-        }
+        pub mod viewer;
     }
 }

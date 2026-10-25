@@ -19,7 +19,7 @@ pub fn render(frame: &mut Frame, app: &mut App) {
         return;
     };
 
-    let show_content = viewer.show_content && !viewer.content.is_empty();
+    let show_content = viewer.show_content && !viewer.lines.is_empty();
     let panels = if show_content {
         Layout::horizontal([Constraint::Percentage(35), Constraint::Percentage(65)])
             .split(chunks[0])
@@ -43,7 +43,7 @@ pub fn render(frame: &mut Frame, app: &mut App) {
     }
     let mut state = viewer.files.state;
     widgets::render_lines(frame, inner, lines, &mut state);
-    let scroll_snapshot = viewer.content.clone();
+    let scroll_snapshot: Vec<Vec<Span>> = viewer.lines.clone();
     let scroll_pos = viewer.content_scroll;
 
     if show_content {
@@ -55,7 +55,7 @@ pub fn render(frame: &mut Frame, app: &mut App) {
         let visible: Vec<Line> = scroll_snapshot
             .iter()
             .skip(scroll_pos as usize)
-            .map(|l| Line::from(Span::raw(l.clone())))
+            .map(|spans| Line::from(spans.clone()))
             .collect();
         let text = ratatui::text::Text::from(visible);
         let p = ratatui::widgets::Paragraph::new(text);
