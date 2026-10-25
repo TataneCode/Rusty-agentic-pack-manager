@@ -20,6 +20,7 @@ Un **pack** est une combinaison cohérente de skills, d'agents et de commands, a
 | `Tab` | Basculer le focus entre les panneaux |
 | `Entrée` / `Retour arrière` | Naviguer (descendre / remonter) dans la liste ou le système de fichiers |
 | `A` | Appliquer un pack (focus passe sur l'explorer en mode installation) |
+| `v` | Visualiser le contenu d'un pack (.md, .js, .toml, avec coloration syntaxique — panneau packs uniquement) |
 | `i` | Installer le pack dans le répertoire sélectionné (mode installation) |
 | `r` | Créer un dossier (explorer) |
 | `Espace` | Aide contextuelle (selon le panneau actif / le mode) |
