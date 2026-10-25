@@ -50,6 +50,5 @@ extended-description = "TUI to manage agentic packs (skills, agents, commands) f
 depends = "$auto"
 assets = [
     ["target/release/rapm", "usr/bin/", "755"],
-    ["packs/**", "usr/share/rusty-agentic-pack-manager/packs/", "644"],
     ["LICENSE", "usr/share/doc/rusty-agentic-pack-manager/LICENSE", "644"],
 ]
