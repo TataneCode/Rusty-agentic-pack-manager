@@ -5,7 +5,6 @@ use crate::application::pack::dto::PackSummaryDto;
 use crate::application::pack::service::PackService;
 use crate::application::pack_view::service::PackViewService;
 use crate::domain::pack::value_objects::TargetCli;
-use crate::presentation::tui::common::keys::AppAction;
 use crate::presentation::tui::common::widgets::{SelectList, TextInput};
 
 /// Which panel owns the keyboard.
@@ -153,26 +152,5 @@ impl App {
 
     pub fn show_error(&mut self, message: String) {
         self.popup = Some(Popup::Error(message));
-    }
-
-    pub fn handle(&mut self, action: AppAction) {
-        // Popup has priority: any key closes it.
-        if self.popup.is_some() && action != AppAction::Quit {
-            self.popup = None;
-            return;
-        }
-        match action {
-            AppAction::Quit => self.quit = true,
-            AppAction::ToggleFocus => {
-                if self.mode == Mode::Normal {
-                    self.focus = match self.focus {
-                        Focus::Packs => Focus::Explorer,
-                        Focus::Explorer => Focus::Packs,
-                    };
-                }
-            }
-            AppAction::Close => self.mode = Mode::Normal,
-            _ => {}
-        }
     }
 }

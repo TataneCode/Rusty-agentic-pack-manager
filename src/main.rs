@@ -1,7 +1,6 @@
 use std::path::PathBuf;
 
 use anyhow::{Context, Result};
-use ratatui::Terminal;
 
 use rusty_agentic_pack_manager::application::explorer::service::ExplorerService;
 use rusty_agentic_pack_manager::application::pack::service::PackService;

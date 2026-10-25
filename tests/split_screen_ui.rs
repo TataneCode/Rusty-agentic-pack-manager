@@ -236,3 +236,30 @@ fn force_delete_deletes_non_empty_folder_directly() {
     assert!(app.confirm.is_none());
     assert!(!tmp.path().join("start/subdir").exists());
 }
+
+#[test]
+fn ctrl_c_quits_from_any_mode() {
+    let tmp = TempDir::new().unwrap();
+    let mut app = build_app(&tmp);
+
+    // from the packs panel
+    app.dispatch(&ctrl('c'));
+    assert!(app.quit);
+
+    // from install mode
+    let mut app = build_app(&tmp);
+    app.dispatch(&key(crossterm::event::KeyCode::Char('a')));
+    assert!(matches!(
+        app.mode,
+        rusty_agentic_pack_manager::presentation::tui::app::Mode::Installing { .. }
+    ));
+    app.dispatch(&ctrl('c'));
+    assert!(app.quit);
+}
+
+fn ctrl(c: char) -> crossterm::event::KeyEvent {
+    crossterm::event::KeyEvent::new(
+        crossterm::event::KeyCode::Char(c),
+        crossterm::event::KeyModifiers::CONTROL,
+    )
+}

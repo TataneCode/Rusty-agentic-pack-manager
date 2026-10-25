@@ -50,8 +50,13 @@ impl App {
     }
 
     fn handle_action(&mut self, action: AppAction) {
-        // Popup has priority: any non-quit key closes it.
-        if self.popup.is_some() && action != AppAction::Quit {
+        // Quit works from any mode/focus (advertised as Ctrl-C).
+        if let AppAction::Quit = action {
+            self.quit = true;
+            return;
+        }
+        // Popup has priority: any key closes it.
+        if self.popup.is_some() {
             self.popup = None;
             return;
         }
