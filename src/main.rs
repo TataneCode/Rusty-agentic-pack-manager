@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 
 use anyhow::{Context, Result};
-use ratatui::{backend::CrosstermBackend, Terminal};
+use ratatui::Terminal;
 
 use rusty_agentic_pack_manager::application::explorer::service::ExplorerService;
 use rusty_agentic_pack_manager::application::pack::service::PackService;
@@ -55,8 +55,10 @@ fn main() -> Result<()> {
         anyhow::bail!("no packs directory found (expected ./packs next to the binary, ./packs in cwd, or /usr/share/rusty-agentic-pack-manager/packs)");
     };
 
-    let backend = CrosstermBackend::new(std::io::stdout());
-    let mut terminal = Terminal::new(backend)?;
+    // ratatui::init(): raw mode + alternate screen + panic hook. Paired with
+    // ratatui::restore() in the exit path below (review finding: the terminal
+    // was never set up, making every keypress line-buffered).
+    let mut terminal = ratatui::init();
     let events = EventHandler::default();
 
     let result = (|| -> Result<()> {
