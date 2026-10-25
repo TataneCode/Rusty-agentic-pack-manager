@@ -1,6 +1,7 @@
 pub mod domain {
     pub mod pack {
         pub mod entity;
+        pub mod error;
         pub mod value_objects;
     }
 }
