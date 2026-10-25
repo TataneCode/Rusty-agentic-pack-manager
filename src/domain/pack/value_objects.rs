@@ -142,7 +142,7 @@ impl PackItemKind {
             "skill" => Ok(PackItemKind::Skill),
             "agent" => Ok(PackItemKind::Agent),
             "command" => Ok(PackItemKind::Command),
-            other => Err(DomainError::UnknownCli(other.to_string())),
+            other => Err(DomainError::UnknownItemKind(other.to_string())),
         }
     }
 }

@@ -14,6 +14,8 @@ pub enum ApplicationError {
     NotADirectory(String),
     #[error("invalid pack manifest {path}: {message}")]
     InvalidManifest { path: String, message: String },
+    #[error("invalid name '{name}' for {context}")]
+    InvalidName { context: String, name: String },
     #[error("destination already exists: {0}")]
     DestinationExists(String),
     #[error("io error on {path}: {source}")]

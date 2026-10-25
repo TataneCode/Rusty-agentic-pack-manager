@@ -59,9 +59,9 @@ impl ExplorerService {
     }
 
     fn invalid_name_error(parent: &str, name: &str) -> ApplicationError {
-        ApplicationError::InvalidManifest {
-            path: parent.to_string(),
-            message: format!("invalid entry name: '{name}'"),
+        ApplicationError::InvalidName {
+            context: format!("an entry in {parent}"),
+            name: name.to_string(),
         }
     }
 }

@@ -11,6 +11,7 @@ pub enum DomainError {
     InvalidVersion(String),
     EmptyCliList,
     UnknownCli(String),
+    UnknownItemKind(String),
     EmptyItemSource,
     EmptyItemDestination,
     ItemDestinationOutsideTarget(String),
@@ -25,6 +26,7 @@ impl fmt::Display for DomainError {
             DomainError::InvalidVersion(v) => write!(f, "invalid pack version: {v}"),
             DomainError::EmptyCliList => write!(f, "pack must target at least one CLI"),
             DomainError::UnknownCli(c) => write!(f, "unknown target CLI: {c}"),
+            DomainError::UnknownItemKind(k) => write!(f, "unknown pack item kind: {k}"),
             DomainError::EmptyItemSource => write!(f, "pack item source must not be empty"),
             DomainError::EmptyItemDestination => {
                 write!(f, "pack item destination must not be empty")
