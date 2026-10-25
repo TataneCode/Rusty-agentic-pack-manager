@@ -26,6 +26,7 @@ pub mod application {
 }
 
 pub mod infrastructure {
+    pub mod error;
     pub mod pack {
         pub mod content;
         pub mod loader;
