@@ -1,38 +1,37 @@
 ---
 name: rust-quality-gate
-description: Contrôle qualité Rust — formatage, clippy strict, MSRV 1.88, style du code rusty-console. Utiliser ce skill avant toute livraison de code, sur échec de CI, ou quand on demande un review qualité.
+description: Rust quality gate — formatting, strict clippy, MSRV 1.88, this project's code style. Use this skill before any code delivery, on CI failure, or when a quality review is requested.
 ---
 
-# Skill : Contrôle qualité Rust
+# Skill: Rust quality gate
 
-## Commandes de vérification (dans cet ordre)
+## Verification commands (in this order)
 
 ```bash
-cargo fmt                  # formate — aucun diff ne doit rester
-cargo clippy -- -D warnings  # lint strict : la CI traite les warnings en erreurs
-cargo test                 # tous les tests
-cargo check                # compilation rapide (MSRV 1.88)
-cargo build --release      # seulement si la livraison concerne le binaire
+cargo fmt                  # format — no diff must remain
+cargo clippy -- -D warnings  # strict lint: CI treats warnings as errors
+cargo test                 # all tests
+cargo check                # fast compile (MSRV 1.88)
+cargo build --release      # only if the delivery concerns the binary
 ```
 
-Toute livraison doit passer `fmt` + `clippy -D warnings` + `test` sans erreur.
+Every delivery must pass `fmt` + `clippy -D warnings` + `test` without errors.
 
-## Règles de style du projet
+## Project style rules
 
-> Source de vérité mutualisée : `rules/quality.md` et les règles par couche (`rules/*.md`) à la racine du dépôt. Cette section en est le résumé opérationnel.
+> Shared source of truth: `rules/quality.md` and the per-layer rules (`rules/*.md`) at the repository root. This section is the operational summary.
 
+- Edition 2021, MSRV **1.88** (declared in `Cargo.toml` via `rust-version`). No nightly features, no crates requiring a newer toolchain.
+- Error handling: **always `thiserror`** for layer errors (never `String` nor `anyhow` in expected layer errors). `anyhow` reserved for the `main.rs` edge.
+- Error chain: `DomainError` → `ApplicationError` (`#[from]`) for the UI; `ApplicationError::Io` carries the failing path.
+- **Synchronous application** — no tokio; all I/O via `std::fs` behind repository traits.
+- Memory safety: avoid superfluous `clone()`, prefer references.
+- Naming: follow Rust conventions (snake_case functions, PascalCase types); rename rather than add `#[allow(clippy::...)]`.
+- Dependencies: the minimum necessary, the narrowest features possible.
 
-- Édition 2021, MSRV **1.88** (déclaré dans `Cargo.toml` via `rust-version`). Pas de feature nightly ni de crates exigeant un toolchain plus récent.
-- Gestion d'erreurs : **toujours `thiserror`** pour les erreurs de couches (jamais de `String` ni `anyhow` dans les erreurs attendues des couches). `anyhow` réservé au bord de `main.rs`.
-- Chaîne d'erreurs à 3 niveaux : `DomainError` → `AppError` (`#[from]`) → `InfraError` (conversion bollard) → `AppError` pour l'UI.
-- Async : tout l'I/O via `tokio` ; traits async avec `#[async_trait]` ; features tokio limitées à `rt-multi-thread, macros, sync, time, process` — ne pas réactiver `full`.
-- Sécurité mémoire : éviter `clone()` superflus, préférer les références ; `Arc` uniquement au point d'injection DI.
-- Noms : suivre les conventions Rust (snake_case fonctions, PascalCase types) ; renommer plutôt que d'ajouter `#[allow(clippy::...)]`.
-- Dépendances : minimum nécessaire, features les plus étroites possibles.
+## CI failure — diagnosis
 
-## Échec de CI — diagnostic
-
-1. Lire le premier message d'erreur du haut (`cargo clippy` ou `cargo test`), pas les erreurs en cascade.
-2. Reproduire localement avec la commande exacte de la CI.
-3. Correr la cause démontrée, pas un symptôme deviné.
-4. Re-vérifier la chaîne complète avant de pousser.
+1. Read the first error message from the top (`cargo clippy` or `cargo test`), not the cascade errors.
+2. Reproduce locally with the exact CI command.
+3. Fix the demonstrated cause, not a guessed symptom.
+4. Re-verify the full chain before pushing.

@@ -1,38 +1,38 @@
 ---
 name: plan
-description: Produire un plan de conception rusty-console via le rôle Architecte — lecture seule sur les sources, tous les outils accessibles (équivalent smart-approve), approbation explicite du plan obligatoire avant toute implémentation, puis invocation du skill implement. Utiliser pour cadrer une fonctionnalité, un bugfix ou un refactoring avant d'écrire du code.
+description: Produce a design plan via the Architect role — read-only on the sources, all tools accessible, explicit plan approval required before any implementation, then invoke the implement skill. Use to frame a feature, bugfix or refactoring before writing code.
 user-invocable: true
 ---
 
-# Skill : Plan (rôle Architecte)
+# Skill: Plan (Architect role)
 
-Endosse le rôle **Architecte** défini dans [agents/architect.md](../../../agents/architect.md) : produire des plans de conception, **jamais de code d'implémentation**. Fonctionne depuis tout point d'entrée (Vibe Code, Vibe CLI).
+Take the **Architect** role: produce design plans, **never implementation code**. Works from any entry point (Vibe Code, Vibe CLI).
 
-## Mode opératoire
+## Operating mode
 
-> Sur une demande non triviale, le skill `challenge` (`/challenge`) doit avoir cadré la demande **avant** ce skill — ne pas planifier une demande non cadrée.
+> On a non-trivial request, the `challenge` skill must have framed the request **before** this skill — do not plan an unframed request.
 
-1. Charger le contexte : [CONTEXT.md](../../../CONTEXT.md), puis [rules/README.md](../../../rules/README.md).
-2. Invoquer le skill `rust-architecture-planning` et suivre ses 6 étapes : cadrage, audit de l'existant, options (2–3 max), décisions d'architecture, plan, validation finale.
-3. Invoquer `rust-dependency` dès que le plan envisage un nouveau crate (MSRV 1.88, features minimales).
-4. Auditer l'existant en **lecture seule** : `read_file`, `grep`, commandes shell non destructrices.
-5. Consulter les règles de couche ([rules/](../../../rules/)) pour garantir que chaque étape respecte le flux DDD.
+1. Load the context: [CONTEXT.md](../../../CONTEXT.md), then [rules/README.md](../../../rules/README.md).
+2. Follow the 6 planning steps: framing, audit of the existing, options (2-3 max), architecture decisions, plan, final validation.
+3. Consider dependency rules as soon as the plan involves a new crate (minimal features).
+4. Audit the existing in **read-only** mode: `read_file`, `grep`, non-destructive shell commands.
+5. Consult the layer rules to guarantee every step respects the DDD flow.
 
-## Limites d'outils
+## Tool limits
 
-- **Lecture seule sur les sources** : aucune modification de fichier du dépôt pendant la phase de plan.
-- Tous les outils restent accessibles (équivalent smart-approve) ; une écriture éventuelle passe par l'approbation explicite de l'utilisateur.
+- **Read-only on the sources**: no repository file modification during the plan phase.
+- All tools remain accessible; any write goes through the user's explicit approval.
 
-## Approbation du plan (obligatoire)
+## Plan approval (mandatory)
 
-1. Présenter le plan au format `rust-architecture-planning` : Objectif, Décisions (avec rationale), Étapes avec commandes de vérification, Risques, Hors périmètre.
-2. Demander l'approbation explicite de l'utilisateur. **Le silence ou une réponse ambiguë signifie « ne pas continuer ».**
-3. Plan approuvé → invoquer le skill `implement` pour confier l'exécution au rôle Développeur.
-4. Plan rejeté ou amendé → itérer sur le plan, toujours sans toucher aux sources.
+1. Present the plan: Goal, Decisions (with rationale), Steps with verification commands, Risks, Out of scope.
+2. Ask for the user's explicit approval. **Silence or an ambiguous answer means "do not continue".**
+3. Plan approved → invoke the `implement` skill to hand execution to the Developer role.
+4. Plan rejected or amended → iterate on the plan, still without touching the sources.
 
-## Anti-patterns interdits
+## Forbidden anti-patterns
 
-- Commencer l'implémentation sans approbation explicite du plan.
-- Plan mélangé à du code d'implémentation détaillé (snippets d'API illustratifs courts admis).
-- Décision d'architecture sans rationale, ou étape qui viole le flux de dépendances DDD.
-- Ignorer les patterns existants du projet au profit d'une approche générique.
+- Starting implementation without explicit plan approval.
+- A plan mixed with detailed implementation code (short illustrative API snippets allowed).
+- An architecture decision without rationale, or a step that violates the DDD dependency flow.
+- Ignoring the project's existing patterns in favor of a generic approach.
