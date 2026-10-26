@@ -1,67 +1,63 @@
 ---
 name: rust-testing
-description: Écrire les tests Rust de rusty-console — UT co-localisés (mockall, tokio) ou IT dans tests/ (TestBackend, build_app). Utiliser ce skill dès qu'une tâche demande des tests ou que du code testable est ajouté.
+description: Write this project's Rust tests — co-located UT (mockall, tempdir) or IT in tests/ (TestBackend, real App). Use this skill whenever a task asks for tests or testable code is added.
 ---
 
-# Skill : Tests Rust
+# Skill: Rust testing
 
-> **Source de vérité des conventions** : [rules/testing.md](../../../rules/testing.md) (seuil UT vs IT, anti-patterns). Ce skill en est le résumé opérationnel. La matrice des scénarios IT vivants : [docs/TESTING.md](../../../docs/TESTING.md).
+> **Source of truth for conventions**: [rules/testing.md](../../../rules/testing.md) (UT vs IT threshold, anti-patterns). This skill is the operational summary.
 
-## Choisir : UT ou IT
+## Choose: UT or IT
 
-| Situation | Où |
+| Situation | Where |
 |---|---|
-| Logique pure (invariant, mapper, service mocké, presenter, vue pure) | **UT** — `#[cfg(test)]` dans le fichier |
-| Comportement user-facing (écran × touche × état) | **IT** — scénario dans `tests/` |
-| Bugfix de logique métier | **UT** de régression d'abord (rouge), puis correction |
-| Nouveau comportement visible à l'écran | **IT** + entrée dans la matrice de `docs/TESTING.md` |
+| Pure logic (invariant, mapper, mocked service, render function) | **UT** — `#[cfg(test)]` in the file |
+| User-facing behavior (screen × key × state) | **IT** — scenario in `tests/` |
+| Business logic bugfix | **UT** regression first (red), then fix |
+| New visible behavior on screen | **IT** scenario |
 
-## UT — par couche
+## UT — per layer
 
 ### Domain (`01_domain`)
-- Tester les invariants : construction valide, rejet des entrées invalides (`new() → Err(DomainError::...)`).
-- Aucun mock : le domaine est pur.
+- Test the invariants: valid construction, rejection of invalid inputs (`new() → Err(DomainError::...)`).
+- No mocks: the domain is pure.
 
 ### Application (`02_application`)
-- `#[cfg_attr(test, mockall::automock)]` sur le trait repository s'il n'y est pas déjà.
-- Attentes explicites : `mock.expect_xxx().with(eq(...)).returning(|_| Ok(...))`.
-- Cas : succès, erreur repository propagée, mappage domaine → DTO correct.
-- Async : `#[tokio::test]`.
+- `#[automock]` on the repository trait if not already there.
+- Explicit expectations: `mock.expect_xxx().with(eq(...)).returning(|_| Ok(...))`.
+- Cases: success, repository error propagated, domain → DTO mapping correct.
 
 ### Infrastructure (`03_infrastructure`)
-- Pas de test contre un vrai démon Docker dans la suite standard.
-- Tester les mappers bollard → domaine avec des fixtures de types bollard construits à la main.
+- Test adapters on `tempfile::TempDir` fixtures — never against system paths.
+- Manifest → entity conversions tested with hand-built fixtures.
 
 ### Presentation (`04_presentation`)
-- Tester les fonctions de rendu pur de `view.rs` (références → widgets, testables sans terminal).
-- Tester la logique de `presenter.rs` (sélection, scroll) sans mock lourd.
+- Test the pure render functions (`split_view.rs`, `viewer/view.rs`) via `ratatui::backend::TestBackend`.
+- Test the display-state logic (selection, scroll, popups) through `app.dispatch(&KeyEvent)` without a real terminal.
 
 ## IT — `tests/`
 
-- Build du vrai `App` via `tests/common/mod.rs::build_app()` (vrais adapters, client bollard lazy — **pas de démon requis** pour le rendu et les actions).
-- Pilotage : `app.handle_action(AppAction::…)`, `app.handle_filter_key(KeyCode::…)` (publics à cette fin).
-- Rendu : `ratatui::backend::TestBackend`, assertions sur le buffer aplati.
-- Toute fonctionnalité user-facing nouvelle → scénario ajouté à la matrice de `docs/TESTING.md`.
+- Build the real `App` as in `main.rs` (real adapters on tempdir packs — no daemon, no network needed).
+- Driving: `app.dispatch(&KeyEvent)`; rendering via `TestBackend`, assertions on the flattened buffer.
+- Every new user-facing feature → an added scenario in the relevant `tests/` suite.
 
-## Conventions communes
+## Common conventions
 
-- Un test par comportement, nom descriptif : `rejects_empty_container_id`, pas `test_1`.
-- Arrange / Act / Assert, une assertion logique par test.
-- Bugfix : test de reproduction d'abord (rouge), puis correction.
+- One test per behavior, descriptive name: `rejects_absolute_destination`, not `test_1`.
+- Arrange / Act / Assert, one logical assertion per test.
+- Bugfix: reproduction test first (red), then fix.
 
-## Vérification
+## Verification
 
 ```bash
-cargo test                 # tout (UT + IT)
-cargo test --lib           # UT seuls
-cargo test --test <suite>  # une suite IT seule
-cargo test <name>          # un test ciblé
-cargo llvm-cov             # couverture (min 70 %)
+cargo test                 # everything (UT + IT)
+cargo test --lib           # UT only
+cargo test --test <suite>  # one IT suite
+cargo test <name>          # one targeted test
 ```
 
-## Anti-patterns interdits
+## Forbidden anti-patterns
 
-- Mocker ce qu'on ne possède pas (types bollard entiers) — mapper à la main dans des fixtures.
-- Tests dépendant d'un environnement externe (démon Docker, réseau) dans la suite standard.
-- `#[ignore]` sans justification écrite.
-- Modifier un test pour « faire passer » un refactor.
+- Tests against system paths or an external environment in the standard suite.
+- `#[ignore]` without a written justification.
+- Modifying a test to "make pass" a refactoring.

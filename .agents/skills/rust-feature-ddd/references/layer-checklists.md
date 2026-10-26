@@ -1,40 +1,40 @@
-# Référence — Checklists d'implémentation par couche
+# Reference — Implementation checklists per layer
 
-Détail de `rust-feature-ddd` (étapes 1 à 5). Chargé à la demande, couche par couche. Les règles normatives complètes vivent dans `rules/` (source de vérité) — ce fichier n'est qu'un aide-mémoire opérationnel.
+Detail of `rust-feature-ddd` (steps 1 to 5). Loaded on demand, layer by layer. The full normative rules live in `rules/` (source of truth) — this file is only an operational memory aid.
 
 ## 1. Domain (`src/01_domain/<area>/`)
 
-- Entité / value object en Rust pur : **zéro crate externe** (thiserror toléré pour les erreurs).
-- Value objects : champs privés + `new() -> Result<Self, DomainError>` (jamais de constructeur infallible pour une donnée validée).
-- Invariants dans le type, pas dans les couches supérieures.
-- Erreurs : variantes dans `src/01_domain/error.rs` avec `#[thiserror::error]`.
-- Tests unitaires dans `#[cfg(test)]` au sein même du fichier.
+- Entity / value object in pure Rust: **zero external crates** (thiserror tolerated for errors).
+- Value objects: private fields + `new() -> Result<Self, DomainError>` (never an infallible constructor for validated data).
+- Invariants in the type, not in the upper layers.
+- Errors: variants in the domain error enum (`src/01_domain/pack/error.rs`) with `Display`.
+- Unit tests in `#[cfg(test)]` in the same file.
 
 ## 2. Application (`src/02_application/<area>/`)
 
-- Trait repository si nouvelle capacité : `#[async_trait]`, retour `Result<T, AppError>`, `#[cfg_attr(test, mockall::automock)]`.
-- Service stateless : `pub struct XxxService { repo: Arc<dyn XxxRepository> }`.
-- DTO dédié + mapper `domain ↔ DTO` dans `mapper.rs` (unit struct, fonctions associées). Jamais d'entité domain exposée à l'UI.
-- Erreurs : étendre `AppError` dans `src/02_application/error.rs`.
+- Repository trait if a new capability: `#[automock]`, returns `Result<T, ApplicationError>`, `Send` bounds.
+- Stateless service: `pub struct XxxService { repo: Box<dyn XxxRepository> }`.
+- Dedicated DTO + `domain ↔ DTO` mapper (associated functions on unit structs). Never a domain entity exposed to the UI.
+- Errors: extend `ApplicationError` in `src/02_application/error.rs`.
 
-## 3. Infrastructure (`src/03_infrastructure/docker/<area>/`)
+## 3. Infrastructure (`src/03_infrastructure/<area>/`)
 
-- Adapter implémentant le trait application, conversion des types bollard en entités domaine via un mapper dédié.
-- `bollard::errors::Error` → `InfraError` → `AppError` via `From`.
-- Spécificités Bollard 0.18 : `df()` sans argument, `Port.typ`, `Port.private_port: u16`.
+- Adapter implementing the application trait; manifest → entity and DTO conversions via dedicated mappers.
+- `std::io::Error` → `ApplicationError::Io { path, source }` carrying the failing path.
+- Tempdir-based tests; no hardcoded system paths; existing destinations never silently overwritten.
 
-## 4. Presentation (`src/04_presentation/tui/<area>/`)
+## 4. Presentation (`src/04_presentation/tui/`)
 
-- Triade **presenter / view / actions** :
-  - `presenter.rs` — état mutable (sélection, offset de scroll, données chargées)
-  - `view.rs` — fonctions de rendu pures (références → widgets)
-  - `actions.rs` — wrappers async minces autour des services
-- Étendre `Screen` dans `ui/app.rs` si nouvel écran ; overlays (`confirm_dialog`, `error_message`) traités avant les handlers spécifiques.
-- Touches mappées dans `ui/common/keys.rs` → variantes `AppAction`.
-- L'UI catch `AppError` et l'affiche via `App::error_message`.
+- Separation of the three concerns (structure of this project, per `rules/presentation.md`):
+  - `app.rs` — mutable display state (selection, scroll, focus, popups)
+  - `split_view.rs` / `viewer/view.rs` — pure render functions (references → widgets)
+  - `router.rs` — action handlers, thin wrappers around application services
+- Overlays (`popup`, `input`, `confirm`) evaluated before the panel handlers.
+- Keys mapped in `common/keys.rs` → `AppAction` variants per `KeyContext`.
+- The UI catches `ApplicationError` and shows it as a popup message; never panics.
 
-## 5. Wiring (`src/main.rs` et `src/lib.rs`)
+## 5. Wiring (`src/main.rs` and `src/lib.rs`)
 
-- Câblage manuel ascendant, sans framework DI :
-  `DockerClient → Arc<XxxAdapter> → XxxService → XxxActions → App::new(...)`
-- Exposer les modules dans les `mod.rs` / `lib.rs` correspondants.
+- Manual bottom-up wiring, no DI framework:
+  `Fs*Adapter → XxxService → App::new(...)`
+- Expose the modules in the relevant `mod.rs` / `lib.rs`.
