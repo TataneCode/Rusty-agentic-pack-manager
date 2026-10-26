@@ -1,44 +1,44 @@
 ---
 name: rust-bugfix
-description: Corriger un bug dans rusty-console — reproduction, localisation de la cause racine dans la couche fautive, test de régression. Utiliser ce skill dès qu'un comportement incorrect est signalé ou qu'un test échoue.
+description: Fix a bug in this project — reproduction, root-cause localization in the faulty layer, regression test. Use this skill as soon as incorrect behavior is reported or a test fails.
 ---
 
-# Skill : Correction de bug Rust
+# Skill: Rust bug fixing
 
-## Procédure systématique — 5 étapes
+## Systematic procedure — 5 steps
 
-### 1. Reproduire
-- Identifier la commande minimale qui déclenche le bug (`cargo test <name>`, scénario TUI précis).
-- Si le bug dépend du démon Docker, isoler d'abord la couche fautive via les tests mappés (domain pur, application mockée) avant de conclure « infrastructure ».
-- Si impossible à reproduire, demander les étapes exactes plutôt que deviner.
+### 1. Reproduce
+- Identify the minimal command that triggers the bug (`cargo test <name>`, a precise TUI scenario).
+- If the bug depends on the filesystem, isolate the faulty layer first via mapped tests (pure domain, mocked application) before concluding "infrastructure".
+- If impossible to reproduce, ask for the exact steps rather than guess.
 
-### 2. Localiser la couche fautive (grâce à l'architecture DDD)
-| Symptôme | Couche probable |
+### 2. Locate the faulty layer (thanks to the DDD architecture)
+| Symptom | Likely layer |
 |---|---|
-| Invariant violé, donnée invalide acceptée | `01_domain` |
-| Mauvais DTO, logique de service incorrecte | `02_application` |
-| Erreur bollard mal convertie, mapping Docker faux | `03_infrastructure` |
-| Rendu, sélection, touches, état d'écran | `04_presentation` |
+| Violated invariant, invalid data accepted | `01_domain` |
+| Wrong DTO, incorrect service logic | `02_application` |
+| Badly mapped IO error, wrong manifest conversion | `03_infrastructure` |
+| Rendering, selection, keys, screen state | `04_presentation` |
 
-La correction se fait **dans la couche fautive**, jamais en compensant dans une couche voisine.
+The fix happens **in the faulty layer**, never by compensating in a neighboring layer.
 
-### 3. Écrire le test de régression d'abord
-- Voir le skill `rust-testing` : test co-localisé dans le fichier de la couche, nom décrivant le bug (`rejects_zero_port_mapping`).
-- Vérifier qu'il échoue avant la correction (rouge), sinon il ne teste rien.
+### 3. Write the regression test first
+- See the `rust-testing` skill: co-located test in the layer's file, name describing the bug (`rejects_absolute_destination`).
+- Verify it fails before the fix (red), otherwise it tests nothing.
 
-### 4. Corriger au plus petit périmètre
-- Changement minimal dans la couche identifiée.
-- Ne pas « améliorer » du code adjacent pendant un bugfix.
-- Si la correction exige un refactor, le découpler : bugfix d'abord, refactor ensuite.
+### 4. Fix at the smallest scope
+- Minimal change in the identified layer.
+- Do not "improve" adjacent code during a bugfix.
+- If the fix requires a refactoring, decouple it: bugfix first, refactor after.
 
-### 5. Vérifier la chaîne complète
+### 5. Verify the full chain
 
 ```bash
 cargo fmt && cargo clippy -- -D warnings && cargo test
 ```
 
-## Anti-patterns interdits
+## Forbidden anti-patterns
 
-- Corriger le symptôme dans l'UI alors que la cause est en dessous (ex. catcher une erreur plus tôt pour la masquer).
-- Ajouter un `unwrap()`/`expect()` de convenance pour « débloquer ».
-- Pousser sans test de régression pour un bug de logique métier.
+- Fixing the symptom in the UI while the cause is below (e.g. catching an error earlier to mask it).
+- Adding a convenience `unwrap()`/`expect()` to "unblock".
+- Pushing without a regression test for a business-logic bug.

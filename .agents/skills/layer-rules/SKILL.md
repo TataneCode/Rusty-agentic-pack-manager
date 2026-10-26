@@ -1,24 +1,24 @@
 ---
 name: layer-rules
-description: Règles de rusty-console par couche DDD (domain, application, infrastructure, presentation) + règles qualité transverses. Utiliser ce skill dès qu'une tâche touche le code d'une couche, pour charger les règles de placement et de style applicables.
+description: Per-layer DDD rules for this repository (domain, application, infrastructure, presentation) + cross-cutting quality rules. Use this skill as soon as a task touches code in a layer, to load the applicable placement and style rules.
 ---
 
-# Skill : Règles par couche (mutualisées)
+# Skill: Rules per layer (shared)
 
-Toute procédure qui touche au code d'une couche doit respecter les fichiers de règles correspondants :
+Every procedure that touches a layer's code must respect the corresponding rule files:
 
-Ces fichiers vivent à la racine du dépôt, dans `rules/` (les charger avec `read_file`) :
+These files live at the repository root, in `rules/` (load them with `read_file`):
 
 - `rules/domain.md` — `src/01_domain/`
 - `rules/application.md` — `src/02_application/`
 - `rules/infrastructure.md` — `src/03_infrastructure/`
 - `rules/presentation.md` — `src/04_presentation/`
-- `rules/quality.md` — commandes de vérification et style global
+- `rules/quality.md` — verification commands and global style
 
-## Rappel rapide — flux de dépendances
+## Quick reminder — dependency flow
 
 ```
 04_presentation (ui)  →  02_application  →  01_domain  ←  03_infrastructure
 ```
 
-Aucune couche externe ne peut importer une couche interne. Avant de livrer, vérifier les imports de chaque fichier modifié.
+No outer layer may import an inner layer. Before delivering, check the imports of every modified file.

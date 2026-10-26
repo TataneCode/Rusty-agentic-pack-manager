@@ -1,36 +1,36 @@
-# Référence — Format du plan et checklist de validation
+# Reference — Plan format and validation checklist
 
-Détail du livrable et de la validation finale de `rust-architecture-planning` (étape 5 et 6). Chargé à la demande.
+Detail of the deliverable and final validation of `rust-architecture-planning` (steps 5 and 6). Loaded on demand.
 
-## Format du livrable
+## Deliverable format
 
 ```markdown
-# Plan : <titre>
+# Plan: <title>
 
-## Objectif
-<une phrase>
+## Goal
+<one sentence>
 
-## Décisions d'architecture
-- D1 : <décision> — <raison>
-- D2 : ...
+## Architecture decisions
+- D1: <decision> — <reason>
+- D2: ...
 
-## Étapes
-1. <étape atomique> — fichiers : <chemins> — vérification : <commande>
+## Steps
+1. <atomic step> — files: <paths> — verification: <command>
 2. ...
-   (chaque étape laisse le repo compilable et les tests verts)
+   (every step leaves the repo compilable and the tests green)
 
-## Risques et mitigations
-- <risque> → <mitigation>
+## Risks and mitigations
+- <risk> → <mitigation>
 
-## Hors périmètre
-- <ce qui est explicitement exclu>
+## Out of scope
+- <what is explicitly excluded>
 ```
 
-- Une étape = un commit potentiel ; ordre des couches : domain → application → infrastructure → presentation → wiring.
-- Chaque étape cite ses commandes de vérification (`cargo check`, `cargo test <name>`, etc.).
+- One step = one potential commit; layer order: domain → application → infrastructure → presentation → wiring.
+- Every step cites its verification commands (`cargo check`, `cargo test <name>`, etc.).
 
-## Checklist de validation finale
+## Final validation checklist
 
-- Le plan ne contient pas de code d'implémentation (snippets illustratifs courts admis pour les APIs clés).
-- Cohérence : chaque fichier mentionné existe ou est explicitement créé ; aucune étape ne viole le flux de dépendances.
-- Tests anticipés : chaque étape de logique métier a son test associé (voir skill `rust-testing` et `rules/testing.md`).
+- The plan contains no implementation code (short illustrative snippets allowed for key APIs).
+- Consistency: every mentioned file exists or is explicitly created; no step violates the dependency flow.
+- Anticipated tests: every business-logic step has its associated test (see the `rust-testing` skill and `rules/testing.md`).

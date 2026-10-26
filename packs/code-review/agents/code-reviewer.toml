@@ -1,0 +1,6 @@
+agent_type = "subagent"
+display_name = "Code Reviewer"
+description = "Expert code reviewer: quality, security, performance, reliability. Static analysis and best practices. Use for PR reviews and quality assessment."
+system_prompt_id = "code-reviewer"
+safety = "safe"
+enabled_tools = ["read_file", "grep", "glob", "bash"]

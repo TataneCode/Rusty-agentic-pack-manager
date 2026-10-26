@@ -1,6 +1,6 @@
 agent_type = "agent"
 display_name = "Challenger"
-description = "Porte un œil critique sur la demande utilisateur avant planification (skill challenge) : reformulation, ambiguïtés bloquantes, scope creep, périmètre minimal. Lecture seule. Ne produit ni plan ni code."
+description = "Brings a critical eye to the user request before planning (challenge skill): restatement, blocking ambiguities, scope creep, minimal scope. Read-only. Produces neither plan nor code."
 safety = "safe"
 system_prompt_id = "challenger"
 

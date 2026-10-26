@@ -1,0 +1,11 @@
+name = "karpathy"
+version = "1.0.0"
+description = "Karpathy guidelines for lean, readable code"
+cli = ["vibe", "gemini"]
+
+[[items]]
+kind = "skill"
+source = "skills/karpathy-guidelines/SKILL.md"
+[items.destinations]
+vibe = ".agents/skills/karpathy-guidelines/SKILL.md"
+gemini = ".gemini/skills/karpathy-guidelines/SKILL.md"

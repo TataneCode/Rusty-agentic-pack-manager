@@ -1,59 +1,59 @@
-# AGENTS.md — rusty-console
+# AGENTS.md — rusty-agentic-pack-manager
 
-Routeur de démarrage pour tout agent IA. **Ne lis pas tout le projet** : commence par [CONTEXT.md](CONTEXT.md) (project map), consulte cette table, puis lis uniquement les fichiers du périmètre de la tâche.
+Startup router for any AI agent. **Do not read the whole project**: start with [CONTEXT.md](CONTEXT.md) (project map), check this table, then read only the files in the task's scope.
 
-## Confirmation Gate (obligatoire)
+## Confirmation Gate (mandatory)
 
-Avant **toute** action d'écriture sur ce dépôt (fichier, branche, commit, push, PR, merge), l'agent DOIT présenter un plan concis et attendre l'accord explicite de l'utilisateur. Les opérations purement en lecture (read, grep, `cargo test`/`clippy`/`fmt --check`/`build`) sont exemptées. Le silence ou une réponse ambiguë signifie « ne pas continuer ». Procédure complète : [.agents/skills/confirmation-gate/SKILL.md](.agents/skills/confirmation-gate/SKILL.md).
+Before **any** write action on this repository (file, branch, commit, push, PR, merge), the agent MUST present a concise plan and wait for the user's explicit agreement. Purely read-only operations (read, grep, `cargo test`/`clippy`/`fmt --check`/`build`) are exempt. Silence or an ambiguous answer means "do not continue". Full procedure: [.agents/skills/confirmation-gate/SKILL.md](.agents/skills/confirmation-gate/SKILL.md).
 
-## En 15 secondes
+## In 15 seconds
 
-TUI Rust de gestion Docker (conteneurs, volumes, images, stacks) — portage C#/.NET. DDD 4 couches, flux strictement inward :
+Rust TUI to manage **agentic packs** (skills, agents, commands) for AI CLIs (Vibe CLI, Gemini CLI): list, view, install in a repository. DDD 4 layers, strictly inward flow:
 
 ```
 04_presentation (ui)  →  02_application  →  01_domain  ←  03_infrastructure
 ```
 
-Stack : ratatui + crossterm, bollard (async), tokio, thiserror. Édition 2021, MSRV 1.88. Commandes et état du projet : [CONTEXT.md](CONTEXT.md).
+Stack: ratatui + crossterm, syntect (highlighting), serde + toml (manifests), thiserror. **Synchronous** application (std::fs, no tokio). Edition 2021, MSRV 1.88. Commands and project status: [CONTEXT.md](CONTEXT.md).
 
-## Routage — quelle commande pour quelle tâche
+## Routing — which command for which task
 
-| Commande (skill `/…`) | Rôle | Quand l'utiliser |
+| Command (skill `/…`) | Role | When to use |
 |---|---|---|
-| `/challenge` | Challenger | **Avant tout `/plan`** : reformuler la demande, détecter ambiguïtés et scope creep, proposer le périmètre minimal |
-| `/plan` | Architecte | Cadrer une feature, un bugfix ou un refactor avant d'écrire du code (plan approuvé obligatoirement avant implémentation) |
-| `/implement` | Développeur | Implémenter à partir d'un plan approuvé (jamais de commit/push sans accord) |
-| `/self-review` | Développeur | Relire son propre diff (checklist `rules/`, imports inter-couches, gate local) **avant** de demander une review |
-| `/review` | Reviewer | Revue de PR GitHub (Vibe Code) ou de diff de branche (Vibe CLI), verdict structuré |
-| `/audit` | Auditeur | Analyser une zone du code produit : conformité `rules/`, dette, violations DDD — lecture seule |
-| `/update-config` | — | Faire évoluer cette configuration (skills, rules, agents, commandes) |
+| `/challenge` | Challenger | **Before any `/plan`**: restate the request, detect ambiguities and scope creep, propose the minimal scope |
+| `/plan` | Architect | Frame a feature, bugfix or refactoring before writing code (approved plan mandatory before implementation) |
+| `/implement` | Developer | Implement from an approved plan (never commit/push without agreement) |
+| `/self-review` | Developer | Reread your own diff (rules checklist, cross-layer imports, local gate) **before** requesting a review |
+| `/review` | Reviewer | GitHub PR review (Vibe Code) or branch diff review (Vibe CLI), structured verdict |
+| `/audit` | Auditor | Analyze a zone of the produced code: rules compliance, debt, DDD violations — read-only |
+| `/update-config` | — | Evolve this configuration (skills, rules, agents, commands) |
 
-Skills métier invoqués par les rôles ci-dessus : `rust-architecture-planning`, `rust-feature-ddd`, `rust-bugfix`, `rust-refactoring`, `rust-testing`, `rust-quality-gate`, `rust-dependency`, `rust-code-review`, `layer-rules` — voir [.agents/skills/](.agents/skills/).
+Business skills invoked by the roles above: `rust-architecture-planning`, `rust-feature-ddd`, `rust-bugfix`, `rust-refactoring`, `rust-testing`, `rust-quality-gate`, `rust-dependency`, `rust-code-review`, `layer-rules` — see [.agents/skills/](.agents/skills/).
 
-## Sources de vérité (une seule par sujet)
+## Sources of truth (one per topic)
 
-| Sujet | Fichier |
+| Topic | File |
 |---|---|
-| Contexte projet, map de navigation | [CONTEXT.md](CONTEXT.md) |
-| Règles par couche DDD | [rules/](rules/) (`domain`, `application`, `infrastructure`, `presentation`) |
-| Qualité transverse (commandes, style) | [rules/quality.md](rules/quality.md) |
-| Conventions UT & IT | [rules/testing.md](rules/testing.md) + [docs/TESTING.md](docs/TESTING.md) (matrice des scénarios) |
-| Architecture (schéma, DI, data flow) | [ARCHITECTURE.md](ARCHITECTURE.md) |
-| Procédures agents/skills | [.agents/skills/](.agents/skills/) + [AGENT_ARCHITECTURE.md](AGENT_ARCHITECTURE.md) |
-| Rôles d'agents (Markdown agnostique) | [agents/](agents/) |
-| Wiring Vibe CLI | [.vibe/](.vibe/) (`agents/`, `prompts/`, `config.toml`) |
+| Project context, navigation map | [CONTEXT.md](CONTEXT.md) |
+| Per-layer DDD rules | [rules/](rules/) (`domain`, `application`, `infrastructure`, `presentation`) |
+| Cross-cutting quality (commands, style) | [rules/quality.md](rules/quality.md) |
+| UT & IT conventions | [rules/testing.md](rules/testing.md) |
+| Pack format / manifest | [MANUAL.md](MANUAL.md) + `packs/tdd/pack.toml` (example) |
+| Embedded packs | [packs/](packs/) |
+| Agent/skill procedures | [.agents/skills/](.agents/skills/) + [AGENT_ARCHITECTURE.md](AGENT_ARCHITECTURE.md) |
+| Agent roles (agnostic Markdown) | [agents/](agents/) |
+| Vibe CLI wiring | [.vibe/](.vibe/) (`agents/`, `prompts/`, `config.toml`) |
 
-## Conventions incontournables
+## Non-negotiable conventions
 
-- **Lire un fichier entièrement avant de le modifier** ; diff minimal ; matcher le style existant.
-- **Erreurs** : `thiserror` par couche — `DomainError` → `AppError` (`#[from]`) → `InfraError` (conversion bollard) → `AppError` pour l'UI. Jamais de `String`/`anyhow` dans les erreurs de couche.
-- **Tests** : toute logique nouvelle a son test ; bugfix = test de régression d'abord (rouge) puis correction. Voir [rules/testing.md](rules/testing.md).
-- **Gate avant livraison** : `cargo fmt` → `cargo clippy -- -D warnings` → `cargo test`. Voir [rules/quality.md](rules/quality.md).
-- **Jamais de commit, push, PR ou merge sans accord explicite de l'utilisateur** (voir Confirmation Gate ci-dessus).
+- **Read a file entirely before modifying it**; minimal diff; match the existing style.
+- **Errors**: `thiserror` per layer — `DomainError` → `ApplicationError` (`#[from]`) for the UI; `anyhow` reserved for `main.rs`. No error `String`s in the layers.
+- **Tests**: every new logic has its test; bugfix = failing regression test first, then fix. See [rules/testing.md](rules/testing.md).
+- **Gate before delivery**: `cargo fmt` → `cargo clippy -- -D warnings` → `cargo test`. See [rules/quality.md](rules/quality.md).
+- **Never commit, push, PR or merge without the user's explicit agreement** (see Confirmation Gate above).
 
-## Ressources complémentaires
+## Additional resources
 
-- [README.md](README.md) — doc utilisateur ; [MANUAL.md](MANUAL.md) — manuel des touches.
-- [docs/plans/](docs/plans/) — plans par feature ; [docs/refactoring/](docs/refactoring/) — comptes-rendus de refactor.
-- [xx_learning/](xx_learning/) — parcours d'apprentissage Rust.
-- [.legacy/](.legacy/) — archive historique (roadmap, évolution, logs d'architecture).
+- [README.md](README.md) — user docs; [MANUAL.md](MANUAL.md) — keys manual and pack format.
+- [docs/plans/](docs/plans/) — per-feature plans.
+- Design and patterns taken from [rusty-console](https://github.com/TataneCode/rusty-console) (see [AGENT_ARCHITECTURE.md](AGENT_ARCHITECTURE.md)).

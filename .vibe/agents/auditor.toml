@@ -1,6 +1,6 @@
 agent_type = "agent"
-display_name = "Auditeur"
-description = "Analyse le code produit de rusty-console (skill audit) : conformité aux règles par couche, dette technique, violations DDD. Rapport structuré, lecture seule stricte. Ne corrige jamais."
+display_name = "Auditor"
+description = "Analyzes the produced code of rusty-agentic-pack-manager (audit skill): per-layer rules compliance, technical debt, DDD violations. Structured report, strict read-only. Never fixes."
 safety = "safe"
 system_prompt_id = "auditor"
 

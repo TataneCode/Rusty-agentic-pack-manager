@@ -1,0 +1,11 @@
+name = "work-slicing"
+version = "1.0.0"
+description = "Slice work into small, independently verifiable units"
+cli = ["vibe", "gemini"]
+
+[[items]]
+kind = "skill"
+source = "skills/work-slicing/SKILL.md"
+[items.destinations]
+vibe = ".agents/skills/work-slicing/SKILL.md"
+gemini = ".gemini/skills/work-slicing/SKILL.md"

@@ -1,22 +1,22 @@
-# Règles — Couche Infrastructure (`src/03_infrastructure/`)
+# Rules — Infrastructure layer (`src/03_infrastructure/`)
 
-## Périmètre
+## Scope
 
-Adapters Bollard implémentant les traits repository de l'application ; mappers Docker API→domain.
+`std::fs` and `toml` adapters implementing the application repository traits; manifest and filesystem mappers.
 
-## Règles
+## Rules
 
-1. **Adapters implémentent les traits application** — `#[async_trait]`, contre l'API async Bollard. C'est la seule couche qui connaît `bollard`.
-2. **Erreurs : `InfraError`** avec `thiserror` — convertit `bollard::errors::Error`, puis se convertit en `AppError` via `From` pour l'UI.
-3. **Mappers infra : `Option<Entity>` avec `filter_map`** — les réponses Docker API malformées sont **silencieusement ignorées** (skip), pas d'erreur.
-4. **Mappers stateless** — unit structs avec fonctions associées, conversion Docker type → entité domain.
-5. **`Arc<*Adapter>`** au point d'injection DI (`main.rs`) pour la propriété partagée entre tâches async.
-6. **Bollard 0.18 spécifiques** — `df()` sans argument (`DataUsageOptions` supprimé) ; `Port.typ` (pas `Port.r#type`) ; `Port.private_port` est `u16` (pas `Option<u16>`).
-7. **Tests** — mocker l'API Bollard si nécessaire, sinon tester les mappers en isolation avec des fixtures JSON réalistes.
+1. **Adapters implement application traits** — `FsPackRepository`, `FsPackContentRepository`, `FsExplorer`, `FsInstallDestination`. This is the only layer that touches the filesystem and `toml` parsing.
+2. **Errors: mapped to `ApplicationError`** — `Io { path, source }`, `InvalidManifest`, `NotADirectory` carry the failing path.
+3. **Malformed pack dirs are skipped** — a directory without `pack.toml` is ignored in listings, not an error.
+4. **Stateless mappers** — manifest → entity conversion in associated functions.
+5. **Constructed at the DI point** (`main.rs`) — the rest of the code depends on traits only.
+6. **Tests on tempdirs** — `tempfile::TempDir` fixtures; no hardcoded system paths.
+7. **Copy semantics** — recursive tree copy creates parent directories; existing destinations are never silently overwritten.
 
-## Anti-patterns interdits
+## Forbidden anti-patterns
 
-- Exposer un type `bollard` en sortie d'adapter (le retour est toujours une entité domain ou un DTO via l'application).
-- Contenir de la logique métier — un adapter traduit, il ne décide pas.
-- Importer `04_presentation` ou toucher au rendu.
-- Dépendre des features tokio non déclarées (`rt-multi-thread, macros, sync, time, process` uniquement — jamais `full`).
+- Exposing a `toml` or raw `std::fs` type out of an adapter (returns are always domain entities or DTOs via the application).
+- Containing business logic — an adapter translates, it does not decide.
+- Importing `04_presentation` or touching rendering.
+- Writing outside the target root or the packs directory.

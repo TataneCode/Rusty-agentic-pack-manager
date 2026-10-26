@@ -1,6 +1,6 @@
 agent_type = "agent"
-display_name = "Architecte"
-description = "Produit des plans de conception pour rusty-console (skill plan). Lecture seule sur les sources, tous les outils accessibles. Ne produit jamais de code d'implémentation."
+display_name = "Architect"
+description = "Produces design plans for rusty-agentic-pack-manager (plan skill). Read-only on the sources, all tools accessible. Never produces implementation code."
 safety = "safe"
 system_prompt_id = "architect"
 

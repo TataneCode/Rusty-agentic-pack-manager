@@ -1,56 +1,56 @@
 ---
 name: challenge
-description: Challenger une demande utilisateur avant de planifier — reformuler le besoin, détecter les ambiguïtés bloquantes et le scope creep, proposer un périmètre minimal. Utiliser AVANT tout skill plan sur une demande non triviale. Lecture seule, aucun code, aucune écriture.
+description: Challenge a user request before planning — restate the need, detect blocking ambiguities and scope creep, propose a minimal scope. Use BEFORE any plan skill on a non-trivial request. Read-only, no code, no writes.
 user-invocable: true
 ---
 
-# Skill : Challenge (œil critique sur la demande)
+# Skill: Challenge (critical eye on the request)
 
-Endosse le rôle **Challenger** défini dans [agents/challenger.md](../../../agents/challenger.md) : lire la demande d'un œil critique **avant** qu'elle ne devienne un plan. Fonctionne depuis tout point d'entrée (Vibe Code, Vibe CLI).
+Take the **Challenger** role: read the request with a critical eye **before** it becomes a plan. Works from any entry point (Vibe Code, Vibe CLI).
 
-## Objectif
+## Goal
 
-Éviter de planifier puis coder du hors-sujet. Une demande mal cadrée coûte un plan entier ; 5 minutes de challenge économisent une itération complète.
+Avoid planning and then coding off-target. A badly framed request costs a whole plan; 5 minutes of challenge save a full iteration.
 
-## Procédure
+## Procedure
 
-1. **Lire la demande telle quelle** (ne pas la réécrire encore).
-2. **Reformuler** en 3 phrases maximum : le problème, la cible, le bénéfice attendu. Si tu ne peux pas, c'est que la demande est floue.
-3. **Lister les ambiguïtés bloquantes** (2-3 max) : celles dont la réponse change le périmètre, l'architecture ou le résultat. Une ambiguïté non bloquante se tranche par les conventions du repo, pas par une question.
-4. **Détecter le scope creep** : la demande contient-elle des éléments qui ne servent pas l'objectif premier ? Les lister séparément comme « hors périmètre ».
-5. **Proposer un périmètre minimal** : la plus petite version qui résout le problème posé, et une version complète si elle diffère.
-6. **Conclure par une décision** : une question courte à l'utilisateur (si ambiguïté bloquante), ou un « go » explicite sur le périmètre minimal proposé. **Le silence signifie « ne pas continuer ».**
+1. **Read the request as is** (do not rewrite it yet).
+2. **Restate** in 3 sentences maximum: the problem, the target, the expected benefit. If you cannot, the request is fuzzy.
+3. **List blocking ambiguities** (2-3 max): those whose answer changes the scope, the architecture or the result. A non-blocking ambiguity is settled by repo conventions, not by a question.
+4. **Detect scope creep**: does the request contain elements that do not serve the primary goal? List them separately as "out of scope".
+5. **Propose a minimal scope**: the smallest version that solves the stated problem, and a full version if different.
+6. **Conclude with a decision**: one short question to the user (if a blocking ambiguity), or an explicit "go" on the proposed minimal scope. **Silence means "do not continue".**
 
-## Format de sortie
+## Output format
 
 ```markdown
-## Reformulation
-<3 phrases max>
+## Restatement
+<3 sentences max>
 
-## Ambiguïtés bloquantes
-1. <question précise, avec les options si possible>
+## Blocking ambiguities
+1. <precise question, with options if possible>
 
-## Scope creep détecté
-- <élément> → suggéré en hors périmètre
+## Detected scope creep
+- <element> → suggested as out of scope
 
-## Périmètre proposé
-- **Minimal** : <...>
-- **Complet** (si différent) : <...>
+## Proposed scope
+- **Minimal**: <...>
+- **Full** (if different): <...>
 
-## Décision demandée
-<la question, ou « OK pour le périmètre minimal ? »>
+## Decision requested
+<the question, or "OK for the minimal scope?">
 ```
 
-## Limites
+## Limits
 
-- **Lecture seule** : aucune écriture, aucun plan, aucun code.
-- Ne pas challenger pour le plaisir : une demande claire et petite (< 1 écran, 1 couche) passe directement.
-- Ne pas proposer de solution technique dans ce skill — c'est le rôle de `plan`. Ici on cadre le **quoi**, pas le **comment**.
-- Ton factuel, jamais condescendant : on challenge la demande, pas la personne.
+- **Read-only**: no writes, no plan, no code.
+- Do not challenge for the pleasure of it: a clear, small request (< 1 screen, 1 layer) goes straight through.
+- Do not propose a technical solution in this skill — that is `plan`'s role. Here we frame the **what**, not the **how**.
+- Factual tone, never condescending: we challenge the request, not the person.
 
-## Anti-patterns interdits
+## Forbidden anti-patterns
 
-- Sauter le challenge parce que « la demande a l'air claire » sur une tâche non triviale.
-- Poser 5 questions au lieu de 1-2 bloquantes.
-- Réécrire la demande en jargon ou la noyer sous du contexte.
-- Faire le plan à la place du challenge (rôle de `plan`).
+- Skipping the challenge because "the request looks clear" on a non-trivial task.
+- Asking 5 questions instead of 1-2 blocking ones.
+- Rewriting the request in jargon or drowning it in context.
+- Doing the plan instead of the challenge (`plan`'s role).

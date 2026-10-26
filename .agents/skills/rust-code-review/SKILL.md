@@ -1,52 +1,52 @@
 ---
 name: rust-code-review
-description: Relire une pull request rusty-console sur GitHub — examen systématique par couche DDD, contrôle qualité, verdict actionnable. Utiliser ce skill pour toute revue de PR (demandée, assignée, ou en surveillance de CI).
+description: Review a GitHub pull request of this project — systematic per-DDD-layer examination, quality control, actionable verdict. Use this skill for any PR review (requested, assigned, or CI monitoring).
 ---
 
-# Skill : Revue de code Rust (pull requests)
+# Skill: Rust code review (pull requests)
 
-## Procédure systématique — 6 étapes
+## Systematic procedure — 6 steps
 
-### 1. Collecter le contexte
+### 1. Collect the context
 ```bash
-gh pr view <n> --repo TataneCode/rusty-console
+gh pr view <n> --repo TataneCode/Rusty-agentic-pack-manager
 gh pr diff <n>
 ```
-- Lire le titre, la description et l'issue liée.
-- Vérifier la taille du diff : une PR > ~400 lignes de logique est un signal de découpage insuffisant (à noter en commentaire, pas bloquant d'office).
+- Read the title, the description and the linked issue.
+- Check the diff size: a PR with > ~400 lines of logic is a signal of insufficient splitting (note it as a comment, not systematically blocking).
 
-### 2. Vérifier le périmètre
-- Le diff fait-il exactement ce que le titre/description annonce ? Tout changement non lié = demande d'extraction.
-- Aucun fichier généré ni `Cargo.lock` inutilement churné (sauf changement de dépendance justifié).
+### 2. Verify the scope
+- Does the diff do exactly what the title/description announces? Any unrelated change = ask to extract it.
+- No generated files nor needlessly churned `Cargo.lock` (except a justified dependency change).
 
-### 3. Examiner par couche (règles de blocage)
-- **Domain (`01_domain`)** : aucun crate externe ; invariants validés dans les types ; `DomainError` pour tout échec de construction.
-- **Application (`02_application`)** : traits `#[async_trait]` + `#[cfg_attr(test, mockall::automock)]` ; services stateless ; DTO/mappers dédiés ; pas d'entité domain exposée.
-- **Infrastructure (`03_infrastructure`)** : types bollard confinés ici ; mappers vers le domaine ; conversion `InfraError → AppError`.
-- **Presentation (`04_presentation`)** : triade presenter/view/actions respectée ; logique métier absente de l'UI ; `AppAction`/`Screen` étendus proprement ; erreurs catchées via `App::error_message`.
-- **Transverse** : chaîne d'erreurs thiserror respectée ; pas de nouveau `unwrap()`/`expect()` sur chemin d'erreur ; wiring `main.rs` cohérent.
+### 3. Examine per layer (blocking rules)
+- **Domain (`01_domain`)**: no external crates; invariants validated in the types; `DomainError` for every construction failure.
+- **Application (`02_application`)**: traits `#[automock]`; stateless services; dedicated DTO/mappers; no exposed domain entity.
+- **Infrastructure (`03_infrastructure`)**: `toml` and raw `std::fs` types confined here; mappers to the domain; errors mapped to `ApplicationError` with the failing path.
+- **Presentation (`04_presentation`)**: state/views/actions separation respected (app.rs / split_view+viewer / router.rs per `rules/presentation.md`); no business logic in the UI; `AppAction`/`KeyContext` extended cleanly; errors caught and shown as popups.
+- **Cross-cutting**: thiserror error chain respected; no new `unwrap()`/`expect()` on an error path; `main.rs` wiring consistent.
 
-### 4. Contrôler la qualité et les tests
-- Nouvelle logique métier → tests présents et significatifs (pas de test qui teste le mock).
-- Bugfix → test de régression présent (voir skill `rust-bugfix`).
-- Si la CI tourne : vérifier son verdict ; en cas d'échec, chercher la cause racine dans les logs avant tout commentaire.
-- `cargo clippy -- -D warnings` et `cargo fmt` doivent être nets (vérifiable en local sur la branche si besoin).
+### 4. Control quality and tests
+- New business logic → tests present and meaningful (no test testing the mock).
+- Bugfix → regression test present (see the `rust-bugfix` skill).
+- If CI is running: check its verdict; on failure, find the root cause in the logs before any comment.
+- `cargo clippy -- -D warnings` and `cargo fmt` must be clean (verifiable locally on the branch if needed).
 
-### 5. Rédiger la revue
-- Structure : **Verdict** (approve / request changes / comment) en tête, puis findings par sévérité :
-  - 🔴 **Bloquant** — viole l'architecture, casse la CI, bug, sécurité
-  - 🟡 **Important** — pattern contourné, test manquant, lisibilité
-  - 🟢 **Mineur / nit** — style, nommage (non bloquant)
-- Chaque finding : `fichier:ligne`, explication du problème, suggestion concrète. Pas de « c'est moche » sans alternative.
-- Saluer explicitement les bonnes décisions (une revue n'est pas qu'une liste de défauts).
+### 5. Write the review
+- Structure: **Verdict** (approve / request changes / comment) up front, then findings by severity:
+  - 🔴 **Blocker** — violates the architecture, breaks CI, bug, security
+  - 🟡 **Important** — bypassed pattern, missing test, readability
+  - 🟢 **Minor / nit** — style, naming (non-blocking)
+- Every finding: `file:line`, explanation of the problem, concrete suggestion. No "this is ugly" without an alternative.
+- Explicitly acknowledge good decisions (a review is not just a list of defects).
 
-### 6. Publier et suivre
-- Publier via `gh pr review` avec un corps structuré (fichier temp + `--body-file`).
-- Après retours de l'auteur : re-vérifier uniquement les points corrigés, pas toute la PR.
+### 6. Publish and follow up
+- Publish via `gh pr review` with a structured body (temp file + `--body-file`).
+- After the author's responses: re-verify only the fixed points, not the whole PR.
 
-## Anti-patterns interdits
+## Forbidden anti-patterns
 
-- Revue superficielle « LGTM » sur un diff contenant de la logique métier.
-- Findings sans localisation ni suggestion.
-- Demander du style personnel contraire aux conventions du repo (ce sont elles qui font foi, via `AGENTS.md` et les skills).
-- Approuver une PR qui viole le flux de dépendances DDD « parce que c'est petit ».
+- A superficial "LGTM" review on a diff containing business logic.
+- Findings without location or suggestion.
+- Requesting personal style contrary to the repo conventions (they are the authority, via `AGENTS.md` and the skills).
+- Approving a PR that violates the DDD dependency flow "because it is small".

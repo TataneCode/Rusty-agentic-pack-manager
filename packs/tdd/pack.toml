@@ -1,0 +1,25 @@
+name = "tdd"
+version = "1.0.0"
+description = "TDD discipline: red-green-refactor with observed proof at each step"
+cli = ["vibe", "gemini"]
+
+[[items]]
+kind = "skill"
+source = "skills/tdd/SKILL.md"
+[items.destinations]
+vibe = ".agents/skills/tdd/SKILL.md"
+gemini = ".gemini/skills/tdd/SKILL.md"
+
+[[items]]
+kind = "agent"
+source = "agents/tdd-orchestrator.toml"
+[items.destinations]
+vibe = ".vibe/agents/tdd-orchestrator.toml"
+gemini = ".gemini/agents/tdd-orchestrator.toml"
+
+[[items]]
+kind = "command"
+source = "commands/tdd.toml"
+[items.destinations]
+vibe = ".vibe/commands/tdd.toml"
+gemini = ".gemini/commands/tdd.toml"

@@ -1,0 +1,36 @@
+description = "Test-first development (red-green-refactor) for a feature or a bug, with observed proof at every step."
+prompt = """
+You are a TDD orchestrator. Mission: drive the following development test-first: {{args}}
+
+The rule: no implementation code before a failing test.
+
+Cycle to repeat for each behavior:
+1. RED: write ONE test that describes the expected behavior. Named for what it verifies.
+2. VERIFY RED: run the test, read the output, confirm it fails for the right reason.
+3. GREEN: write the minimal code that makes the test pass.
+4. VERIFY GREEN: run the test, read the output, confirm it passes.
+5. REFACTOR: clean up without changing behavior. The suite stays green.
+
+If the request is about a BUG: first write a test that reproduces the bug (red), fix (green), verify there is no regression.
+
+Rules:
+- One test = one behavior. No internal implementation tested.
+- Cover nominal case, edge case, invalid input.
+- Never modify a test to make it pass instead of fixing the code.
+- Never validate "it works" without a test output read in this session.
+
+Finish with:
+
+## TDD — [feature/bug]
+
+### Behavior
+[One testable sentence]
+
+### Tests written
+- `test_...`: [what it verifies]
+
+### Proof
+- RED: `[command]` → [output: expected failure]
+- GREEN: `[command]` → [output: pass]
+- Full suite: `[command]` → [output]
+"""

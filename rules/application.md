@@ -1,23 +1,23 @@
-# Règles — Couche Application (`src/02_application/`)
+# Rules — Application layer (`src/02_application/`)
 
-## Périmètre
+## Scope
 
-Traits repository (boundary d'inversion de contrôle), services stateless, DTOs, mappers domain→DTO.
+Repository traits (dependency inversion boundary), stateless services, DTOs, domain→DTO mappers.
 
-## Règles
+## Rules
 
-1. **Traits repository dans `*/traits.rs`** — tous avec `#[async_trait]`, bounds `Send + Sync`, chaque méthode retourne `Result<T, AppError>`.
-2. **Inversion de contrôle** — l'application définit les ports (traits) ; l'infrastructure les implémente. L'application n'importe jamais `03_infrastructure`.
-3. **Erreurs : `AppError`** avec `thiserror` — wrappe `DomainError` via `#[from]`, ajoute les variantes `Repository`, `NotFound`, `Connection` avec méthodes builder.
-4. **Services stateless** — pas d'état mutable ; les services reçoivent `Arc<dyn Trait>` en dépendance.
-5. **DTOs distincts des entités** — mappers application (`unit structs`, fonctions associées, pas de `self`) convertissent domain→DTO. L'UI ne voit que des DTO.
-6. **Mappers stateless** — unit structs avec fonctions associées ; jamais d'état.
-7. **Tout l'I/O est async** via `tokio` ; jamais d'appel bloquant dans un service.
-8. **Tests avec `mockall`** — `Mock*Repository` pour mocker les traits ; tests `#[tokio::test]` co-localisés dans les fichiers de service.
+1. **Repository traits in `*/traits.rs`** — all mockable (`automock`), `Send` bounds, every method returns `Result<T, ApplicationError>`.
+2. **Dependency inversion** — the application defines the ports (traits); the infrastructure implements them. The application never imports `03_infrastructure`.
+3. **Errors: `ApplicationError`** with `thiserror` — wraps `DomainError` via `#[from]`, adds `PackNotFound`, `InvalidManifest`, `Io` variants.
+4. **Stateless services** — no mutable state; services receive `Box<dyn Trait>` dependencies.
+5. **DTOs distinct from entities** — application mappers (`PackSummaryDto::from_pack`) convert domain→DTO. The UI only sees DTOs.
+6. **Stateless mappers** — associated functions on unit structs; never state.
+7. **No hidden I/O** — the application layer orchestrates; actual I/O lives behind repository traits.
+8. **Tests with `mockall`** — `Mock*Repository` to mock the traits; co-located tests in the service files.
 
-## Anti-patterns interdits
+## Forbidden anti-patterns
 
-- Importer `03_infrastructure`, `bollard`, ou un type Docker quelconque.
-- Retourner une entité du domain directement à l'UI (toujours un DTO).
-- Logique de rendu ou de gestion de touches clavier (c'est le rôle de la presentation).
-- État mutable dans un service (utiliser un presenter côté UI à la place).
+- Importing `03_infrastructure` or any filesystem type.
+- Returning a domain entity directly to the UI (always a DTO).
+- Rendering or key-handling logic (that is the presentation's role).
+- Mutable state in a service (use a UI-side presenter instead).

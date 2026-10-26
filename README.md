@@ -1,57 +1,54 @@
 # Rusty Agentic Pack Manager
 
-TUI Rust de gestion de packs agentiques : création, déploiement et suppression d'ensembles de skills, agents et commands dans n'importe quel dépôt.
+A Rust TUI to manage agentic packs: creation, deployment and removal of skill, agent and command sets in any repository.
 
-## Qu'est-ce qu'un pack agentique ?
+## What is an agentic pack?
 
-Un **pack** est une combinaison cohérente de skills, d'agents et de commands, applicable à un CLI donné (Vibe CLI, Gemini CLI, …) et facilement déployable — et supprimable — d'un dépôt.
+A **pack** is a coherent combination of skills, agents and commands, applicable to a given CLI (Vibe CLI, Gemini CLI, …) and easily deployable — and removable — in a repository.
 
-- **Format** : un répertoire contenant un manifeste `pack.toml` (nom, description, version, CLIs cibles, items) et les fichiers du pack (skills, agents, commands).
-- **Granularité** : packs thématiques (ex. `tdd`, `review`) regroupant skills + agents + commands liés, plus packs solo.
-- **Installation** : le manifeste déclare, par CLI, les destinations (ex. `.agents/skills/` pour Vibe, `.gemini/commands/` pour Gemini) ; les fichiers sont copiés sous le répertoire choisi par l'utilisateur.
+- **Format**: a directory containing a `pack.toml` manifest (name, description, version, target CLIs, items) and the pack files (skills, agents, commands).
+- **Granularity**: thematic packs (e.g. `tdd`, `review`) grouping related skills + agents + commands, plus solo packs.
+- **Installation**: the manifest declares, per CLI, the destinations (e.g. `.agents/skills/` for Vibe, `.gemini/commands/` for Gemini); files are copied under the directory chosen by the user.
 
 ## UI — split screen
 
-- **Panneau gauche** : liste des packs, triés par CLI cible (Vibe CLI, Gemini CLI, …).
-- **Panneau droit** : arborescence de fichiers de la machine hôte.
+- **Left panel**: the pack list, grouped by target CLI (Vibe CLI, Gemini CLI, …).
+- **Right panel**: the file tree of the host machine.
 
-| Touche | Action |
+| Key | Action |
 |---|---|
-| `Tab` | Basculer le focus entre les panneaux |
-| `Entrée` / `Retour arrière` | Naviguer (descendre / remonter) dans la liste ou le système de fichiers |
-| `A` | Appliquer un pack (focus passe sur l'explorer en mode installation) |
-| `v` | Visualiser le contenu d'un pack (.md, .js, .toml, avec coloration syntaxique — panneau packs uniquement) |
-| `i` | Installer le pack dans le répertoire sélectionné (mode installation) |
-| `r` | Créer un dossier (explorer) |
-| `Espace` | Aide contextuelle (selon le panneau actif / le mode) |
-
-En mode installation, seules la navigation, l'installation (`i`) et l'aide sont disponibles.
+| `Tab` | Switch focus between panels |
+| `Enter` / `Backspace` | Navigate (down / up) in the list or the file system |
+| `A` | Install the selected pack in the explorer's current directory |
+| `V` | View the pack files (opens on `pack.toml`) with syntax highlighting (packs panel only) |
+| `R` | Create a folder (explorer) |
+| `M` | Rename a folder/file (explorer) |
+| `D` | Delete a folder/file (explorer; `Shift-D` forces non-empty folders) |
+| `Space` | Contextual help (depending on the active panel / mode) |
 
 ## Architecture
 
-Rust (édition 2021, MSRV 1.88), TUI `ratatui` + `crossterm`. DDD 4 couches, flux strictement inward :
+Rust (edition 2021, MSRV 1.88), `ratatui` + `crossterm` TUI. DDD 4 layers, strictly inward flow:
 
 ```
 04_presentation (ui)  →  02_application  →  01_domain  ←  03_infrastructure
 ```
 
-Les règles d'architecture, le design et les patterns d'actions sont repris de [rusty-console](https://github.com/TataneCode/rusty-console).
+Architecture rules, design and action patterns are taken from [rusty-console](https://github.com/TataneCode/rusty-console).
 
-- Point d'entrée agents : [AGENTS.md](AGENTS.md), puis [CONTEXT.md](CONTEXT.md)
-- Règles par couche : [rules/](rules/)
-- Plans de conception : [docs/plans/](docs/plans/)
+- Agents entry point: [AGENTS.md](AGENTS.md), then [CONTEXT.md](CONTEXT.md)
+- Per-layer rules: [rules/](rules/)
+- Design plans: [docs/plans/](docs/plans/)
 
-> Note : les fichiers agentiques (`AGENTS.md`, `CONTEXT.md`, `rules/`, `.agents/`, `.vibe/`, `agents/`) sont issus de rusty-console et seront adaptés à ce projet au fil de l'implémentation.
+## Embedded packs
 
-## Packs embarqués
-
-La liste de packs initiale (dans `packs/`) est construite à partir de [docs-tech/llm-cli](https://github.com/TataneCode/docs-tech/tree/main/llm-cli) et de rusty-console, rendue agnostique des bibliothèques tierces, et ciblée **Vibe CLI** et **Gemini CLI** dans un premier temps.
+The initial pack list (in `packs/`) is built from [docs-tech/llm-cli](https://github.com/TataneCode/docs-tech/tree/main/llm-cli) and rusty-console, made library-agnostic, targeting **Vibe CLI** and **Gemini CLI** first.
 
 ## Packaging
 
-- **RPM / DEB** : le répertoire `packs/` est embarqué dans le paquet (ex. `/usr/share/rusty-agentic-pack-manager/packs/`).
-- **Windows** : une archive 7z est générée en artefact (binaire + répertoire `packs/` à côté).
+- **RPM / DEB**: the `packs/` directory ships inside the package (e.g. `/usr/share/rusty-agentic-pack-manager/packs/`).
+- **Windows**: a 7z archive is generated as an artifact (binary + a `packs` directory side by side).
 
-## État
+## Status
 
-Projet en initialisation — voir [docs/plans/init.md](docs/plans/init.md). V1 en cours de construction.
+V1 under construction — see [docs/plans/init.md](docs/plans/init.md).

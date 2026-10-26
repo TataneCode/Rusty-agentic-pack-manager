@@ -1,27 +1,25 @@
-# Règles — Couche Domain (`src/01_domain/`)
+# Rules — Domain layer (`src/01_domain/`)
 
-## Périmètre
+## Scope
 
-Entités (`Container`, `Volume`, `Image`, `Stack`), value objects (`ContainerId`, `PortMapping`, `ImageId`, ...), erreurs de domaine, invariants métier.
+Entities (`Pack`, `PackItem`), value objects (`PackName`, `PackVersion`, `TargetCli`, `PackItemKind`), domain errors, business invariants.
 
-## Règles
+## Rules
 
-1. **Rust pur, zéro crate externe** — pas de dépendance, même pas `serde` ou `chrono`. Le domain est compilable seul.
-2. **Erreurs : `thiserror` uniquement** — `DomainError` pour les violations d'invariants. Jamais de `String` ni `anyhow`.
-3. **Builder pattern `with_*`** pour les champs optionnels :
+1. **Pure Rust, zero external crates** — no dependencies, not even `serde`. The domain compiles standalone.
+2. **Errors: `thiserror` only** — `DomainError` for invariant violations. Never `String` nor `anyhow`.
+3. **`with_*` builder pattern** for optional fields:
    ```rust
-   Container::new(id, name, image, state, status, created)
-       .with_ports(ports)
-       .with_networks(networks)
+   Pack::new(name, version, description, clis, items)
    ```
-4. **Constructeurs validants** — tout constructeur d'entité ou de value object valide ses invariants (ex. `PortMapping` rejette le port 0) et retourne `Result<T, DomainError>` quand l'invariant peut être violé.
-5. **Pas d'I/O** — aucune opération réseau, fichier, ou horloge. Le domaine est déterministe.
-6. **Pas de logique applicative** — pas d'orchestration, pas de DTO (les DTO vivent en application).
-7. **Tests co-localisés** dans `#[cfg(test)]` dans chaque fichier, sans mock (la couche est pure).
+4. **Validating constructors** — every entity or value object constructor validates its invariants (e.g. `PackName` rejects uppercase) and returns `Result<T, DomainError>` when the invariant can be violated.
+5. **No I/O** — no network, file, or clock operations. The domain is deterministic.
+6. **No application logic** — no orchestration, no DTOs (DTOs live in the application layer).
+7. **Co-located tests** in `#[cfg(test)]` in each file, no mocks (the layer is pure).
 
-## Anti-patterns interdits
+## Forbidden anti-patterns
 
-- Importer quoi que ce soit de `02_application`, `03_infrastructure` ou `04_presentation`.
-- Ajouter une dépendance externe au `Cargo.toml` pour cette couche.
-- Champs `pub` mutables sur les entités : l'état se modifie par méthodes nommées.
-- `unwrap()`/`expect()` hors des tests.
+- Importing anything from `02_application`, `03_infrastructure` or `04_presentation`.
+- Adding an external dependency to this layer.
+- Mutable `pub` fields on entities: state changes through named methods.
+- `unwrap()`/`expect()` outside tests.

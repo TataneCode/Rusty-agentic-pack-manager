@@ -1,0 +1,6 @@
+agent_type = "subagent"
+display_name = "TDD Orchestrator"
+description = "TDD orchestrator: applies the red-green-refactor discipline, designs the tests, enforces coverage on complex logic."
+system_prompt_id = "tdd-orchestrator"
+safety = "safe"
+enabled_tools = ["read_file", "write_file", "search_replace", "grep", "glob", "bash"]

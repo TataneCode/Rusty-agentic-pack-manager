@@ -1,0 +1,53 @@
+name = "rusty-agnostic"
+version = "1.0.0"
+description = "Agentic working discipline: challenge, plan, implement, review (agnostic)"
+cli = ["vibe", "gemini"]
+
+[[items]]
+kind = "skill"
+source = "skills/confirmation-gate"
+[items.destinations]
+vibe = ".agents/skills/confirmation-gate"
+gemini = ".gemini/skills/confirmation-gate"
+
+[[items]]
+kind = "skill"
+source = "skills/plan"
+[items.destinations]
+vibe = ".agents/skills/plan"
+gemini = ".gemini/skills/plan"
+
+[[items]]
+kind = "skill"
+source = "skills/implement"
+[items.destinations]
+vibe = ".agents/skills/implement"
+gemini = ".gemini/skills/implement"
+
+[[items]]
+kind = "skill"
+source = "skills/review"
+[items.destinations]
+vibe = ".agents/skills/review"
+gemini = ".gemini/skills/review"
+
+[[items]]
+kind = "skill"
+source = "skills/self-review"
+[items.destinations]
+vibe = ".agents/skills/self-review"
+gemini = ".gemini/skills/self-review"
+
+[[items]]
+kind = "skill"
+source = "skills/challenge"
+[items.destinations]
+vibe = ".agents/skills/challenge"
+gemini = ".gemini/skills/challenge"
+
+[[items]]
+kind = "skill"
+source = "skills/audit"
+[items.destinations]
+vibe = ".agents/skills/audit"
+gemini = ".gemini/skills/audit"

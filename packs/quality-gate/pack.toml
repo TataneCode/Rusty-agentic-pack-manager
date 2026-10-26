@@ -1,0 +1,25 @@
+name = "quality-gate"
+version = "1.0.0"
+description = "Verification gates and branch finishing discipline"
+cli = ["vibe", "gemini"]
+
+[[items]]
+kind = "skill"
+source = "skills/verification-gate/SKILL.md"
+[items.destinations]
+vibe = ".agents/skills/verification-gate/SKILL.md"
+gemini = ".gemini/skills/verification-gate/SKILL.md"
+
+[[items]]
+kind = "skill"
+source = "skills/finish-branch/SKILL.md"
+[items.destinations]
+vibe = ".agents/skills/finish-branch/SKILL.md"
+gemini = ".gemini/skills/finish-branch/SKILL.md"
+
+[[items]]
+kind = "command"
+source = "commands/discipline.toml"
+[items.destinations]
+vibe = ".vibe/commands/discipline.toml"
+gemini = ".gemini/commands/discipline.toml"

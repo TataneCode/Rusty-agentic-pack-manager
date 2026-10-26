@@ -1,42 +1,42 @@
 ---
 name: rust-dependency
-description: Ajouter ou mettre à jour une dépendance Cargo dans rusty-console — choix de version compatible MSRV, features minimales, vérification Cargo.lock. Utiliser ce skill dès qu'une tâche touche Cargo.toml ou introduit un crate.
+description: Add or update a Cargo dependency in this project — MSRV-compatible version choice, minimal features, Cargo.lock verification. Use this skill as soon as a task touches Cargo.toml or introduces a crate.
 ---
 
-# Skill : Gestion des dépendances Cargo
+# Skill: Cargo dependency management
 
-## Procédure systématique — 5 étapes
+## Systematic procedure — 5 steps
 
-### 1. Justifier la dépendance
-- Répondre avant d'ajouter : quel problème ne peut pas être résolu avec la std ou les crates existantes ?
-- Vérifier si un crate déjà présent couvre le besoin (ex. `chrono` pour le temps, `serde` pour la sérialisation).
+### 1. Justify the dependency
+- Answer before adding: which problem cannot be solved with std or the existing crates?
+- Check whether an already-present crate covers the need (e.g. `serde` for serialization, `toml` for manifests).
 
-### 2. Contraintes du projet
-- MSRV **1.88** : vérifier que le crate (et sa version) supporte ce toolchain. `rust-version` du crate ≤ 1.88.
-- Édition 2021.
-- Le domaine (`01_domain`) reste à **zéro crate externe** (thiserror seul toléré pour les erreurs). Jamais de nouvelle dépendance utilisée par le domaine.
+### 2. Project constraints
+- MSRV **1.88**: verify the crate (and its version) supports this toolchain. The crate's `rust-version` ≤ 1.88.
+- Edition 2021.
+- The domain (`01_domain`) stays at **zero external crates** (thiserror alone tolerated for errors). Never a new dependency used by the domain.
 
-### 3. Déclarer avec les features minimales
-- Lister explicitement les features (ex. tokio limité à `rt-multi-thread, macros, sync, time, process` — pas de `full`).
-- Version contrainte mineure (`"0.30"`, pas `"*"` ni `^` large inutile).
-- Dev-dependencies séparées (`mockall`, `tokio-test`).
+### 3. Declare with minimal features
+- List features explicitly (e.g. syntect with `default-fancy`, no onig; no blanket `full`).
+- Constrained minor version (`"0.30"`, not `*` nor a needlessly wide `^`).
+- Dev-dependencies separate (`mockall`, `tempfile`).
 
-### 4. Verrouiller et vérifier
+### 4. Lock and verify
 ```bash
-cargo update -p <crate>       # ou ajout manuel + cargo build
-cargo check                   # résolution + compilation MSRV
+cargo update -p <crate>       # or manual add + cargo build
+cargo check                   # resolution + MSRV compile
 cargo clippy -- -D warnings
 cargo test
 ```
-- `Cargo.lock` est commité : l'inclure dans le commit.
-- Vérifier qu'aucune feature d'un crate existant n'a été élargie au passage (`cargo tree -e features` si doute).
+- `Cargo.lock` is committed: include it in the commit.
+- Verify no existing crate's features were widened along the way (`cargo tree -e features` if in doubt).
 
-### 5. Documenter dans Cargo.toml
-- Regrouper par rôle avec commentaires, comme l'existant (`# TUI Framework`, `# Docker API`, `# Async Runtime`, `# Error Handling`...).
+### 5. Document in Cargo.toml
+- Group by role with comments, like the existing style (`# TUI framework`, `# Syntax highlighting`, `# Serialization`, `# Error handling`...).
 
-## Anti-patterns interdits
+## Forbidden anti-patterns
 
-- Ajouter un crate « au cas où » ou pour une seule fonction triviale implémentable en quelques lignes.
-- Élargir des features (`default-features = true` implicite + features larges) sans nécessité.
-- Mettre à jour des dépendances non liées à la tâche dans le même commit.
-- Introduire une dépendance qui force le domaine ou relève le MSRV.
+- Adding a crate "just in case" or for a single trivial function implementable in a few lines.
+- Widening features (implicit `default-features = true` + broad features) without necessity.
+- Updating dependencies unrelated to the task in the same commit.
+- Introducing a dependency that the domain uses or that raises the MSRV.

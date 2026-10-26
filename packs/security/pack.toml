@@ -1,0 +1,18 @@
+name = "security"
+version = "1.0.0"
+description = "Security audits of application code and configuration"
+cli = ["vibe", "gemini"]
+
+[[items]]
+kind = "skill"
+source = "skills/security-audit/SKILL.md"
+[items.destinations]
+vibe = ".agents/skills/security-audit/SKILL.md"
+gemini = ".gemini/skills/security-audit/SKILL.md"
+
+[[items]]
+kind = "agent"
+source = "agents/security-auditor.toml"
+[items.destinations]
+vibe = ".vibe/agents/security-auditor.toml"
+gemini = ".gemini/agents/security-auditor.toml"

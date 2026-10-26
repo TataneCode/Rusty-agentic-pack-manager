@@ -1,0 +1,31 @@
+use std::path::Path;
+
+use mockall::automock;
+
+use crate::application::error::ApplicationError;
+use crate::domain::pack::entity::Pack;
+
+/// Read access to the pack library (directories with pack.toml manifests).
+#[automock]
+pub trait PackRepository: Send {
+    /// List every available pack, sorted by name.
+    fn list(&self) -> Result<Vec<Pack>, ApplicationError>;
+    /// Load one pack by name.
+    fn find(&self, name: &str) -> Result<Pack, ApplicationError>;
+}
+
+/// Write access to the target filesystem for installing a planned copy.
+#[automock]
+pub trait InstallDestination: Send {
+    /// Recursively copy `source` (relative to the pack dir) to
+    /// `destination` (absolute, inside the chosen target root). Fails if
+    /// the destination already exists (no silent overwrite).
+    fn copy(
+        &self,
+        pack_name: &str,
+        source: &Path,
+        destination: &Path,
+    ) -> Result<(), ApplicationError>;
+    /// Check existence of a destination path (for collision warnings).
+    fn exists(&self, destination: &Path) -> bool;
+}

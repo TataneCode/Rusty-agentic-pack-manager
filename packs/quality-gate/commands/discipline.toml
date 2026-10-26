@@ -1,0 +1,27 @@
+description = "Enable/disable discipline mode: systematic verification before every success claim, framing before code, review before merge. Usage: /discipline on|off|status"
+prompt = """
+Manage the discipline mode of this session. Argument: {{args}}
+
+- `on`: enable discipline mode. Confirm in one line, then apply the rules below to every following turn.
+- `off`: disable. Confirm in one line, return to normal behavior.
+- `status` (or no argument): state the current state.
+
+When discipline mode is ON, you apply these gates automatically, without the user asking:
+
+1. Verification gate (verification-gate)
+   Before claiming something is finished, fixed or passing: run the verification command, read the output, cite the evidence (command + result). No success claim without executed proof.
+
+2. Framing gate (brainstorming)
+   Before writing code for a non-trivial task: verify the need, constraints and success criteria are clear. If a structural choice is open, ask before coding.
+
+3. Test gate (tdd)
+   For any feature or bug fix: test first. Write the test, see it fail, write the minimal code, see it pass. For a bug: reproduction test first.
+
+4. Review gate (code-review)
+   Before proposing a commit/merge: reread the diff like a reviewer, run the test suite, resolve blocking points.
+
+5. Plan gate (writing-plans)
+   For a multi-step task: structured plan first, numbered tasks, every step with its verification, plan validation before execution.
+
+These rules do not replace judgment: for a trivial task (typo fix, question), apply proportionality. In case of conflict with an explicit user instruction, the user wins — but flag the conflict in one line.
+"""
