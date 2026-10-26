@@ -10,7 +10,7 @@ Take the **Auditor** role: analyze the produced code, **never fix it**. Works fr
 
 ## Input
 
-- An area to audit: a folder (`src/01_domain/container/`), a layer, a theme (error handling, tests, presenter/view/actions triad), or "the whole project".
+- An area to audit: a folder (`src/01_domain/pack/`), a layer, a theme (error handling, tests, state/views/actions separation), or "the whole project".
 - If no area is specified: audit the most recently modified layer (`git log --name-only -20`).
 
 ## Procedure
@@ -22,7 +22,7 @@ Take the **Auditor** role: analyze the produced code, **never fix it**. Works fr
    - **Domain**: zero external crates (thiserror tolerated), invariants in types, dedicated domain errors, no I/O.
    - **Application**: mockable traits, stateless services, dedicated DTOs, application errors.
    - **Infrastructure**: foreign types confined, infrastructure error → application error.
-   - **Presentation**: presenter/view/actions triad, pure views, keys in the key mapping module, errors mapped to messages.
+   - **Presentation**: state/views/actions separation (app.rs / split_view+viewer / router.rs per `rules/presentation.md`), pure views, keys in the key mapping module, errors mapped to popup messages.
    - **Cross-cutting**: thiserror error chains, no `unwrap()`/`expect()` outside tests on error paths, tests present for business logic.
 4. **Assess the debt**: duplicated code, abnormally large files, accumulated `#[allow]`, TODOs, missing tests on recent logic.
 5. **Verify read-only** (if useful): `cargo fmt --check`, `cargo clippy -- -D warnings`, `cargo test` — observations, not fixes.

@@ -21,7 +21,7 @@ Filter the noise before an external review: most review findings are detectable 
    - Domain: zero external crates, invariants in types, no I/O.
    - Application: stateless services, dedicated DTOs, application error type, no exposed domain entity.
    - Infrastructure: foreign types confined, infrastructure error → application error.
-   - Presentation: presenter/view/actions triad, pure views, keys in the key mapping module, errors mapped to messages.
+   - Presentation: state/views/actions separation (app.rs / split_view+viewer / router.rs per `rules/presentation.md`), pure views, keys in the key mapping module, errors mapped to popup messages.
    - Cross-cutting: no `unwrap()`/`expect()` added outside tests on an error path; no `#[allow]` added to bypass clippy (rename/refactor instead).
 4. **Verify the tests**: new logic = co-located unit test; new user-facing behavior = integration scenario; bugfix = regression test that failed before the fix.
 5. **Run the local quality gate** (in order):

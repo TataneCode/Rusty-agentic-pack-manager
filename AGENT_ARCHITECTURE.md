@@ -76,6 +76,8 @@ Every skill lives in `.agents/skills/<name>/SKILL.md` with a YAML frontmatter (`
 
 The layer rules are **shared** in `rules/`: agents and skills reference them instead of duplicating instructions. The `layer-rules` skill serves as the index.
 
+> Note: unlike rusty-console (from which the agent tooling was inherited), this project does **not** use a per-panel presenter/view/actions file triad. The three concerns are separated by location instead: display state in `tui/app.rs`, pure views in `tui/split_view.rs` and `tui/viewer/view.rs`, action handlers in `tui/router.rs`. The normative rule lives in `rules/presentation.md`.
+
 ### Invocation from runtimes
 
 - **Vibe Code (sandbox)** and **Vibe CLI** natively discover the skills in `.agents/skills/` (Agent Skills standard, trusted folder). The frontmatter `user-invocable: true` exposes a skill as a slash-command (`/<name>`).
