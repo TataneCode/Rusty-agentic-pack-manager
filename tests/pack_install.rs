@@ -117,8 +117,8 @@ fn all_shipped_packs_load_and_install() {
     let repo = FsPackRepository::new(packs_dir.clone()).unwrap();
     let packs = repo.list().unwrap();
     assert!(
-        packs.len() >= 13,
-        "expected 13 shipped packs, got {}",
+        packs.len() >= 16,
+        "expected 16 shipped packs, got {}",
         packs.len()
     );
 
@@ -149,4 +149,23 @@ fn all_shipped_packs_load_and_install() {
     let gemini_target = tmp.path().join("gemini");
     assert!(gemini_target.join(".gemini/skills/tdd/SKILL.md").is_file());
     assert!(gemini_target.join(".gemini/commands/tdd.toml").is_file());
+
+    // Multi-file skills (scripts included) install as whole directories.
+    assert!(vibe_target
+        .join(".agents/skills/vibe-wise-learn/behavior.md")
+        .is_file());
+    assert!(vibe_target
+        .join(".agents/skills/vibe-wise-reset/scripts/reset.py")
+        .is_file());
+    // The Gemini-only commands pack namespaces under vibe-wise/.
+    assert!(gemini_target
+        .join(".gemini/commands/vibe-wise/learn.toml")
+        .is_file());
+    assert!(gemini_target
+        .join(".gemini/commands/vibe-wise/reset.toml")
+        .is_file());
+    // The vibe-wise-commands pack does not target Vibe.
+    let commands_pack = service.find("vibe-wise-commands").unwrap();
+    assert!(commands_pack.supports(TargetCli::Gemini));
+    assert!(!commands_pack.supports(TargetCli::Vibe));
 }

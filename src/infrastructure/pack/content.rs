@@ -4,7 +4,7 @@ use crate::application::error::ApplicationError;
 use crate::application::pack_view::traits::{PackContentRepository, PackFileDto};
 
 /// Text extensions the viewer can display.
-const TEXT_EXTENSIONS: [&str; 8] = ["md", "js", "toml", "txt", "json", "yaml", "yml", "sh"];
+const TEXT_EXTENSIONS: [&str; 9] = ["md", "js", "toml", "txt", "json", "yaml", "yml", "sh", "py"];
 
 /// Reads pack file contents from the packs directory (viewer backing).
 pub struct FsPackContentRepository {
@@ -112,6 +112,31 @@ mod tests {
         assert_eq!(
             repo.read_file("tdd", "skills/tdd/SKILL.md").unwrap(),
             "# TDD"
+        );
+    }
+
+    #[test]
+    fn python_scripts_are_text() {
+        let tmp = TempDir::new().unwrap();
+        let pack = tmp.path().join("vibe-wise");
+        fs::create_dir_all(pack.join("skills/vibe-wise-reset/scripts")).unwrap();
+        fs::write(
+            pack.join("skills/vibe-wise-reset/scripts/reset.py"),
+            "print(1)",
+        )
+        .unwrap();
+
+        let repo = FsPackContentRepository::new(tmp.path().to_path_buf()).unwrap();
+        let files = repo.list_files("vibe-wise").unwrap();
+        let script = files
+            .iter()
+            .find(|f| f.path == "skills/vibe-wise-reset/scripts/reset.py")
+            .unwrap();
+        assert!(script.is_text);
+        assert_eq!(
+            repo.read_file("vibe-wise", "skills/vibe-wise-reset/scripts/reset.py")
+                .unwrap(),
+            "print(1)"
         );
     }
 

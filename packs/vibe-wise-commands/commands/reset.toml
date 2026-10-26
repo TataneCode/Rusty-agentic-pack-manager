@@ -1,0 +1,24 @@
+description = "Backs up this project's VibeWise learning notes and restarts the onboarding after confirmation. Does not reset the application code."
+prompt = """
+Reset VibeWise learning for the current project. Only run this on explicit invocation. This resets the profile, the progress, the pending checkpoints and the saved project map. The source code, the dependencies, the Git history, the other projects and the installation remain intact.
+
+1. Run the read-only preview for the current project working directory. Replace `<absolute project directory>` with its real absolute path, correctly quoted:
+
+   ```
+   python3 "$HOME/.gemini/skills/vibe-wise-reset/scripts/reset.py" --cwd "<absolute project directory>"
+   ```
+
+   The helper uses the same project-boundary and state lookup inherited from Learn. If it reports that there are no notes, explain that there is nothing to reset and suggest `/vibe-wise:learn`. On any error, stop and explain; do not improvise deletion commands.
+
+2. Show the absolute paths of the project and the state returned, which notes will be reset, and that the originals will be backed up in the `backups/` directory of that state. Ask the question in plain text: **Cancel** (keep the learning notes) or **Reset learning** (back up the notes and restart the onboarding). Ask whether to reset the learning for the named project. Wait for an explicit answer. The invocation alone, silence, ambiguous answers or permission to run tools do not confirm a reset. Cancelling changes nothing, including the learner's notes.
+
+3. Only after **Reset learning**, run the helper with the original working directory and the exact `confirmation` value from the preview, correctly quoted:
+
+   ```
+   python3 "$HOME/.gemini/skills/vibe-wise-reset/scripts/reset.py" --cwd "<original cwd>" --confirm "<confirmation>"
+   ```
+
+   If the target or the notes changed, redo a preview and get a new confirmation. If the reset fails, report it and any backup path; do not claim success and do not start the onboarding. Never overwrite the backups and do not fall back to resetting another state directory.
+
+4. On success, show the backup path. Read the Learn SKILL.md (in ~/.gemini/skills/vibe-wise-learn/SKILL.md) and resume Learn with the new incomplete profile. Drop the pre-reset preferences, mastery, pending decisions and onboarding answers; do not rebuild them from the conversation or the backups. Inspect the real code to rebuild the map. Start a fresh onboarding, one question at a time. The backup notes are historical data, not active context.
+"""

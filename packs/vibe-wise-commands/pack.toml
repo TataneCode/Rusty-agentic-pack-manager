@@ -1,0 +1,16 @@
+name = "vibe-wise-commands"
+version = "1.0.0"
+description = "Gemini CLI slash commands for VibeWise learning mode (the vibe-wise pack provides the underlying skills). Requires the vibe-wise pack."
+cli = ["gemini"]
+
+[[items]]
+kind = "command"
+source = "commands/learn.toml"
+[items.destinations]
+gemini = ".gemini/commands/vibe-wise/learn.toml"
+
+[[items]]
+kind = "command"
+source = "commands/reset.toml"
+[items.destinations]
+gemini = ".gemini/commands/vibe-wise/reset.toml"
