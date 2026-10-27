@@ -55,7 +55,7 @@ The focused panel has a cyan border.
 
 `A` on the packs panel installs immediately into the **explorer's current directory** and refreshes the explorer. Navigate the explorer first (Tab, Enter/Backspace) to choose the target directory.
 
-The install targets the **pack's first declared CLI** (all 13 shipped packs declare `["vibe", "gemini"]`, so Vibe destinations are used; a CLI picker is planned for v1.1). If a destination already exists, the install is refused (no silent overwrite) and an error message is shown.
+The install targets the **pack's first declared CLI** (all shipped packs declare `["vibe", "gemini"]` except `vibe-wise-commands`, which is Gemini-only, so Vibe destinations are used; a CLI picker is planned for v1.1). If a destination already exists, the install is refused (no silent overwrite) and an error message is shown.
 
 ### Viewer (after `V`)
 
@@ -93,4 +93,4 @@ gemini = ".gemini/skills/tdd"
 
 ## Embedded packs
 
-13 packs shipped: `tdd`, `code-review`, `debugging`, `security`, `planning`, `brainstorming`, `quality-gate`, `prd`, `work-slicing`, `karpathy`, `parallel-agents`, `focus-adhd`, `rusty-agnostic`.
+16 packs shipped: `tdd`, `code-review`, `debugging`, `security`, `planning`, `brainstorming`, `quality-gate`, `prd`, `work-slicing`, `karpathy`, `parallel-agents`, `focus-adhd`, `rusty-agnostic`, `learning` (feynman-learning, deep-research, fact-check, curriculum-planner), `vibe-wise` (learning mode skills with scripts), `vibe-wise-commands` (Gemini CLI slash commands for VibeWise).

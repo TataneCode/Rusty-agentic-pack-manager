@@ -1,0 +1,32 @@
+name = "learning"
+version = "1.0.0"
+description = "Pedagogy and content skills: Feynman learning, deep research, fact-checking, curriculum planning"
+cli = ["vibe", "gemini"]
+
+[[items]]
+kind = "skill"
+source = "skills/feynman-learning/SKILL.md"
+[items.destinations]
+vibe = ".agents/skills/feynman-learning/SKILL.md"
+gemini = ".gemini/skills/feynman-learning/SKILL.md"
+
+[[items]]
+kind = "skill"
+source = "skills/deep-research/SKILL.md"
+[items.destinations]
+vibe = ".agents/skills/deep-research/SKILL.md"
+gemini = ".gemini/skills/deep-research/SKILL.md"
+
+[[items]]
+kind = "skill"
+source = "skills/fact-check/SKILL.md"
+[items.destinations]
+vibe = ".agents/skills/fact-check/SKILL.md"
+gemini = ".gemini/skills/fact-check/SKILL.md"
+
+[[items]]
+kind = "skill"
+source = "skills/curriculum-planner/SKILL.md"
+[items.destinations]
+vibe = ".agents/skills/curriculum-planner/SKILL.md"
+gemini = ".gemini/skills/curriculum-planner/SKILL.md"

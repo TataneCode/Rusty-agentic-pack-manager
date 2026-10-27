@@ -1,0 +1,18 @@
+name = "vibe-wise"
+version = "1.0.0"
+description = "VibeWise learning mode: the learner drives the design, the AI writes the retained code. Local state in .vibe-wise/, Python 3.8+ for the reset helper."
+cli = ["vibe", "gemini"]
+
+[[items]]
+kind = "skill"
+source = "skills/vibe-wise-learn"
+[items.destinations]
+vibe = ".agents/skills/vibe-wise-learn"
+gemini = ".gemini/skills/vibe-wise-learn"
+
+[[items]]
+kind = "skill"
+source = "skills/vibe-wise-reset"
+[items.destinations]
+vibe = ".agents/skills/vibe-wise-reset"
+gemini = ".gemini/skills/vibe-wise-reset"
