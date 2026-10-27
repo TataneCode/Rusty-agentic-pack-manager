@@ -8,10 +8,12 @@ use ratatui::{backend::TestBackend, Terminal as RTerminal};
 use rusty_agentic_pack_manager::application::explorer::service::ExplorerService;
 use rusty_agentic_pack_manager::application::pack::service::PackService;
 use rusty_agentic_pack_manager::application::pack_view::service::PackViewService;
+use rusty_agentic_pack_manager::domain::pack::value_objects::TargetCli;
 use rusty_agentic_pack_manager::infrastructure::filesystem::explorer::{
     FsExplorer, FsInstallDestination,
 };
 use rusty_agentic_pack_manager::infrastructure::pack::content::FsPackContentRepository;
+use rusty_agentic_pack_manager::infrastructure::pack::index::FsInstallIndexRepository;
 use rusty_agentic_pack_manager::infrastructure::pack::loader::FsPackRepository;
 use rusty_agentic_pack_manager::presentation::tui::app::{App, Focus};
 use rusty_agentic_pack_manager::presentation::tui::split_view;
@@ -52,7 +54,11 @@ fn build_app(tmp: &TempDir) -> App {
 
     let repo = FsPackRepository::new(packs_dir.clone()).unwrap();
     let destination = FsInstallDestination::new(packs_dir.clone());
-    let pack_service = PackService::new(Box::new(repo), Box::new(destination));
+    let pack_service = PackService::new(
+        Box::new(repo),
+        Box::new(destination),
+        Box::new(FsInstallIndexRepository),
+    );
     let explorer = ExplorerService::new(Box::new(FsExplorer));
     let view_service =
         PackViewService::new(Box::new(FsPackContentRepository::new(packs_dir).unwrap()));
@@ -102,14 +108,101 @@ fn split_screen_shows_both_panels_and_pack() {
 }
 
 #[test]
-fn tab_toggles_focus() {
+fn tab_cycles_through_packs_installed_and_explorer() {
     let tmp = TempDir::new().unwrap();
     let mut app = build_app(&tmp);
     assert_eq!(app.focus, Focus::Packs);
     app.dispatch(&key(crossterm::event::KeyCode::Tab));
+    assert_eq!(app.focus, Focus::Installed);
+    app.dispatch(&key(crossterm::event::KeyCode::Tab));
     assert_eq!(app.focus, Focus::Explorer);
     app.dispatch(&key(crossterm::event::KeyCode::Tab));
     assert_eq!(app.focus, Focus::Packs);
+}
+
+#[test]
+fn installed_panel_lists_pack_and_hides_it_from_available() {
+    let tmp = TempDir::new().unwrap();
+    let mut app = build_app(&tmp);
+    app.dispatch(&key(crossterm::event::KeyCode::Char('a')));
+
+    // r2 lists the installation, with the CLI and item count
+    assert_eq!(app.installed.items.len(), 1);
+    assert_eq!(app.installed.items[0].name, "review");
+    assert_eq!(app.installed.items[0].cli, TargetCli::Vibe);
+    let snapshot = render_snapshot(&mut app);
+    assert!(
+        snapshot.contains("Installed"),
+        "installed panel title missing"
+    );
+    assert!(
+        snapshot.contains("review v1.0.0"),
+        "installed entry missing"
+    );
+
+    // r1 no longer offers the installed pack
+    assert!(app.packs.iter().all(|p| p.name != "review"));
+    assert!(app.pack_list.items.iter().all(|p| p.name != "review"));
+}
+
+#[test]
+fn uninstall_removes_assets_and_restores_pack_as_available() {
+    let tmp = TempDir::new().unwrap();
+    let mut app = build_app(&tmp);
+    app.dispatch(&key(crossterm::event::KeyCode::Char('a')));
+    assert!(tmp
+        .path()
+        .join("start/.agents/skills/code-review/SKILL.md")
+        .is_file());
+
+    // Close the success popup first (popups have priority over keys), then
+    // Tab to the installed panel; U asks for confirmation.
+    app.dispatch(&key(crossterm::event::KeyCode::Char(' ')));
+    app.dispatch(&key(crossterm::event::KeyCode::Tab));
+    assert_eq!(app.focus, Focus::Installed);
+    app.dispatch(&key(crossterm::event::KeyCode::Char('u')));
+    assert!(app.confirm.is_some(), "uninstall must ask for confirmation");
+
+    // confirm with Yes
+    app.dispatch(&key(crossterm::event::KeyCode::Up));
+    app.dispatch(&key(crossterm::event::KeyCode::Enter));
+
+    // assets are gone, the index entry is dropped, the pack is available again
+    assert!(!tmp.path().join("start/.agents/skills/code-review").exists());
+    assert!(app.installed.items.is_empty());
+    assert!(app.packs.iter().any(|p| p.name == "review"));
+    assert!(matches!(
+        app.popup,
+        Some(rusty_agentic_pack_manager::presentation::tui::app::Popup::Success(_))
+    ));
+}
+
+#[test]
+fn uninstall_cancel_keeps_assets_and_entry() {
+    let tmp = TempDir::new().unwrap();
+    let mut app = build_app(&tmp);
+    app.dispatch(&key(crossterm::event::KeyCode::Char('a')));
+
+    app.focus = Focus::Installed;
+    app.dispatch(&key(crossterm::event::KeyCode::Char('u')));
+    app.dispatch(&key(crossterm::event::KeyCode::Esc));
+
+    assert!(app.confirm.is_none());
+    assert_eq!(app.installed.items.len(), 1);
+    assert!(tmp
+        .path()
+        .join("start/.agents/skills/code-review/SKILL.md")
+        .is_file());
+}
+
+#[test]
+fn installed_help_lists_uninstall() {
+    let tmp = TempDir::new().unwrap();
+    let mut app = build_app(&tmp);
+    app.focus = Focus::Installed;
+    app.dispatch(&key(crossterm::event::KeyCode::Char(' ')));
+    let snapshot = render_snapshot(&mut app);
+    assert!(snapshot.contains("Uninstall"), "installed help missing");
 }
 
 #[test]

@@ -2,6 +2,7 @@ pub mod domain {
     pub mod pack {
         pub mod entity;
         pub mod error;
+        pub mod installed;
         pub mod value_objects;
     }
 }
@@ -28,6 +29,7 @@ pub mod application {
 pub mod infrastructure {
     pub mod pack {
         pub mod content;
+        pub mod index;
         pub mod loader;
     }
     pub mod filesystem {

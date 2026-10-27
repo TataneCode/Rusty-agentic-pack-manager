@@ -2,6 +2,7 @@ use std::fmt;
 use std::path::PathBuf;
 
 use crate::domain::pack::entity::{Pack, PackItem};
+use crate::domain::pack::installed::INDEX_FILENAME;
 use crate::domain::pack::value_objects::TargetCli;
 
 #[derive(Debug, PartialEq, Eq)]
@@ -16,6 +17,9 @@ pub enum DomainError {
     EmptyItemDestination,
     ItemDestinationOutsideTarget(String),
     InstallCollision(String),
+    ReservedDestination(String),
+    EmptyInstallPaths,
+    InstallPathOutsideTarget(String),
 }
 
 impl fmt::Display for DomainError {
@@ -36,6 +40,15 @@ impl fmt::Display for DomainError {
             }
             DomainError::InstallCollision(d) => {
                 write!(f, "installation collision on destination: {d}")
+            }
+            DomainError::ReservedDestination(d) => {
+                write!(f, "reserved destination ({INDEX_FILENAME}): {d}")
+            }
+            DomainError::EmptyInstallPaths => {
+                write!(f, "an installed pack must record at least one path")
+            }
+            DomainError::InstallPathOutsideTarget(p) => {
+                write!(f, "installed path escapes target root: {p}")
             }
         }
     }
@@ -93,6 +106,13 @@ fn resolve_destination(
         .ok_or(DomainError::EmptyItemDestination)?;
 
     let resolved = normalize_in_target(&destination, target_root)?;
+    // The install index at the target root is managed by the application,
+    // never by a pack item.
+    if resolved.file_name().is_some_and(|f| f == INDEX_FILENAME)
+        && resolved.parent().is_some_and(|p| p == target_root)
+    {
+        return Err(DomainError::ReservedDestination(destination.to_string()));
+    }
     Ok(resolved)
 }
 
@@ -217,5 +237,33 @@ mod tests {
     fn normalize_accepts_dot_components() {
         let resolved = normalize_in_target("./a/./b", std::path::Path::new("/repo")).unwrap();
         assert_eq!(resolved, PathBuf::from("/repo/a/b"));
+    }
+
+    #[test]
+    fn plan_install_rejects_index_file_destination() {
+        let mut pack = sample_pack();
+        pack.items[0] = PackItem::new(
+            crate::domain::pack::value_objects::PackItemKind::Skill,
+            PathBuf::from("skills/tdd/SKILL.md"),
+            TargetCliMap::from_pairs(&[(TargetCli::Vibe, "packs_index.toml")]),
+        )
+        .unwrap();
+        let err = plan_install(&pack, TargetCli::Vibe, std::path::Path::new("/repo"))
+            .expect_err("must reject the index file destination");
+        assert!(matches!(err, DomainError::ReservedDestination(_)));
+    }
+
+    #[test]
+    fn plan_install_allows_index_file_name_below_root() {
+        let mut pack = sample_pack();
+        pack.items[0] = PackItem::new(
+            crate::domain::pack::value_objects::PackItemKind::Skill,
+            PathBuf::from("skills/tdd/SKILL.md"),
+            TargetCliMap::from_pairs(&[(TargetCli::Vibe, ".agents/packs_index.toml")]),
+        )
+        .unwrap();
+        let plan = plan_install(&pack, TargetCli::Vibe, std::path::Path::new("/repo"))
+            .expect("only the root index file is reserved");
+        assert_eq!(plan.len(), 1);
     }
 }

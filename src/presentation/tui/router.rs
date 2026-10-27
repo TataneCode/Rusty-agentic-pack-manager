@@ -1,5 +1,5 @@
 use crate::domain::pack::value_objects::TargetCli;
-use crate::presentation::tui::app::{App, ConfirmDialog, Focus, InputKind, Popup};
+use crate::presentation::tui::app::{App, ConfirmDialog, ConfirmKind, Focus, InputKind, Popup};
 use crate::presentation::tui::common::keys::{map_key, AppAction, KeyContext};
 
 /// Screen routing: maps user actions to handlers (pattern rusty-console
@@ -18,6 +18,7 @@ impl App {
         }
         match self.focus {
             Focus::Packs => KeyContext::PacksPanel,
+            Focus::Installed => KeyContext::InstalledPanel,
             Focus::Explorer => KeyContext::ExplorerPanel,
         }
     }
@@ -61,6 +62,7 @@ impl App {
 
         match self.focus {
             Focus::Packs => self.handle_packs_action(action),
+            Focus::Installed => self.handle_installed_action(action),
             Focus::Explorer => self.handle_explorer_action(action),
         }
     }
@@ -71,6 +73,17 @@ impl App {
             AppAction::NavigateDown => self.pack_list.select_next(),
             AppAction::Apply => self.install_here(),
             AppAction::View => self.open_viewer(),
+            AppAction::Help => self.popup = Some(Popup::Help),
+            AppAction::ToggleFocus => self.focus = Focus::Installed,
+            _ => {}
+        }
+    }
+
+    fn handle_installed_action(&mut self, action: AppAction) {
+        match action {
+            AppAction::NavigateUp => self.installed.select_previous(),
+            AppAction::NavigateDown => self.installed.select_next(),
+            AppAction::Uninstall => self.ask_uninstall(),
             AppAction::Help => self.popup = Some(Popup::Help),
             AppAction::ToggleFocus => self.focus = Focus::Explorer,
             _ => {}
@@ -93,6 +106,32 @@ impl App {
             AppAction::Help => self.popup = Some(Popup::Help),
             AppAction::ToggleFocus => self.focus = Focus::Packs,
             _ => {}
+        }
+    }
+
+    fn ask_uninstall(&mut self) {
+        let Some(entry) = self.selected_installed() else {
+            return;
+        };
+        let (name, cli, count) = (entry.name.clone(), entry.cli, entry.paths.len());
+        self.confirm = Some(ConfirmDialog {
+            message: format!("Uninstall '{name}' ({cli}) — remove {count} item(s)?"),
+            selected_yes: false,
+            kind: ConfirmKind::Uninstall { name, cli },
+        });
+    }
+
+    fn execute_uninstall(&mut self, name: &str, cli: TargetCli) {
+        let root = self.current_dir.to_string_lossy().into_owned();
+        match self.pack_service.uninstall(name, cli, &root) {
+            Ok(result) => {
+                self.refresh_dir();
+                self.popup = Some(Popup::Success(format!(
+                    "{} uninstalled: {} item(s) removed from {}",
+                    result.pack_name, result.removed_count, root
+                )));
+            }
+            Err(err) => self.show_error(err.to_string()),
         }
     }
 
@@ -120,6 +159,7 @@ impl App {
             self.confirm = Some(ConfirmDialog {
                 message: format!("Delete '{name}'?"),
                 selected_yes: false,
+                kind: ConfirmKind::Delete { name: name.clone() },
             });
         }
     }
@@ -146,9 +186,15 @@ impl App {
             KeyCode::Enter => {
                 let dialog = self.confirm.take().unwrap();
                 if dialog.selected_yes {
-                    if let Some((name, _)) = self.dir_entries.selected() {
-                        let name = name.clone();
-                        self.execute_delete(&name);
+                    match &dialog.kind {
+                        ConfirmKind::Delete { name } => {
+                            let name = name.clone();
+                            self.execute_delete(&name);
+                        }
+                        ConfirmKind::Uninstall { name, cli } => {
+                            let (name, cli) = (name.clone(), *cli);
+                            self.execute_uninstall(&name, cli);
+                        }
                     }
                 }
             }

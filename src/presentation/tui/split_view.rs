@@ -32,7 +32,11 @@ pub fn render(frame: &mut Frame, app: &mut App) {
     let panels = Layout::horizontal([Constraint::Percentage(50), Constraint::Percentage(50)])
         .split(chunks[1]);
 
-    render_packs_panel(frame, panels[0], app);
+    let left =
+        Layout::vertical([Constraint::Percentage(60), Constraint::Percentage(40)]).split(panels[0]);
+
+    render_packs_panel(frame, left[0], app);
+    render_installed_panel(frame, left[1], app);
     render_explorer_panel(frame, panels[1], app);
 
     action_bar::render_action_bar(frame, chunks[2], &action_bar::base_footer_text());
@@ -89,6 +93,34 @@ fn render_packs_panel(frame: &mut Frame, area: Rect, app: &mut App) {
     let mut state = app.pack_list.state;
     widgets::render_lines(frame, inner, lines, &mut state);
     app.pack_list.state = state;
+}
+
+fn render_installed_panel(frame: &mut Frame, area: Rect, app: &mut App) {
+    let focused = app.focus == Focus::Installed;
+    let block = Theme::block("Installed", focused);
+    let inner = block.inner(area);
+    frame.render_widget(block, area);
+
+    let mut lines = Vec::new();
+    for entry in app.installed.items.clone() {
+        lines.push(Line::from(Span::raw(format!(
+            " {} v{} — {} ({} item(s))",
+            entry.name,
+            entry.version,
+            entry.cli.label(),
+            entry.paths.len()
+        ))));
+    }
+    if lines.is_empty() {
+        lines.push(Line::from(Span::styled(
+            " None installed",
+            Theme::file_style(),
+        )));
+    }
+
+    let mut state = app.installed.state;
+    widgets::render_lines(frame, inner, lines, &mut state);
+    app.installed.state = state;
 }
 
 fn render_explorer_panel(frame: &mut Frame, area: Rect, app: &mut App) {
@@ -174,6 +206,7 @@ fn render_popups(frame: &mut Frame, app: &App) {
             let lines = match (&app.viewer.is_some(), &app.focus) {
                 (true, _) => help::viewer_help(),
                 (false, Focus::Packs) => help::packs_help(),
+                (false, Focus::Installed) => help::installed_help(),
                 (false, Focus::Explorer) => help::explorer_help(),
             };
             action_bar::render_popup(frame, frame.area(), " Help ", lines);

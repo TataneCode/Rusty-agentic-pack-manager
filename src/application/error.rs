@@ -18,6 +18,8 @@ pub enum ApplicationError {
     InvalidName { context: String, name: String },
     #[error("destination already exists: {0}")]
     DestinationExists(String),
+    #[error("no install of '{0}' recorded in this target")]
+    InstallNotFound(String),
     #[error("io error on {path}: {source}")]
     Io {
         path: String,

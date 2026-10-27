@@ -9,6 +9,7 @@ use rusty_agentic_pack_manager::infrastructure::filesystem::explorer::{
     FsExplorer, FsInstallDestination,
 };
 use rusty_agentic_pack_manager::infrastructure::pack::content::FsPackContentRepository;
+use rusty_agentic_pack_manager::infrastructure::pack::index::FsInstallIndexRepository;
 use rusty_agentic_pack_manager::infrastructure::pack::loader::FsPackRepository;
 use rusty_agentic_pack_manager::presentation::tui::app::App;
 use rusty_agentic_pack_manager::presentation::tui::event::EventHandler;
@@ -40,7 +41,11 @@ fn build_app(start_dir: PathBuf, packs_dir: PathBuf) -> Result<App> {
     let pack_repository = FsPackRepository::new(packs_dir.clone())
         .with_context(|| format!("packs dir unreadable: {}", packs_dir.display()))?;
     let destination = FsInstallDestination::new(packs_dir.clone());
-    let pack_service = PackService::new(Box::new(pack_repository), Box::new(destination));
+    let pack_service = PackService::new(
+        Box::new(pack_repository),
+        Box::new(destination),
+        Box::new(FsInstallIndexRepository),
+    );
     let explorer = ExplorerService::new(Box::new(FsExplorer));
     let view_service = PackViewService::new(Box::new(
         FsPackContentRepository::new(packs_dir).context("pack content repo")?,
