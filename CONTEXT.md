@@ -34,6 +34,6 @@ No outer layer may import an inner layer. The UI never sees the domain: DTOs + s
 
 ## Project status
 
-**V1 in progress** — delivered foundation: packs/explorer split screen, apply (`A`) + install (`I`), viewer (`V`) with syntax highlighting, folder creation (`R`), rename (`M`), delete (`D`/`Shift-D`), contextual help (Space), 16 embedded packs, RPM/DEB/7z packaging in CI. Plan: [docs/plans/init.md](docs/plans/init.md).
+**V1 in progress** — delivered foundation: packs/explorer split screen, apply (`A`) + install (`I`), viewer (`V`) with syntax highlighting, folder creation (`R`), rename (`M`), delete (`D`/`Shift-D`), contextual help (Space), 16 embedded packs, RPM/DEB/7z packaging in CI. Plan: [docs/plans/init.md](docs/plans/init.md). Also delivered: install tracking (`packs_index.toml` in the target root, one entry per `(pack, CLI)` with the copied paths), an **Installed** panel under the packs panel, and uninstall (`U`) removing the recorded assets. Plan: [docs/plans/install-index.md](docs/plans/install-index.md).
 
-Out of scope for v1 (planned v2): undeploy, 7z/tar packs, CLIs other than vibe/gemini.
+Out of scope for v1 (planned v2): 7z/tar packs, CLIs other than vibe/gemini.

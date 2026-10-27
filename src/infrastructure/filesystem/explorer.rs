@@ -108,6 +108,17 @@ impl InstallDestination for FsInstallDestination {
     fn exists(&self, destination: &Path) -> bool {
         destination.exists()
     }
+
+    fn remove(&self, path: &Path) -> Result<(), ApplicationError> {
+        if !path.exists() {
+            return Ok(());
+        }
+        if path.is_dir() {
+            std::fs::remove_dir_all(path).map_err(|e| io_err(&path.to_string_lossy(), e))
+        } else {
+            std::fs::remove_file(path).map_err(|e| io_err(&path.to_string_lossy(), e))
+        }
+    }
 }
 
 fn copy_dir(source: &Path, destination: &Path) -> Result<(), ApplicationError> {
@@ -187,6 +198,23 @@ mod tests {
             .create_dir(tmp.path().to_str().unwrap(), "new")
             .unwrap();
         assert!(tmp.path().join("new").is_dir());
+    }
+
+    #[test]
+    fn install_destination_remove_deletes_file_tree_and_tolerates_missing() {
+        let tmp = TempDir::new().unwrap();
+        fs::create_dir_all(tmp.path().join("repo/.agents/skills/tdd")).unwrap();
+        fs::write(tmp.path().join("repo/.agents/skills/tdd/SKILL.md"), "#").unwrap();
+        fs::write(tmp.path().join("repo/file.txt"), "x").unwrap();
+
+        let dest = FsInstallDestination::new(tmp.path().join("packs"));
+        dest.remove(&tmp.path().join("repo/.agents/skills/tdd"))
+            .unwrap();
+        assert!(!tmp.path().join("repo/.agents/skills/tdd").exists());
+        dest.remove(&tmp.path().join("repo/file.txt")).unwrap();
+        assert!(!tmp.path().join("repo/file.txt").exists());
+        // Idempotent: a missing path is not an error.
+        dest.remove(&tmp.path().join("repo/file.txt")).unwrap();
     }
 
     #[test]

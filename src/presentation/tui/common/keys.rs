@@ -11,6 +11,7 @@ pub enum AppAction {
     Back,
     Apply,        // 'a' on packs panel: install in the explorer's current dir
     View,         // 'v' on packs panel
+    Uninstall,    // 'u' on installed panel: remove a recorded installation
     CreateFolder, // 'r' on explorer panel
     Rename,       // 'm' on explorer panel
     Delete,       // 'd' on explorer panel (confirm dialog)
@@ -23,6 +24,7 @@ pub enum AppAction {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum KeyContext {
     PacksPanel,
+    InstalledPanel,
     ExplorerPanel,
     Viewer,
     Dialog,
@@ -53,6 +55,7 @@ pub fn map_key(key: &KeyEvent, context: KeyContext) -> Option<AppAction> {
         (KeyCode::Backspace, _) => Some(AppAction::Back),
         (KeyCode::Char('a'), KeyContext::PacksPanel) => Some(AppAction::Apply),
         (KeyCode::Char('v'), KeyContext::PacksPanel) => Some(AppAction::View),
+        (KeyCode::Char('u'), KeyContext::InstalledPanel) => Some(AppAction::Uninstall),
         (KeyCode::Char('r'), KeyContext::ExplorerPanel) => Some(AppAction::CreateFolder),
         (KeyCode::Char('m'), KeyContext::ExplorerPanel) => Some(AppAction::Rename),
         (KeyCode::Char('d'), KeyContext::ExplorerPanel) => Some(AppAction::Delete),
@@ -94,6 +97,26 @@ mod tests {
         );
         assert_eq!(
             map_key(&key(KeyCode::Char('d')), KeyContext::PacksPanel),
+            None
+        );
+    }
+
+    #[test]
+    fn installed_panel_maps_uninstall_only() {
+        assert_eq!(
+            map_key(&key(KeyCode::Char('u')), KeyContext::InstalledPanel),
+            Some(AppAction::Uninstall)
+        );
+        assert_eq!(
+            map_key(&key(KeyCode::Char('a')), KeyContext::InstalledPanel),
+            None
+        );
+        assert_eq!(
+            map_key(&key(KeyCode::Char('v')), KeyContext::InstalledPanel),
+            None
+        );
+        assert_eq!(
+            map_key(&key(KeyCode::Char('u')), KeyContext::PacksPanel),
             None
         );
     }

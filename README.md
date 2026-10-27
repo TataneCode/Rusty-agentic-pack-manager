@@ -12,19 +12,24 @@ A **pack** is a coherent combination of skills, agents and commands, applicable 
 
 ## UI — split screen
 
-- **Left panel**: the pack list, grouped by target CLI (Vibe CLI, Gemini CLI, …).
+- **Left column**: the available pack list, grouped by target CLI (Vibe CLI, Gemini CLI, …), and below it the **Installed** panel: packs already installed in the explorer's current directory (tracked in `packs_index.toml`).
 - **Right panel**: the file tree of the host machine.
 
 | Key | Action |
 |---|---|
-| `Tab` | Switch focus between panels |
+| `Tab` | Switch focus (Packs → Installed → Explorer) |
 | `Enter` / `Backspace` | Navigate (down / up) in the list or the file system |
 | `A` | Install the selected pack in the explorer's current directory |
 | `V` | View the pack files (opens on `pack.toml`) with syntax highlighting (packs panel only) |
+| `U` | Uninstall the selected pack: remove every file it installed (installed panel) |
 | `R` | Create a folder (explorer) |
 | `M` | Rename a folder/file (explorer) |
 | `D` | Delete a folder/file (explorer; `Shift-D` forces non-empty folders) |
 | `Space` | Contextual help (depending on the active panel / mode) |
+
+## Installation index
+
+Each install is recorded in a `packs_index.toml` file at the root of the target directory — one entry per `(pack, CLI)` with the relative paths actually copied. The **Installed** panel reads this index: it shows what is installed in the current directory, hides those packs from the available list, and `U` uninstalls a pack by removing exactly the recorded assets.
 
 ## Architecture
 

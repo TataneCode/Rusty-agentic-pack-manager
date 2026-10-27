@@ -12,6 +12,7 @@ use rusty_agentic_pack_manager::domain::pack::value_objects::TargetCli;
 use rusty_agentic_pack_manager::infrastructure::filesystem::explorer::{
     FsExplorer, FsInstallDestination,
 };
+use rusty_agentic_pack_manager::infrastructure::pack::index::FsInstallIndexRepository;
 use rusty_agentic_pack_manager::infrastructure::pack::loader::FsPackRepository;
 use tempfile::TempDir;
 
@@ -62,7 +63,11 @@ fn real_pack_installs_into_target_repo() {
 
     let repo = FsPackRepository::new(packs_dir.clone()).unwrap();
     let destination = FsInstallDestination::new(packs_dir.clone());
-    let service = PackService::new(Box::new(repo), Box::new(destination));
+    let service = PackService::new(
+        Box::new(repo),
+        Box::new(destination),
+        Box::new(FsInstallIndexRepository),
+    );
 
     let target = tmp.path().join("repo");
     fs::create_dir_all(&target).unwrap();
@@ -85,6 +90,104 @@ fn real_pack_installs_into_target_repo() {
     service
         .install("tdd", TargetCli::Vibe, target.to_str().unwrap(), true)
         .expect("overwrite install must succeed");
+}
+
+#[test]
+fn install_records_the_index_and_uninstall_removes_everything() {
+    let tmp = TempDir::new().unwrap();
+    let packs_dir = tmp.path().join("packs");
+    fs::create_dir_all(&packs_dir).unwrap();
+    make_pack(&packs_dir);
+
+    let repo = FsPackRepository::new(packs_dir.clone()).unwrap();
+    let destination = FsInstallDestination::new(packs_dir.clone());
+    let service = PackService::new(
+        Box::new(repo),
+        Box::new(destination),
+        Box::new(FsInstallIndexRepository),
+    );
+
+    let target = tmp.path().join("repo");
+    fs::create_dir_all(&target).unwrap();
+    let root = target.to_str().unwrap();
+
+    // No index before the first install.
+    assert!(service.installed_in(root).unwrap().is_empty());
+
+    service
+        .install("tdd", TargetCli::Vibe, root, false)
+        .expect("install must succeed");
+
+    // The index records the (pack, cli) entry with the relative paths.
+    let installed = service.installed_in(root).unwrap();
+    assert_eq!(installed.len(), 1);
+    assert_eq!(installed[0].name, "tdd");
+    assert_eq!(installed[0].cli, TargetCli::Vibe);
+    assert_eq!(
+        installed[0].paths,
+        vec![
+            PathBuf::from(".agents/skills/tdd"),
+            PathBuf::from(".vibe/agents/tdd-orchestrator.toml")
+        ]
+    );
+    let raw = fs::read_to_string(target.join("packs_index.toml")).unwrap();
+    assert!(raw.contains("name = \"tdd\""));
+    assert!(raw.contains("cli = \"vibe\""));
+
+    // Reinstall with overwrite: still a single entry (upsert).
+    service
+        .install("tdd", TargetCli::Vibe, root, true)
+        .expect("overwrite install must succeed");
+    assert_eq!(service.installed_in(root).unwrap().len(), 1);
+
+    // Uninstall removes every listed asset and drops the index entry.
+    let result = service
+        .uninstall("tdd", TargetCli::Vibe, root)
+        .expect("uninstall must succeed");
+    assert_eq!(result.removed_count, 2);
+    assert!(!target.join(".agents/skills/tdd").exists());
+    assert!(!target.join(".vibe/agents/tdd-orchestrator.toml").exists());
+    assert!(service.installed_in(root).unwrap().is_empty());
+
+    // Uninstalling again is reported, not a crash.
+    let err = service
+        .uninstall("tdd", TargetCli::Vibe, root)
+        .expect_err("second uninstall must be reported");
+    assert!(err.to_string().contains("no install"));
+}
+
+#[test]
+fn failed_install_writes_no_index() {
+    let tmp = TempDir::new().unwrap();
+    let packs_dir = tmp.path().join("packs");
+    fs::create_dir_all(&packs_dir).unwrap();
+    make_pack(&packs_dir);
+
+    let repo = FsPackRepository::new(packs_dir.clone()).unwrap();
+    let destination = FsInstallDestination::new(packs_dir.clone());
+    let service = PackService::new(
+        Box::new(repo),
+        Box::new(destination),
+        Box::new(FsInstallIndexRepository),
+    );
+
+    let target = tmp.path().join("repo");
+    fs::create_dir_all(&target).unwrap();
+    let root = target.to_str().unwrap();
+
+    // First install, then a second one without overwrite aborts on collision.
+    service
+        .install("tdd", TargetCli::Vibe, root, false)
+        .unwrap();
+    let err = service
+        .install("tdd", TargetCli::Vibe, root, false)
+        .expect_err("collision must abort");
+    assert!(err.to_string().contains("already exists"));
+
+    // The aborted install changed nothing in the index.
+    let installed = service.installed_in(root).unwrap();
+    assert_eq!(installed.len(), 1);
+    assert_eq!(installed[0].paths.len(), 2);
 }
 
 #[test]
@@ -125,7 +228,11 @@ fn all_shipped_packs_load_and_install() {
     let target = tmp.path().join("repo");
     fs::create_dir_all(&target).unwrap();
     let destination = FsInstallDestination::new(packs_dir);
-    let service = PackService::new(Box::new(repo), Box::new(destination));
+    let service = PackService::new(
+        Box::new(repo),
+        Box::new(destination),
+        Box::new(FsInstallIndexRepository),
+    );
 
     for cli in [TargetCli::Vibe, TargetCli::Gemini] {
         let target = tmp.path().join(format!("{cli}"));

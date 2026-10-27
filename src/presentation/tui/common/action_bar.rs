@@ -86,6 +86,7 @@ pub fn action_label(action: AppAction) -> &'static str {
         AppAction::Back => "Parent",
         AppAction::Apply => "Apply pack",
         AppAction::View => "View pack",
+        AppAction::Uninstall => "Uninstall pack",
         AppAction::CreateFolder => "New folder",
         AppAction::Rename => "Rename",
         AppAction::Delete => "Delete",

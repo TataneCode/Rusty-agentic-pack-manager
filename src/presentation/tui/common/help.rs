@@ -5,7 +5,7 @@ use super::theme::Theme;
 /// Contextual help content per focus/mode (spacebar).
 pub fn packs_help() -> Vec<Line<'static>> {
     vec![
-        help_line("Tab", "Switch to the explorer panel"),
+        help_line("Tab", "Switch to the installed panel"),
         help_line("↑/↓ or k/j", "Move in the pack list"),
         help_line("Enter", "Expand pack details"),
         help_line(
@@ -13,6 +13,18 @@ pub fn packs_help() -> Vec<Line<'static>> {
             "Install the selected pack in the explorer's current directory",
         ),
         help_line("V", "View the pack files with syntax highlighting"),
+        help_line("Ctrl-C", "Quit"),
+    ]
+}
+
+pub fn installed_help() -> Vec<Line<'static>> {
+    vec![
+        help_line("Tab", "Switch to the explorer panel"),
+        help_line("↑/↓ or k/j", "Move in the installed list"),
+        help_line(
+            "U",
+            "Uninstall the selected pack (removes its files, confirm)",
+        ),
         help_line("Ctrl-C", "Quit"),
     ]
 }
