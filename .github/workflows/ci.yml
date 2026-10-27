@@ -21,46 +21,82 @@ jobs:
       - run: cargo clippy --all-targets -- -D warnings
       - run: cargo test
 
-  linux-packages:
+  # Compile-check both platforms on every PR: a broken Windows build
+  # must not be discovered only when a release tag is pushed.
+  build-release:
     needs: quality
-    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            bin: target/release/rapm
+            artifact: rapm-linux-bin
+          - os: windows-latest
+            bin: target/release/rapm.exe
+            artifact: rapm-windows-bin
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
       - run: cargo build --release
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: ${{ matrix.bin }}
+
+  # Packaging is expensive (cargo install of the RPM tool, full RPM/DEB
+  # builds) and rarely changes: run it on main only. A broken package
+  # config is caught here before any release tag is cut.
+  linux-packages:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: build-release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - uses: actions/download-artifact@v4
+        with:
+          name: rapm-linux-bin
+          path: target/release
       - name: RPM
         run: |
           cargo install cargo-generate-rpm
           python3 packaging/expand_rpm_assets.py
           cargo generate-rpm
-      - name: DEB
+      - name: DEB (prebuilt cargo-deb, no cargo install)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          cargo install cargo-deb
+          gh release download v3.8.0 -R kornelski/cargo-deb --pattern '*.deb' --dir /tmp
+          sudo dpkg -i /tmp/cargo-deb_*.deb
           cargo deb
+      - name: Smoke test DEB (install + contents)
+        run: |
+          sudo dpkg -i target/debian/*.deb
+          test -x /usr/bin/rapm
+          expected=$(find packs -type f | wc -l)
+          installed=$(find /usr/share/rusty-agentic-pack-manager/packs -type f | wc -l)
+          echo "pack files: expected=${expected} installed=${installed}"
+          test "$expected" -eq "$installed"
+      - name: Smoke test RPM (extract + contents)
+        run: |
+          sudo apt-get install -y rpm2cpio cpio
+          mkdir -p /tmp/rpm-extract
+          cd /tmp/rpm-extract
+          rpm=$(find "$GITHUB_WORKSPACE/target" -name '*.rpm' | head -1)
+          test -n "$rpm"
+          rpm2cpio "$rpm" | cpio -idm
+          test -x usr/bin/rapm
+          expected=$(find "$GITHUB_WORKSPACE/packs" -type f | wc -l)
+          installed=$(find usr/share/rusty-agentic-pack-manager/packs -type f | wc -l)
+          echo "pack files: expected=${expected} installed=${installed}"
+          test "$expected" -eq "$installed"
       - uses: actions/upload-artifact@v4
         with:
           name: linux-packages
           path: |
             target/**/*.rpm
             target/debian/*.deb
-
-  windows-7z:
-    needs: quality
-    runs-on: windows-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-      - uses: Swatinem/rust-cache@v2
-      - run: cargo build --release
-      - name: Build 7z artifact (binary + packs)
-        shell: pwsh
-        run: |
-          New-Item -ItemType Directory -Force -Path dist
-          Copy-Item target/release/rapm.exe dist/
-          Copy-Item -Recurse packs dist/packs
-          7z a rapm-windows-x64.7z ./dist/*
-      - uses: actions/upload-artifact@v4
-        with:
-          name: rapm-windows-7z
-          path: rapm-windows-x64.7z
