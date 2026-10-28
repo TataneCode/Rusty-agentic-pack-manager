@@ -52,16 +52,17 @@ fn build_app(tmp: &TempDir) -> App {
     fs::create_dir_all(tmp.path().join("start/subdir")).unwrap();
     fs::write(tmp.path().join("start/file.txt"), "x").unwrap();
 
-    let repo = FsPackRepository::new(packs_dir.clone()).unwrap();
-    let destination = FsInstallDestination::new(packs_dir.clone());
+    let repo = FsPackRepository::new(vec![packs_dir.clone()]).unwrap();
+    let destination = FsInstallDestination::new(vec![packs_dir.clone()]);
     let pack_service = PackService::new(
         Box::new(repo),
         Box::new(destination),
         Box::new(FsInstallIndexRepository),
     );
     let explorer = ExplorerService::new(Box::new(FsExplorer));
-    let view_service =
-        PackViewService::new(Box::new(FsPackContentRepository::new(packs_dir).unwrap()));
+    let view_service = PackViewService::new(Box::new(
+        FsPackContentRepository::new(vec![packs_dir]).unwrap(),
+    ));
     App::new(
         pack_service,
         explorer,

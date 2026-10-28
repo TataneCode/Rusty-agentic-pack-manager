@@ -4,6 +4,7 @@ use anyhow::{Context, Result};
 
 use rusty_agentic_pack_manager::application::explorer::service::ExplorerService;
 use rusty_agentic_pack_manager::application::pack::service::PackService;
+use rusty_agentic_pack_manager::application::pack_create::service::PackCreationService;
 use rusty_agentic_pack_manager::application::pack_view::service::PackViewService;
 use rusty_agentic_pack_manager::infrastructure::filesystem::explorer::{
     FsExplorer, FsInstallDestination,
@@ -11,36 +12,17 @@ use rusty_agentic_pack_manager::infrastructure::filesystem::explorer::{
 use rusty_agentic_pack_manager::infrastructure::pack::content::FsPackContentRepository;
 use rusty_agentic_pack_manager::infrastructure::pack::index::FsInstallIndexRepository;
 use rusty_agentic_pack_manager::infrastructure::pack::loader::FsPackRepository;
+use rusty_agentic_pack_manager::infrastructure::pack::writer::FsPackWriter;
+use rusty_agentic_pack_manager::presentation::cli;
+use rusty_agentic_pack_manager::presentation::library::PackLibrary;
 use rusty_agentic_pack_manager::presentation::tui::app::App;
 use rusty_agentic_pack_manager::presentation::tui::event::EventHandler;
 use rusty_agentic_pack_manager::presentation::tui::split_view;
 
-/// Discover the embedded packs directory: next to the binary, then the
-/// system location (D3).
-fn find_packs_dir() -> Option<PathBuf> {
-    let exe_dir = std::env::current_exe()
-        .ok()?
-        .parent()
-        .map(PathBuf::from)?
-        .join("packs");
-    if exe_dir.is_dir() {
-        return Some(exe_dir);
-    }
-    let cwd_packs = PathBuf::from("packs");
-    if cwd_packs.is_dir() {
-        return Some(cwd_packs);
-    }
-    let system = PathBuf::from("/usr/share/rusty-agentic-pack-manager/packs");
-    if system.is_dir() {
-        return Some(system);
-    }
-    None
-}
-
-fn build_app(start_dir: PathBuf, packs_dir: PathBuf) -> Result<App> {
-    let pack_repository = FsPackRepository::new(packs_dir.clone())
-        .with_context(|| format!("packs dir unreadable: {}", packs_dir.display()))?;
-    let destination = FsInstallDestination::new(packs_dir.clone());
+fn build_app(start_dir: PathBuf, library: &PackLibrary) -> Result<App> {
+    let pack_repository = FsPackRepository::new(library.roots.clone())
+        .with_context(|| format!("pack library unreadable: {:?}", library.roots))?;
+    let destination = FsInstallDestination::new(library.roots.clone());
     let pack_service = PackService::new(
         Box::new(pack_repository),
         Box::new(destination),
@@ -48,16 +30,49 @@ fn build_app(start_dir: PathBuf, packs_dir: PathBuf) -> Result<App> {
     );
     let explorer = ExplorerService::new(Box::new(FsExplorer));
     let view_service = PackViewService::new(Box::new(
-        FsPackContentRepository::new(packs_dir).context("pack content repo")?,
+        FsPackContentRepository::new(library.roots.clone()).context("pack content repo")?,
     ));
     Ok(App::new(pack_service, explorer, view_service, start_dir))
 }
 
+fn build_creation_service(library: &PackLibrary) -> Result<PackCreationService> {
+    library.ensure_user_root().with_context(|| {
+        format!(
+            "cannot create user pack library: {}",
+            library.user_root.display()
+        )
+    })?;
+    let repository = FsPackRepository::new(library.roots.clone())
+        .with_context(|| format!("pack library unreadable: {:?}", library.roots))?;
+    let writer = FsPackWriter::new(library.user_root.clone());
+    Ok(PackCreationService::new(
+        Box::new(repository),
+        Box::new(writer),
+    ))
+}
+
 fn main() -> Result<()> {
+    let args: Vec<String> = std::env::args().skip(1).collect();
+    let library = PackLibrary::discover().ok_or_else(|| {
+        anyhow::anyhow!(
+            "no pack library found (expected the user library under the XDG data dir, ./packs next to the binary, ./packs in cwd, or /usr/share/rusty-agentic-pack-manager/packs)"
+        )
+    })?;
+
+    // The CLI runs before any terminal setup: `rapm <subcommand>` never
+    // enters raw mode, `rapm` alone launches the TUI.
+    if cli::is_cli_invocation(&args) {
+        let service = build_creation_service(&library)?;
+        match cli::run(&args, &service) {
+            Ok(code) => std::process::exit(code),
+            Err(err) => {
+                eprintln!("error: {err}");
+                std::process::exit(1);
+            }
+        }
+    }
+
     let start_dir = std::env::current_dir().context("cannot read current directory")?;
-    let Some(packs_dir) = find_packs_dir() else {
-        anyhow::bail!("no packs directory found (expected ./packs next to the binary, ./packs in cwd, or /usr/share/rusty-agentic-pack-manager/packs)");
-    };
 
     // ratatui::init(): raw mode + alternate screen + panic hook. Paired with
     // ratatui::restore() in the exit path below (review finding: the terminal
@@ -66,7 +81,7 @@ fn main() -> Result<()> {
     let events = EventHandler::default();
 
     let result = (|| -> Result<()> {
-        let mut app = build_app(start_dir, packs_dir)?;
+        let mut app = build_app(start_dir, &library)?;
         loop {
             terminal.draw(|frame| split_view::render(frame, &mut app))?;
             match events.next()? {

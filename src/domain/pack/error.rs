@@ -20,6 +20,7 @@ pub enum DomainError {
     ReservedDestination(String),
     EmptyInstallPaths,
     InstallPathOutsideTarget(String),
+    DuplicateItemSource(String),
 }
 
 impl fmt::Display for DomainError {
@@ -49,6 +50,9 @@ impl fmt::Display for DomainError {
             }
             DomainError::InstallPathOutsideTarget(p) => {
                 write!(f, "installed path escapes target root: {p}")
+            }
+            DomainError::DuplicateItemSource(s) => {
+                write!(f, "duplicate pack item source: {s}")
             }
         }
     }

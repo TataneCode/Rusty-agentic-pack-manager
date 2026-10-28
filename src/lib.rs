@@ -14,6 +14,11 @@ pub mod application {
         pub mod service;
         pub mod traits;
     }
+    pub mod pack_create {
+        pub mod dto;
+        pub mod service;
+        pub mod traits;
+    }
     pub mod pack_view {
         pub mod dto;
         pub mod service;
@@ -31,6 +36,7 @@ pub mod infrastructure {
         pub mod content;
         pub mod index;
         pub mod loader;
+        pub mod writer;
     }
     pub mod filesystem {
         pub mod explorer;
@@ -38,6 +44,8 @@ pub mod infrastructure {
 }
 
 pub mod presentation {
+    pub mod cli;
+    pub mod library;
     pub mod tui {
         pub mod app;
         pub mod common;

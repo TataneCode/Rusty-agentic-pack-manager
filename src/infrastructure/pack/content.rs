@@ -6,23 +6,32 @@ use crate::application::pack_view::traits::{PackContentRepository, PackFileDto};
 /// Text extensions the viewer can display.
 const TEXT_EXTENSIONS: [&str; 9] = ["md", "js", "toml", "txt", "json", "yaml", "yml", "sh", "py"];
 
-/// Reads pack file contents from the packs directory (viewer backing).
+/// Reads pack file contents from the pack library (viewer backing).
+/// Roots are in read order (user library first): the first root containing
+/// the pack wins.
 pub struct FsPackContentRepository {
-    packs_dir: PathBuf,
+    roots: Vec<PathBuf>,
 }
 
 impl FsPackContentRepository {
-    pub fn new(packs_dir: PathBuf) -> Result<FsPackContentRepository, ApplicationError> {
-        if !packs_dir.is_dir() {
+    pub fn new(roots: Vec<PathBuf>) -> Result<FsPackContentRepository, ApplicationError> {
+        let first = roots
+            .first()
+            .ok_or_else(|| ApplicationError::NotADirectory("(no pack library root)".to_string()))?;
+        if !first.is_dir() {
             return Err(ApplicationError::NotADirectory(
-                packs_dir.to_string_lossy().into_owned(),
+                first.to_string_lossy().into_owned(),
             ));
         }
-        Ok(FsPackContentRepository { packs_dir })
+        Ok(FsPackContentRepository { roots })
     }
 
     fn pack_dir(&self, pack_name: &str) -> PathBuf {
-        self.packs_dir.join(pack_name)
+        self.roots
+            .iter()
+            .map(|root| root.join(pack_name))
+            .find(|dir| dir.is_dir())
+            .unwrap_or_else(|| self.roots[0].join(pack_name))
     }
 
     fn collect_files(&self, dir: &std::path::Path, base: &std::path::Path, out: &mut Vec<String>) {
@@ -96,7 +105,7 @@ mod tests {
         fs::write(pack.join("skills/tdd/SKILL.md"), "# TDD").unwrap();
         fs::write(pack.join("logo.png"), "binary").unwrap();
 
-        let repo = FsPackContentRepository::new(tmp.path().to_path_buf()).unwrap();
+        let repo = FsPackContentRepository::new(vec![tmp.path().to_path_buf()]).unwrap();
         let files = repo.list_files("tdd").unwrap();
         assert_eq!(files.len(), 3);
         let manifest = files.iter().find(|f| f.path == "pack.toml").unwrap();
@@ -126,7 +135,7 @@ mod tests {
         )
         .unwrap();
 
-        let repo = FsPackContentRepository::new(tmp.path().to_path_buf()).unwrap();
+        let repo = FsPackContentRepository::new(vec![tmp.path().to_path_buf()]).unwrap();
         let files = repo.list_files("vibe-wise").unwrap();
         let script = files
             .iter()
@@ -143,12 +152,31 @@ mod tests {
     #[test]
     fn read_missing_file_and_pack() {
         let tmp = TempDir::new().unwrap();
-        let repo = FsPackContentRepository::new(tmp.path().to_path_buf()).unwrap();
+        let repo = FsPackContentRepository::new(vec![tmp.path().to_path_buf()]).unwrap();
         assert!(matches!(
             repo.list_files("nope").unwrap_err(),
             ApplicationError::PackNotFound(_)
         ));
         let err = repo.read_file("nope", "x.md").unwrap_err();
         assert!(matches!(err, ApplicationError::FileNotFound(_)));
+    }
+
+    #[test]
+    fn pack_dir_prefers_the_first_root() {
+        let user = TempDir::new().unwrap();
+        let system = TempDir::new().unwrap();
+        fs::create_dir_all(user.path().join("tdd")).unwrap();
+        fs::write(user.path().join("tdd/USER.md"), "user").unwrap();
+        fs::create_dir_all(system.path().join("tdd")).unwrap();
+        fs::write(system.path().join("tdd/SYSTEM.md"), "system").unwrap();
+
+        let repo = FsPackContentRepository::new(vec![
+            user.path().to_path_buf(),
+            system.path().to_path_buf(),
+        ])
+        .unwrap();
+        let files = repo.list_files("tdd").unwrap();
+        assert!(files.iter().any(|f| f.path == "USER.md"));
+        assert!(!files.iter().any(|f| f.path == "SYSTEM.md"));
     }
 }

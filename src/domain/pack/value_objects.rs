@@ -137,6 +137,15 @@ impl PackItemKind {
         }
     }
 
+    /// Directory holding this kind of item inside a pack (canonical layout).
+    pub fn plural_dir(&self) -> &'static str {
+        match self {
+            PackItemKind::Skill => "skills",
+            PackItemKind::Agent => "agents",
+            PackItemKind::Command => "commands",
+        }
+    }
+
     pub fn parse(value: &str) -> Result<PackItemKind, DomainError> {
         match value.trim().to_ascii_lowercase().as_str() {
             "skill" => Ok(PackItemKind::Skill),
@@ -231,5 +240,12 @@ mod tests {
             PackItemKind::Command
         );
         assert!(PackItemKind::parse("macro").is_err());
+    }
+
+    #[test]
+    fn pack_item_kind_plural_dir() {
+        assert_eq!(PackItemKind::Skill.plural_dir(), "skills");
+        assert_eq!(PackItemKind::Agent.plural_dir(), "agents");
+        assert_eq!(PackItemKind::Command.plural_dir(), "commands");
     }
 }
