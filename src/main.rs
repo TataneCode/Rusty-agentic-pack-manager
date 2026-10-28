@@ -67,10 +67,24 @@ fn main() -> Result<()> {
             Ok(code) => std::process::exit(code),
             Err(err) => {
                 eprintln!("error: {err}");
-                std::process::exit(1);
+                // Usage errors exit 2 (shell convention), runtime errors 1.
+                let code = match err {
+                    rusty_agentic_pack_manager::application::error::ApplicationError::Usage(_) => 2,
+                    _ => 1,
+                };
+                std::process::exit(code);
             }
         }
     }
+
+    // The user library is the first read root: make sure it exists so the
+    // TUI also starts on a fresh machine (idempotent create_dir_all).
+    library.ensure_user_root().with_context(|| {
+        format!(
+            "cannot create user pack library: {}",
+            library.user_root.display()
+        )
+    })?;
 
     let start_dir = std::env::current_dir().context("cannot read current directory")?;
 

@@ -16,11 +16,12 @@ Let the user build a pack from an arbitrary list of files/directories (skills, a
   - ✅ **Explicit item options**: `--skill|--agent|--command <path>` (repeatable; file or directory) followed by `--vibe-dest <d>` / `--gemini-dest <d>` for that item. No kind auto-detection.
   - ✅ **Metadata**: `--name` (prompted interactively if absent and a TTY is available, hard error otherwise), `--version` (default `1.0.0`), `--description` (prompted if absent and TTY, empty otherwise), `--cli vibe,gemini` (default: union of the items' destination CLIs), `--force` (replace an existing pack).
   - ✅ **Canonical layout inside the pack**: each item is copied under `<kind>s/<file-or-dir-name>/` (e.g. `skills/tdd/`, `commands/review.toml`).
+  - ✅ **Review round 1**: creation-time destination validation (fail fast on uninstallable destinations), `ensure_user_root()` on the TUI path (fresh-machine startup), exit code 2 for usage errors (plan D7).
 - Accepted limits (documented in MANUAL.md): the TUI shows a pack created while it runs only after the next action (no dedicated refresh key in this iteration); overwrite is best-effort (old pack moved aside, then removed — a crash between the two renames can leave a `<name>.old-<pid>` directory).
 
 ## Architecture decisions
 
-- **D1: Domain additions** — `PackItemKind::plural_dir()` (`skills`/`agents`/`commands`) and `DomainError::DuplicateItemSource(String)` (two sources of the same kind with the same file/dir name would collide in the canonical layout). Pure layer, co-located UT.
+- **D1: Domain additions** — `PackItemKind::plural_dir()` (`skills`/`agents`/`commands`), `DomainError::DuplicateItemSource(String)` (two sources of the same kind with the same file/dir name would collide in the canonical layout), and `validate_item_destination()` (creation-time destination rule: relative, no `..`, not root-only; same rule as `normalize_in_target` at install time). Pure layer, co-located UT.
 - **D2: Application port `PackWriter`** (`src/application/pack_create/traits.rs`, `#[automock]`, `Send`):
   ```rust
   fn pack_exists(&self, name: &str) -> bool;

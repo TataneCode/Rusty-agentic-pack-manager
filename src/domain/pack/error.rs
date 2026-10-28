@@ -149,6 +149,39 @@ fn normalize_in_target(
     Ok(resolved)
 }
 
+/// Validate a raw item destination at pack-creation time, without a target
+/// root: it must be non-empty, relative (no absolute path, no `..`) and
+/// name something inside the target (`.`/`./` alone is rejected). This is
+/// the same rule `normalize_in_target` enforces at install time, applied
+/// early so a created pack can always be installed.
+pub fn validate_item_destination(destination: &str) -> Result<(), DomainError> {
+    if destination.trim().is_empty() {
+        return Err(DomainError::EmptyItemDestination);
+    }
+    let rel = std::path::Path::new(destination);
+    if rel.is_absolute() {
+        return Err(DomainError::ItemDestinationOutsideTarget(
+            destination.to_string(),
+        ));
+    }
+    let mut has_normal = false;
+    for component in rel.components() {
+        match component {
+            std::path::Component::Normal(_) => has_normal = true,
+            std::path::Component::CurDir => {}
+            _ => {
+                return Err(DomainError::ItemDestinationOutsideTarget(
+                    destination.to_string(),
+                ));
+            }
+        }
+    }
+    if !has_normal {
+        return Err(DomainError::EmptyItemDestination);
+    }
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -241,6 +274,39 @@ mod tests {
     fn normalize_accepts_dot_components() {
         let resolved = normalize_in_target("./a/./b", std::path::Path::new("/repo")).unwrap();
         assert_eq!(resolved, PathBuf::from("/repo/a/b"));
+    }
+
+    #[test]
+    fn validate_item_destination_accepts_relative_paths() {
+        assert!(validate_item_destination(".agents/skills/tdd/").is_ok());
+        assert!(validate_item_destination("./a/./b").is_ok());
+        assert!(validate_item_destination("review.toml").is_ok());
+    }
+
+    #[test]
+    fn validate_item_destination_rejects_absolute_and_escaping_paths() {
+        let err = validate_item_destination("/etc/passwd").unwrap_err();
+        assert!(matches!(err, DomainError::ItemDestinationOutsideTarget(_)));
+        let err = validate_item_destination("../../outside").unwrap_err();
+        assert!(matches!(err, DomainError::ItemDestinationOutsideTarget(_)));
+        let err = validate_item_destination("a/../../b").unwrap_err();
+        assert!(matches!(err, DomainError::ItemDestinationOutsideTarget(_)));
+    }
+
+    #[test]
+    fn validate_item_destination_rejects_empty_and_root_only() {
+        assert!(matches!(
+            validate_item_destination("   ").unwrap_err(),
+            DomainError::EmptyItemDestination
+        ));
+        assert!(matches!(
+            validate_item_destination(".").unwrap_err(),
+            DomainError::EmptyItemDestination
+        ));
+        assert!(matches!(
+            validate_item_destination("./").unwrap_err(),
+            DomainError::EmptyItemDestination
+        ));
     }
 
     #[test]

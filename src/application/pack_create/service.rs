@@ -108,9 +108,10 @@ fn build_items(
         let mut destinations = TargetCliMap::default();
         for (cli_raw, dest) in &dto.destinations {
             let cli = TargetCli::parse(cli_raw)?;
-            if dest.trim().is_empty() {
-                return Err(ApplicationError::Domain(DomainError::EmptyItemDestination));
-            }
+            // Fail fast on destinations that could never install (absolute,
+            // escaping, or root-only paths): the same rule the domain
+            // enforces at install time.
+            crate::domain::pack::error::validate_item_destination(dest)?;
             destinations.insert(cli, dest.clone());
         }
         items.push(PackItem::new(kind, pack_source.clone(), destinations)?);
@@ -333,5 +334,28 @@ mod tests {
         let mut no_name = dto(vec![item_dto("skill", "/", &[("vibe", ".agents/x/")])]);
         no_name.clis = vec!["vibe".to_string()];
         assert!(service.create(&no_name).is_err());
+    }
+
+    #[test]
+    fn create_rejects_uninstallable_destinations() {
+        let mut writer = MockPackWriter::new();
+        writer.expect_write().never();
+        let service = PackCreationService::new(Box::new(repo_with(false)), Box::new(writer));
+
+        for bad_dest in ["/etc/passwd", "../../outside", ".", "./"] {
+            let mut dto = dto(vec![item_dto("skill", "./tdd", &[("vibe", bad_dest)])]);
+            dto.clis = vec!["vibe".to_string()];
+            let err = service.create(&dto).unwrap_err();
+            assert!(
+                matches!(
+                    err,
+                    ApplicationError::Domain(
+                        DomainError::ItemDestinationOutsideTarget(_)
+                            | DomainError::EmptyItemDestination
+                    )
+                ),
+                "destination {bad_dest:?} must be rejected at creation"
+            );
+        }
     }
 }

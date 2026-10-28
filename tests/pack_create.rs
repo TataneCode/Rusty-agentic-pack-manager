@@ -262,3 +262,71 @@ fn create_requires_a_destination_for_every_declared_cli() {
         )
     ));
 }
+
+#[test]
+fn library_works_when_the_user_root_does_not_exist_yet() {
+    let tmp = TempDir::new().unwrap();
+    let user_root = tmp.path().join("user-packs");
+    let system_root = tmp.path().join("system-packs");
+    fs::create_dir_all(&system_root).unwrap();
+    // A system pack exists; the user root does not.
+    let system_pack = system_root.join("tdd");
+    fs::create_dir_all(&system_pack).unwrap();
+    fs::write(
+        system_pack.join("pack.toml"),
+        "name = \"tdd\"\nversion = \"1.0.0\"\ncli = [\"vibe\"]\n",
+    )
+    .unwrap();
+
+    let library = PackLibrary::new(vec![user_root.clone(), system_root], user_root.clone());
+    // Regression (review): before ensure_user_root, FsPackRepository::new
+    // rejected a missing first root and the TUI failed to start on a fresh
+    // machine.
+    library.ensure_user_root().unwrap();
+    let repo = FsPackRepository::new(library.roots.clone()).unwrap();
+    assert_eq!(repo.list().unwrap()[0].name.as_str(), "tdd");
+
+    // Creating a pack afterwards writes into the now-existing user root.
+    let host = host_tree(&tmp);
+    let creation = PackCreationService::new(
+        Box::new(FsPackRepository::new(library.roots.clone()).unwrap()),
+        Box::new(FsPackWriter::new(library.user_root.clone())),
+    );
+    creation
+        .create(&dto(vec![skill_dto(&host)]))
+        .expect("creation must succeed");
+    assert!(library.user_root.join("my-pack/pack.toml").is_file());
+}
+
+#[test]
+fn create_rejects_uninstallable_destinations_end_to_end() {
+    let tmp = TempDir::new().unwrap();
+    let (library, creation, _) = wired(&tmp);
+    let host = host_tree(&tmp);
+
+    for bad_dest in ["/etc/passwd", "../../outside", "."] {
+        let mut bad = dto(vec![CreateItemDto {
+            kind: "skill".to_string(),
+            source: host.join("my-stuff/tdd"),
+            destinations: vec![
+                ("vibe".to_string(), bad_dest.to_string()),
+                ("gemini".to_string(), bad_dest.to_string()),
+            ],
+        }]);
+        bad.name = format!("bad-{}", bad_dest.replace(['/', '.'], "-"));
+        let err = creation.create(&bad).unwrap_err();
+        assert!(
+            matches!(
+                err,
+                ApplicationError::Domain(
+                    rusty_agentic_pack_manager::domain::pack::error::DomainError::ItemDestinationOutsideTarget(_)
+                        | rusty_agentic_pack_manager::domain::pack::error::DomainError::EmptyItemDestination
+                )
+            ),
+            "destination {bad_dest:?} must be rejected at creation"
+        );
+    }
+    // Nothing was written.
+    let repo = FsPackRepository::new(library.roots.clone()).unwrap();
+    assert!(repo.list().unwrap().is_empty());
+}

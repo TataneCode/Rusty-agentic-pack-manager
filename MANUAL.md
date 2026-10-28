@@ -42,7 +42,7 @@ rapm pack create \
 | `--skill\|--agent\|--command <path>` | Add an item (file or directory); repeatable |
 | `--vibe-dest <dest>` / `--gemini-dest <dest>` | Install destination for that CLI; applies to the last item |
 
-Rules: every item needs a destination for every declared CLI; two sources of the same kind must not share a file/directory name (they would collide in the canonical layout); an existing pack is refused unless `--force` is passed. Accepted limits: a pack created while the TUI runs appears after the next action; `--force` is best-effort (a crash mid-swap can leave a `<name>.old-<pid>` directory).
+Rules: every item needs a destination for every declared CLI; two sources of the same kind must not share a file/directory name (they would collide in the canonical layout); an existing pack is refused unless `--force` is passed. Destinations are validated at creation with the same rule as at install time: relative paths only — absolute paths (`/etc/...`), upward escapes (`../...`) and root-only destinations (`.`, `/`) are rejected, so a created pack can always be installed. Exit codes: `0` success (and `--help`), `2` usage error (unknown option, missing value, missing `--name` without a terminal), `1` any other error. Accepted limits: a pack created while the TUI runs appears after the next action; `--force` is best-effort (a crash mid-swap can leave a `<name>.old-<pid>` directory).
 
 ## The screen
 
