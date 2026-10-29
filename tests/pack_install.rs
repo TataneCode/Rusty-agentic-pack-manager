@@ -61,8 +61,8 @@ fn real_pack_installs_into_target_repo() {
     fs::create_dir_all(&packs_dir).unwrap();
     make_pack(&packs_dir);
 
-    let repo = FsPackRepository::new(packs_dir.clone()).unwrap();
-    let destination = FsInstallDestination::new(packs_dir.clone());
+    let repo = FsPackRepository::new(vec![packs_dir.clone()]).unwrap();
+    let destination = FsInstallDestination::new(vec![packs_dir.clone()]);
     let service = PackService::new(
         Box::new(repo),
         Box::new(destination),
@@ -99,8 +99,8 @@ fn install_records_the_index_and_uninstall_removes_everything() {
     fs::create_dir_all(&packs_dir).unwrap();
     make_pack(&packs_dir);
 
-    let repo = FsPackRepository::new(packs_dir.clone()).unwrap();
-    let destination = FsInstallDestination::new(packs_dir.clone());
+    let repo = FsPackRepository::new(vec![packs_dir.clone()]).unwrap();
+    let destination = FsInstallDestination::new(vec![packs_dir.clone()]);
     let service = PackService::new(
         Box::new(repo),
         Box::new(destination),
@@ -163,8 +163,8 @@ fn failed_install_writes_no_index() {
     fs::create_dir_all(&packs_dir).unwrap();
     make_pack(&packs_dir);
 
-    let repo = FsPackRepository::new(packs_dir.clone()).unwrap();
-    let destination = FsInstallDestination::new(packs_dir.clone());
+    let repo = FsPackRepository::new(vec![packs_dir.clone()]).unwrap();
+    let destination = FsInstallDestination::new(vec![packs_dir.clone()]);
     let service = PackService::new(
         Box::new(repo),
         Box::new(destination),
@@ -205,7 +205,7 @@ fn explorer_lists_created_dir() {
 fn missing_pack_is_reported() {
     let tmp = TempDir::new().unwrap();
     fs::create_dir_all(tmp.path().join("packs")).unwrap();
-    let repo = FsPackRepository::new(tmp.path().join("packs")).unwrap();
+    let repo = FsPackRepository::new(vec![tmp.path().join("packs")]).unwrap();
     let err = repo.find("ghost").unwrap_err();
     assert!(matches!(
         err,
@@ -217,7 +217,7 @@ fn missing_pack_is_reported() {
 fn all_shipped_packs_load_and_install() {
     let tmp = TempDir::new().unwrap();
     let packs_dir = PathBuf::from("packs");
-    let repo = FsPackRepository::new(packs_dir.clone()).unwrap();
+    let repo = FsPackRepository::new(vec![packs_dir.clone()]).unwrap();
     let packs = repo.list().unwrap();
     assert!(
         packs.len() >= 16,
@@ -227,7 +227,7 @@ fn all_shipped_packs_load_and_install() {
 
     let target = tmp.path().join("repo");
     fs::create_dir_all(&target).unwrap();
-    let destination = FsInstallDestination::new(packs_dir);
+    let destination = FsInstallDestination::new(vec![packs_dir]);
     let service = PackService::new(
         Box::new(repo),
         Box::new(destination),

@@ -45,6 +45,20 @@ Architecture rules, design and action patterns are taken from [rusty-console](ht
 - Per-layer rules: [rules/](rules/)
 - Design plans: [docs/plans/](docs/plans/)
 
+## Pack library and pack creation
+
+Packs are searched, in order: the **user library** (`$XDG_DATA_HOME/rapm/packs/` or `~/.local/share/rapm/packs/`, `%APPDATA%\rapm\packs` on Windows), `<binary directory>/packs/`, `./packs`, then `/usr/share/rusty-agentic-pack-manager/packs/` (system install). The first location containing a pack wins: a user pack overrides a system pack of the same name.
+
+New packs are created from any list of files/directories with the CLI:
+
+```bash
+rapm pack create --name my-pack \
+  --skill ./skills/tdd --vibe-dest .agents/skills/tdd/ --gemini-dest .gemini/skills/tdd/ \
+  --command ./commands/review.toml --vibe-dest .vibe/commands/review.toml --gemini-dest .gemini/commands/review.toml
+```
+
+The pack is written into the user library (canonical layout `<kind>s/<name>/` + a generated `pack.toml`) and is immediately available in the TUI. See [MANUAL.md](MANUAL.md) for the full option list.
+
 ## Embedded packs
 
 The initial pack list (in `packs/`) is built from [docs-tech/llm-cli](https://github.com/TataneCode/docs-tech/tree/main/llm-cli) and rusty-console, made library-agnostic, targeting **Vibe CLI** and **Gemini CLI** first.
