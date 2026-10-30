@@ -1,7 +1,7 @@
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 use crate::application::error::ApplicationError;
 use crate::application::pack::traits::PackRepository;
@@ -10,48 +10,79 @@ use crate::domain::pack::value_objects::{
     PackItemKind, PackName, PackVersion, TargetCli, TargetCliMap,
 };
 
-/// Raw pack.toml shape.
-#[derive(Debug, Deserialize)]
-struct Manifest {
-    name: String,
-    version: String,
+/// Raw pack.toml shape (single source of truth for the manifest format:
+/// the loader reads it, the pack writer serializes it).
+#[derive(Debug, Serialize, Deserialize)]
+pub(crate) struct Manifest {
+    pub name: String,
+    pub version: String,
     #[serde(default)]
-    description: String,
-    cli: Vec<String>,
+    pub description: String,
+    pub cli: Vec<String>,
     #[serde(default, rename = "items")]
-    items: Vec<ManifestItem>,
+    pub items: Vec<ManifestItem>,
 }
 
-#[derive(Debug, Deserialize)]
-struct ManifestItem {
-    kind: String,
-    source: String,
+#[derive(Debug, Serialize, Deserialize)]
+pub(crate) struct ManifestItem {
+    pub kind: String,
+    pub source: String,
     #[serde(rename = "destinations")]
-    destinations: BTreeMap<String, String>,
+    pub destinations: BTreeMap<String, String>,
 }
 
-/// Loads packs from a directory of pack directories, each with pack.toml.
+impl Manifest {
+    /// Raw manifest of a pack entity, for serialization by the pack writer.
+    pub(crate) fn from_pack(pack: &Pack) -> Manifest {
+        Manifest {
+            name: pack.name.as_str().to_string(),
+            version: pack.version.as_str().to_string(),
+            description: pack.description.clone(),
+            cli: pack.clis.iter().map(|c| c.as_str().to_string()).collect(),
+            items: pack
+                .items
+                .iter()
+                .map(|item| ManifestItem {
+                    kind: item.kind.as_str().to_string(),
+                    source: item.source.to_string_lossy().replace('\\', "/"),
+                    destinations: item
+                        .destinations
+                        .iter()
+                        .map(|(cli, dest)| (cli.as_str().to_string(), dest.to_string()))
+                        .collect(),
+                })
+                .collect(),
+        }
+    }
+}
+
+/// Loads packs from the pack library: an ordered list of roots (user
+/// library first, then the system locations). The first root containing a
+/// pack wins: a user pack overrides a system pack of the same name.
 #[derive(Debug)]
 pub struct FsPackRepository {
-    packs_dir: PathBuf,
+    roots: Vec<PathBuf>,
 }
 
 impl FsPackRepository {
-    pub fn new(packs_dir: PathBuf) -> Result<FsPackRepository, ApplicationError> {
-        if !packs_dir.is_dir() {
+    pub fn new(roots: Vec<PathBuf>) -> Result<FsPackRepository, ApplicationError> {
+        let first = roots
+            .first()
+            .ok_or_else(|| ApplicationError::NotADirectory("(no pack library root)".to_string()))?;
+        if !first.is_dir() {
             return Err(ApplicationError::NotADirectory(
-                packs_dir.to_string_lossy().into_owned(),
+                first.to_string_lossy().into_owned(),
             ));
         }
-        Ok(FsPackRepository { packs_dir })
+        Ok(FsPackRepository { roots })
     }
 
-    pub fn packs_dir(&self) -> &Path {
-        &self.packs_dir
-    }
-
-    fn pack_dir(&self, name: &str) -> PathBuf {
-        self.packs_dir.join(name)
+    /// First root (in read order) containing a pack directory named `name`.
+    fn pack_dir(&self, name: &str) -> Option<PathBuf> {
+        self.roots
+            .iter()
+            .map(|root| root.join(name))
+            .find(|dir| dir.join("pack.toml").is_file())
     }
 
     fn load_pack(&self, dir: &Path) -> Result<Pack, ApplicationError> {
@@ -102,19 +133,28 @@ impl FsPackRepository {
 impl PackRepository for FsPackRepository {
     fn list(&self) -> Result<Vec<Pack>, ApplicationError> {
         let mut packs = Vec::new();
-        let entries =
-            std::fs::read_dir(&self.packs_dir).map_err(|source| ApplicationError::Io {
-                path: self.packs_dir.to_string_lossy().into_owned(),
+        let mut seen = std::collections::HashSet::new();
+        for root in &self.roots {
+            let entries = std::fs::read_dir(root).map_err(|source| ApplicationError::Io {
+                path: root.to_string_lossy().into_owned(),
                 source,
             })?;
-        for entry in entries {
-            let entry = entry.map_err(|source| ApplicationError::Io {
-                path: self.packs_dir.to_string_lossy().into_owned(),
-                source,
-            })?;
-            let path = entry.path();
-            if path.is_dir() && path.join("pack.toml").is_file() {
-                packs.push(self.load_pack(&path)?);
+            for entry in entries {
+                let entry = entry.map_err(|source| ApplicationError::Io {
+                    path: root.to_string_lossy().into_owned(),
+                    source,
+                })?;
+                let path = entry.path();
+                // Malformed pack dirs are skipped (rule: a directory without
+                // pack.toml is ignored in listings, not an error).
+                if path.is_dir() && path.join("pack.toml").is_file() {
+                    let pack = self.load_pack(&path)?;
+                    // First root wins: a user pack overrides a system pack
+                    // of the same name.
+                    if seen.insert(pack.name.as_str().to_string()) {
+                        packs.push(pack);
+                    }
+                }
             }
         }
         packs.sort_by(|a, b| a.name.as_str().cmp(b.name.as_str()));
@@ -122,10 +162,9 @@ impl PackRepository for FsPackRepository {
     }
 
     fn find(&self, name: &str) -> Result<Pack, ApplicationError> {
-        let dir = self.pack_dir(name);
-        if !dir.join("pack.toml").is_file() {
-            return Err(ApplicationError::PackNotFound(name.to_string()));
-        }
+        let dir = self
+            .pack_dir(name)
+            .ok_or_else(|| ApplicationError::PackNotFound(name.to_string()))?;
         self.load_pack(&dir)
     }
 }
@@ -157,12 +196,16 @@ gemini = ".gemini/commands/tdd/"
         fs::write(pack_dir.join("pack.toml"), manifest).unwrap();
     }
 
+    fn repo_with(roots: Vec<PathBuf>) -> FsPackRepository {
+        FsPackRepository::new(roots).unwrap()
+    }
+
     #[test]
     fn list_and_find_pack() {
         let tmp = TempDir::new().unwrap();
         write_pack(tmp.path(), "tdd", TDD_MANIFEST);
 
-        let repo = FsPackRepository::new(tmp.path().to_path_buf()).unwrap();
+        let repo = repo_with(vec![tmp.path().to_path_buf()]);
         let packs = repo.list().unwrap();
         assert_eq!(packs.len(), 1);
         assert_eq!(packs[0].name.as_str(), "tdd");
@@ -178,7 +221,7 @@ gemini = ".gemini/commands/tdd/"
     #[test]
     fn find_missing_pack() {
         let tmp = TempDir::new().unwrap();
-        let repo = FsPackRepository::new(tmp.path().to_path_buf()).unwrap();
+        let repo = repo_with(vec![tmp.path().to_path_buf()]);
         let err = repo.find("nope").unwrap_err();
         assert!(matches!(err, ApplicationError::PackNotFound(_)));
     }
@@ -187,7 +230,7 @@ gemini = ".gemini/commands/tdd/"
     fn invalid_manifest_is_reported() {
         let tmp = TempDir::new().unwrap();
         write_pack(tmp.path(), "bad", "name = 42");
-        let repo = FsPackRepository::new(tmp.path().to_path_buf()).unwrap();
+        let repo = repo_with(vec![tmp.path().to_path_buf()]);
         assert!(matches!(
             repo.list().unwrap_err(),
             ApplicationError::InvalidManifest { .. }
@@ -199,13 +242,78 @@ gemini = ".gemini/commands/tdd/"
         let tmp = TempDir::new().unwrap();
         fs::create_dir_all(tmp.path().join("not-a-pack")).unwrap();
         write_pack(tmp.path(), "tdd", TDD_MANIFEST);
-        let repo = FsPackRepository::new(tmp.path().to_path_buf()).unwrap();
+        let repo = repo_with(vec![tmp.path().to_path_buf()]);
         assert_eq!(repo.list().unwrap().len(), 1);
     }
 
     #[test]
-    fn missing_packs_dir_is_rejected() {
-        let err = FsPackRepository::new(PathBuf::from("/definitely/not/here")).unwrap_err();
+    fn missing_first_root_is_rejected() {
+        let err = FsPackRepository::new(vec![PathBuf::from("/definitely/not/here")]).unwrap_err();
         assert!(matches!(err, ApplicationError::NotADirectory(_)));
+        assert!(FsPackRepository::new(vec![]).is_err());
+    }
+
+    #[test]
+    fn list_unions_roots_and_dedupes_by_name_first_root_wins() {
+        let user = TempDir::new().unwrap();
+        let system = TempDir::new().unwrap();
+        write_pack(user.path(), "tdd", TDD_MANIFEST);
+        // Same pack name in the system root, plus a system-only pack.
+        let other_manifest = TDD_MANIFEST
+            .replace("tdd", "review")
+            .replace("TDD pack", "Review");
+        write_pack(system.path(), "tdd", &other_manifest);
+        write_pack(system.path(), "review", &other_manifest);
+
+        let repo = repo_with(vec![user.path().to_path_buf(), system.path().to_path_buf()]);
+        let packs = repo.list().unwrap();
+        assert_eq!(packs.len(), 2);
+        let tdd = packs.iter().find(|p| p.name.as_str() == "tdd").unwrap();
+        // The user copy wins: its description is the original one.
+        assert_eq!(tdd.description, "TDD pack");
+    }
+
+    #[test]
+    fn find_prefers_the_first_root() {
+        let user = TempDir::new().unwrap();
+        let system = TempDir::new().unwrap();
+        write_pack(system.path(), "tdd", TDD_MANIFEST);
+        let user_manifest = TDD_MANIFEST.replace("TDD pack", "User override");
+        write_pack(user.path(), "tdd", &user_manifest);
+
+        let repo = repo_with(vec![user.path().to_path_buf(), system.path().to_path_buf()]);
+        let pack = repo.find("tdd").unwrap();
+        assert_eq!(pack.description, "User override");
+    }
+
+    #[test]
+    fn find_falls_back_to_later_roots() {
+        let user = TempDir::new().unwrap();
+        let system = TempDir::new().unwrap();
+        write_pack(system.path(), "tdd", TDD_MANIFEST);
+
+        let repo = repo_with(vec![user.path().to_path_buf(), system.path().to_path_buf()]);
+        assert!(repo.find("tdd").is_ok());
+    }
+
+    #[test]
+    fn manifest_from_pack_round_trips_through_toml() {
+        let tmp = TempDir::new().unwrap();
+        write_pack(tmp.path(), "tdd", TDD_MANIFEST);
+        let repo = repo_with(vec![tmp.path().to_path_buf()]);
+        let pack = repo.find("tdd").unwrap();
+
+        let raw = toml::to_string_pretty(&Manifest::from_pack(&pack)).unwrap();
+        let parsed: Manifest = toml::from_str(&raw).unwrap();
+        assert_eq!(parsed.name, "tdd");
+        assert_eq!(parsed.version, "1.0.0");
+        assert_eq!(parsed.cli, vec!["vibe".to_string()]);
+        assert_eq!(parsed.items.len(), 1);
+        assert_eq!(parsed.items[0].kind, "skill");
+        assert_eq!(parsed.items[0].source, "skills/tdd/SKILL.md");
+        assert_eq!(
+            parsed.items[0].destinations.get("gemini").unwrap(),
+            ".gemini/commands/tdd/"
+        );
     }
 }

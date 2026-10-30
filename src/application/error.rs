@@ -20,6 +20,10 @@ pub enum ApplicationError {
     DestinationExists(String),
     #[error("no install of '{0}' recorded in this target")]
     InstallNotFound(String),
+    #[error("pack already exists: {0}")]
+    PackAlreadyExists(String),
+    #[error("usage error: {0}")]
+    Usage(String),
     #[error("io error on {path}: {source}")]
     Io {
         path: String,

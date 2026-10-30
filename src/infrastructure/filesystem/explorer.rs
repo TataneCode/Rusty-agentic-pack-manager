@@ -66,16 +66,26 @@ impl ExplorerRepository for FsExplorer {
     }
 }
 
-/// The pack source files live in the packs dir; destinations are absolute.
-/// We need both sides, so the installer adapter is separate from the
-/// explorer one but shares the same std::fs operations.
+/// The pack source files live in the pack library; destinations are
+/// absolute. We need both sides, so the installer adapter is separate from
+/// the explorer one but shares the same std::fs operations. Roots are in
+/// read order (user library first): the first root containing the pack
+/// provides the sources.
 pub struct FsInstallDestination {
-    packs_dir: std::path::PathBuf,
+    roots: Vec<std::path::PathBuf>,
 }
 
 impl FsInstallDestination {
-    pub fn new(packs_dir: std::path::PathBuf) -> FsInstallDestination {
-        FsInstallDestination { packs_dir }
+    pub fn new(roots: Vec<std::path::PathBuf>) -> FsInstallDestination {
+        FsInstallDestination { roots }
+    }
+
+    fn pack_dir(&self, pack_name: &str) -> std::path::PathBuf {
+        self.roots
+            .iter()
+            .map(|root| root.join(pack_name))
+            .find(|dir| dir.is_dir())
+            .unwrap_or_else(|| self.roots[0].join(pack_name))
     }
 }
 
@@ -89,7 +99,7 @@ impl InstallDestination for FsInstallDestination {
         let source = if source.is_absolute() {
             source.to_path_buf()
         } else {
-            self.packs_dir.join(pack_name).join(source)
+            self.pack_dir(pack_name).join(source)
         };
         let source = source.as_path();
         if source.is_dir() {
@@ -207,7 +217,7 @@ mod tests {
         fs::write(tmp.path().join("repo/.agents/skills/tdd/SKILL.md"), "#").unwrap();
         fs::write(tmp.path().join("repo/file.txt"), "x").unwrap();
 
-        let dest = FsInstallDestination::new(tmp.path().join("packs"));
+        let dest = FsInstallDestination::new(vec![tmp.path().join("packs")]);
         dest.remove(&tmp.path().join("repo/.agents/skills/tdd"))
             .unwrap();
         assert!(!tmp.path().join("repo/.agents/skills/tdd").exists());
@@ -227,7 +237,7 @@ mod tests {
         let target = tmp.path().join("repo");
         fs::create_dir_all(&target).unwrap();
 
-        let dest = FsInstallDestination::new(tmp.path().join("packs"));
+        let dest = FsInstallDestination::new(vec![tmp.path().join("packs")]);
         dest.copy(
             "tdd",
             Path::new("skills/tdd/SKILL.md"),
@@ -243,5 +253,28 @@ mod tests {
         )
         .unwrap();
         assert!(target.join(".agents/skills/tdd-tree/SKILL.md").is_file());
+    }
+
+    #[test]
+    fn copy_resolves_sources_from_the_first_root_containing_the_pack() {
+        let tmp = TempDir::new().unwrap();
+        let user_packs = tmp.path().join("user-packs");
+        let system_packs = tmp.path().join("system-packs");
+        fs::create_dir_all(system_packs.join("tdd/skills/tdd")).unwrap();
+        fs::write(system_packs.join("tdd/skills/tdd/SKILL.md"), "# system").unwrap();
+
+        let target = tmp.path().join("repo");
+        fs::create_dir_all(&target).unwrap();
+        let dest = FsInstallDestination::new(vec![user_packs, system_packs]);
+        dest.copy(
+            "tdd",
+            Path::new("skills/tdd/SKILL.md"),
+            &target.join(".agents/skills/tdd/SKILL.md"),
+        )
+        .unwrap();
+        assert_eq!(
+            fs::read_to_string(target.join(".agents/skills/tdd/SKILL.md")).unwrap(),
+            "# system"
+        );
     }
 }

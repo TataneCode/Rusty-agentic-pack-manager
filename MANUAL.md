@@ -1,6 +1,6 @@
 # User manual — rapm
 
-`rapm` is the TUI for managing agentic packs: list, view, install and uninstall sets of skills, agents and commands in a repository, for a target CLI (Vibe CLI, Gemini CLI).
+`rapm` is the TUI for managing agentic packs: list, view, install and uninstall sets of skills, agents and commands in a repository, for a target CLI (Vibe CLI, Gemini CLI). It also ships a CLI to create packs in your personal library: `rapm pack create`.
 
 ## Startup
 
@@ -10,9 +10,39 @@ rapm
 
 The application starts in the current directory. Packs are searched in:
 
-1. `<binary directory>/packs/`
-2. `./packs` (current directory)
-3. `/usr/share/rusty-agentic-pack-manager/packs/` (RPM/DEB system install)
+1. **User library**: `$XDG_DATA_HOME/rapm/packs/` (or `~/.local/share/rapm/packs/`; `%APPDATA%\rapm\packs` on Windows) — writable, this is where `rapm pack create` writes
+2. `<binary directory>/packs/`
+3. `./packs` (current directory)
+4. `/usr/share/rusty-agentic-pack-manager/packs/` (RPM/DEB system install)
+
+The first location containing a pack wins: a pack in the user library overrides a system pack of the same name. Packs created while the TUI is running appear after the next action (the list is reloaded on every action).
+
+## Creating a pack from the CLI
+
+```bash
+rapm pack create [options]
+```
+
+Builds a pack from any list of files or directories and writes it into the user library. Items are copied under a canonical layout — `<kind>s/<name>/` (`skills/`, `agents/`, `commands/`):
+
+```bash
+rapm pack create \
+  --name my-pack \
+  --skill ./skills/tdd --vibe-dest .agents/skills/tdd/ --gemini-dest .gemini/skills/tdd/ \
+  --command ./commands/review.toml --vibe-dest .vibe/commands/review.toml --gemini-dest .gemini/commands/review.toml
+```
+
+| Option | Meaning |
+|---|---|
+| `--name <name>` | Pack name (lowercase, digits, `-`, `_`); prompted interactively if omitted (required — a missing name without a terminal is an error) |
+| `--version <version>` | Semver version (default: `1.0.0`) |
+| `--description <text>` | Description; prompted if omitted (empty by default) |
+| `--cli <vibe,gemini>` | Target CLIs (default: union of the items' destinations) |
+| `--force` | Replace an existing pack of the same name |
+| `--skill\|--agent\|--command <path>` | Add an item (file or directory); repeatable |
+| `--vibe-dest <dest>` / `--gemini-dest <dest>` | Install destination for that CLI; applies to the last item |
+
+Rules: every item needs a destination for every declared CLI; two sources of the same kind must not share a file/directory name (they would collide in the canonical layout); an existing pack is refused unless `--force` is passed. Destinations are validated at creation with the same rule as at install time: relative paths only — absolute paths (`/etc/...`), upward escapes (`../...`) and root-only destinations (`.`, `/`) are rejected, so a created pack can always be installed. Exit codes: `0` success (and `--help`), `2` usage error (unknown option, missing value, missing `--name` without a terminal), `1` any other error. Accepted limits: a pack created while the TUI runs appears after the next action; `--force` is best-effort (a crash mid-swap can leave a `<name>.old-<pid>` directory).
 
 ## The screen
 
