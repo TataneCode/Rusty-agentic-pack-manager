@@ -6,12 +6,12 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 
+use rusty_agentic_pack_manager::domain::pack::value_objects::TargetCli;
 use rusty_agentic_pack_manager::application::error::ApplicationError;
 use rusty_agentic_pack_manager::application::pack::service::PackService;
 use rusty_agentic_pack_manager::application::pack::traits::PackRepository;
 use rusty_agentic_pack_manager::application::pack_create::dto::{CreateItemDto, CreatePackDto};
 use rusty_agentic_pack_manager::application::pack_create::service::PackCreationService;
-use rusty_agentic_pack_manager::domain::pack::value_objects::TargetCli;
 use rusty_agentic_pack_manager::infrastructure::filesystem::explorer::FsInstallDestination;
 use rusty_agentic_pack_manager::infrastructure::pack::index::FsInstallIndexRepository;
 use rusty_agentic_pack_manager::infrastructure::pack::loader::FsPackRepository;
@@ -142,7 +142,7 @@ fn create_builds_a_pack_that_the_library_loads_and_installs() {
     let target = tmp.path().join("repo");
     fs::create_dir_all(&target).unwrap();
     let installed = install
-        .install("my-pack", TargetCli::Vibe, target.to_str().unwrap(), false)
+        .install("my-pack", "vibe", target.to_str().unwrap(), false)
         .expect("install must succeed");
     assert_eq!(installed.copied_count, 3);
     assert!(target.join(".agents/skills/tdd/SKILL.md").is_file());

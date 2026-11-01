@@ -46,6 +46,16 @@ pub fn render(frame: &mut Frame, app: &mut App) {
     render_popups(frame, app);
 }
 
+/// Display label of a CLI identifier DTO (e.g. "vibe" -> "Vibe"). Pure
+/// presentation: the DTO carries the raw id, the label is rendered here.
+fn cli_label(cli: &str) -> String {
+    let mut chars = cli.chars();
+    match chars.next() {
+        Some(first) => first.to_uppercase().collect::<String>() + chars.as_str(),
+        None => cli.to_string(),
+    }
+}
+
 /// Application title header (rusty-console layout: header / content /
 /// action bar, all in shared section blocks).
 fn render_header(frame: &mut Frame, area: Rect, app: &App) {
@@ -70,8 +80,12 @@ fn render_packs_panel(frame: &mut Frame, area: Rect, app: &mut App) {
     let mut lines = Vec::new();
     let mut current_cli: Option<String> = None;
     for pack in app.packs.clone() {
-        let cli_label = pack.clis.first().map(|c| c.label()).unwrap_or("Unknown");
-        if current_cli.as_deref() != Some(cli_label) {
+        let cli_label = pack
+            .clis
+            .first()
+            .map(|c| cli_label(c))
+            .unwrap_or_else(|| "Unknown".to_string());
+        if current_cli.as_deref() != Some(cli_label.as_str()) {
             current_cli = Some(cli_label.to_string());
             lines.push(Line::from(Span::styled(
                 format!(" {cli_label} "),
@@ -107,7 +121,7 @@ fn render_installed_panel(frame: &mut Frame, area: Rect, app: &mut App) {
             " {} v{} — {} ({} item(s))",
             entry.name,
             entry.version,
-            entry.cli.label(),
+            cli_label(&entry.cli),
             entry.paths.len()
         ))));
     }

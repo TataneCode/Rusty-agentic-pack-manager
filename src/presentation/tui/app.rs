@@ -4,7 +4,6 @@ use crate::application::explorer::service::ExplorerService;
 use crate::application::pack::dto::{InstalledPackDto, PackSummaryDto};
 use crate::application::pack::service::PackService;
 use crate::application::pack_view::service::PackViewService;
-use crate::domain::pack::value_objects::TargetCli;
 use crate::presentation::tui::common::widgets::{SelectList, TextInput};
 
 /// Which panel owns the keyboard.
@@ -19,7 +18,7 @@ pub enum Focus {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ConfirmKind {
     Delete { name: String },
-    Uninstall { name: String, cli: TargetCli },
+    Uninstall { name: String, cli: String },
 }
 
 /// Modal state of the split screen.
@@ -29,7 +28,7 @@ pub enum Mode {
     /// A pack was selected for installation; explorer drives target choice.
     Installing {
         pack: String,
-        cli: TargetCli,
+        cli: String,
     },
 }
 
@@ -199,21 +198,21 @@ mod tests {
     use super::*;
     use std::path::PathBuf;
 
-    fn pack(name: &str, clis: &[TargetCli]) -> PackSummaryDto {
+    fn pack(name: &str, clis: &[&str]) -> PackSummaryDto {
         PackSummaryDto {
             name: name.to_string(),
             version: "1.0.0".to_string(),
             description: String::new(),
-            clis: clis.to_vec(),
+            clis: clis.iter().map(|c| c.to_string()).collect(),
             item_count: 1,
         }
     }
 
-    fn installed(name: &str, cli: TargetCli) -> InstalledPackDto {
+    fn installed(name: &str, cli: &str) -> InstalledPackDto {
         InstalledPackDto {
             name: name.to_string(),
             version: "1.0.0".to_string(),
-            cli,
+            cli: cli.to_string(),
             paths: vec![PathBuf::from(".agents/skills/x")],
         }
     }
@@ -221,14 +220,11 @@ mod tests {
     #[test]
     fn filter_available_excludes_packs_installed_for_their_first_cli() {
         let packs = vec![
-            pack("tdd", &[TargetCli::Vibe]),
-            pack("review", &[TargetCli::Vibe, TargetCli::Gemini]),
-            pack("free", &[TargetCli::Gemini]),
+            pack("tdd", &["vibe"]),
+            pack("review", &["vibe", "gemini"]),
+            pack("free", &["gemini"]),
         ];
-        let installed = vec![
-            installed("tdd", TargetCli::Vibe),
-            installed("review", TargetCli::Vibe),
-        ];
+        let installed = vec![installed("tdd", "vibe"), installed("review", "vibe")];
         let available = filter_available(&packs, &installed);
         let names: Vec<&str> = available.iter().map(|p| p.name.as_str()).collect();
         assert_eq!(names, vec!["free"]);
@@ -236,17 +232,17 @@ mod tests {
 
     #[test]
     fn filter_available_keeps_pack_when_only_another_cli_is_installed() {
-        let packs = vec![pack("tdd", &[TargetCli::Vibe, TargetCli::Gemini])];
+        let packs = vec![pack("tdd", &["vibe", "gemini"])];
         // The index records gemini, but `A` installs for the first CLI (vibe):
         // the pack stays available.
-        let installed = vec![installed("tdd", TargetCli::Gemini)];
+        let installed = vec![installed("tdd", "gemini")];
         let available = filter_available(&packs, &installed);
         assert_eq!(available.len(), 1);
     }
 
     #[test]
     fn filter_available_with_no_install_keeps_everything() {
-        let packs = vec![pack("tdd", &[TargetCli::Vibe])];
+        let packs = vec![pack("tdd", &["vibe"])];
         assert_eq!(filter_available(&packs, &[]).len(), 1);
     }
 }
