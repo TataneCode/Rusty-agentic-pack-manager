@@ -3,7 +3,7 @@ use std::path::{Path, PathBuf};
 use crate::application::cli_profile::service::CliProfileService;
 use crate::application::error::ApplicationError;
 use crate::application::pack::dto::{
-    InstallResultDto, InstalledPackDto, PackSummaryDto, UninstallResultDto,
+    InstallResultDto, InstalledPackDto, PackDetailDto, PackSummaryDto, UninstallResultDto,
 };
 use crate::application::pack::traits::{
     InstallDestination, InstallIndexRepository, PackRepository,
@@ -57,6 +57,11 @@ impl PackService {
 
     pub fn find(&self, name: &str) -> Result<Pack, ApplicationError> {
         self.repository.find(name)
+    }
+
+    /// Full manifest of one pack as a display DTO (`rapm show`, E03).
+    pub fn detail(&self, name: &str) -> Result<PackDetailDto, ApplicationError> {
+        Ok(PackDetailDto::from_pack(&self.repository.find(name)?))
     }
 
     /// Installations recorded in the install index of `target_root`.
@@ -278,6 +283,24 @@ mod tests {
         let (repo, dest, index) = service_with(pack);
         let service = PackService::new(Box::new(repo), Box::new(dest), Box::new(index));
         assert_eq!(service.default_cli("tdd").unwrap(), "gemini");
+    }
+
+    #[test]
+    fn detail_maps_the_pack_to_a_display_dto() {
+        let pack = sample_pack("tdd", CliId::new("vibe").unwrap());
+        let (repo, dest, index) = service_with(pack);
+        let service = PackService::new(Box::new(repo), Box::new(dest), Box::new(index));
+        let dto = service.detail("tdd").unwrap();
+        assert_eq!(dto.name, "tdd");
+        assert_eq!(dto.version, "1.0.0");
+        assert_eq!(dto.clis, vec!["vibe".to_string()]);
+        assert_eq!(dto.items.len(), 1);
+        assert_eq!(dto.items[0].kind, "skill");
+        assert_eq!(dto.items[0].source, "skills/tdd/SKILL.md");
+        assert_eq!(
+            dto.items[0].destinations,
+            vec![("vibe".to_string(), ".agents/skills/tdd/".to_string())]
+        );
     }
 
     #[test]

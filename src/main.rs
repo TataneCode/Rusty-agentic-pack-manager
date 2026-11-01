@@ -25,22 +25,9 @@ use rusty_agentic_pack_manager::presentation::tui::event::EventHandler;
 use rusty_agentic_pack_manager::presentation::tui::split_view;
 
 fn build_app(start_dir: PathBuf, library: &PackLibrary) -> Result<App> {
-    let profiles = FsCliProfileRepository::new(library.profile_roots.clone());
-    let registry = profiles.registry().context("CLI profiles unreadable")?;
-    let pack_repository = FsPackRepository::with_profiles(library.roots.clone(), registry)
-        .with_context(|| format!("pack library unreadable: {:?}", library.roots))?;
-    let destination = FsInstallDestination::new(library.roots.clone());
     let content =
         FsPackContentRepository::new(library.roots.clone()).context("pack content repo")?;
-    let pack_service = PackService::new(
-        Box::new(pack_repository),
-        Box::new(destination),
-        Box::new(FsInstallIndexRepository),
-    )
-    .with_profiles(CliProfileService::new(
-        Box::new(profiles),
-        Box::new(content.clone()),
-    ));
+    let pack_service = build_pack_service(library)?;
     let explorer = ExplorerService::new(Box::new(FsExplorer));
     let view_service = PackViewService::new(Box::new(content));
     Ok(App::new(pack_service, explorer, view_service, start_dir))
@@ -67,6 +54,27 @@ fn build_creation_service(library: &PackLibrary) -> Result<PackCreationService> 
     Ok(PackCreationService::new(Box::new(repository), Box::new(writer)).with_profiles(registry))
 }
 
+/// The `PackService` used by both the TUI and the headless CLI (E03):
+/// same adapters, same profile resolver.
+fn build_pack_service(library: &PackLibrary) -> Result<PackService> {
+    let profiles = FsCliProfileRepository::new(library.profile_roots.clone());
+    let registry = profiles.registry().context("CLI profiles unreadable")?;
+    let pack_repository = FsPackRepository::with_profiles(library.roots.clone(), registry)
+        .with_context(|| format!("pack library unreadable: {:?}", library.roots))?;
+    let destination = FsInstallDestination::new(library.roots.clone());
+    let content =
+        FsPackContentRepository::new(library.roots.clone()).context("pack content repo")?;
+    Ok(PackService::new(
+        Box::new(pack_repository),
+        Box::new(destination),
+        Box::new(FsInstallIndexRepository),
+    )
+    .with_profiles(CliProfileService::new(
+        Box::new(profiles),
+        Box::new(content),
+    )))
+}
+
 fn main() -> Result<()> {
     let args: Vec<String> = std::env::args().skip(1).collect();
     let library = PackLibrary::discover().ok_or_else(|| {
@@ -78,8 +86,9 @@ fn main() -> Result<()> {
     // The CLI runs before any terminal setup: `rapm <subcommand>` never
     // enters raw mode, `rapm` alone launches the TUI.
     if cli::is_cli_invocation(&args) {
-        let service = build_creation_service(&library)?;
-        match cli::run(&args, &service) {
+        let creation = build_creation_service(&library)?;
+        let pack = build_pack_service(&library)?;
+        match cli::run(&args, &creation, &pack) {
             Ok(code) => std::process::exit(code),
             Err(err) => {
                 eprintln!("error: {err}");
