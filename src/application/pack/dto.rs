@@ -20,7 +20,11 @@ impl PackSummaryDto {
             name: pack.name.as_str().to_string(),
             version: pack.version.as_str().to_string(),
             description: pack.description.clone(),
-            clis: pack.clis.iter().map(|cli| cli.as_str().to_string()).collect(),
+            clis: pack
+                .clis
+                .iter()
+                .map(|cli| cli.as_str().to_string())
+                .collect(),
             item_count: pack.items.len(),
         }
     }

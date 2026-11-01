@@ -6,15 +6,15 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use rusty_agentic_pack_manager::domain::pack::value_objects::TargetCli;
 use rusty_agentic_pack_manager::application::error::ApplicationError;
+use rusty_agentic_pack_manager::application::library::traits::LibraryInitializer;
 use rusty_agentic_pack_manager::application::pack::service::PackService;
 use rusty_agentic_pack_manager::application::pack::traits::PackRepository;
 use rusty_agentic_pack_manager::application::pack_create::dto::{CreateItemDto, CreatePackDto};
 use rusty_agentic_pack_manager::application::pack_create::service::PackCreationService;
-use rusty_agentic_pack_manager::application::library::traits::LibraryInitializer;
-use rusty_agentic_pack_manager::infrastructure::filesystem::library::FsLibraryInitializer;
+use rusty_agentic_pack_manager::domain::pack::value_objects::TargetCli;
 use rusty_agentic_pack_manager::infrastructure::filesystem::explorer::FsInstallDestination;
+use rusty_agentic_pack_manager::infrastructure::filesystem::library::FsLibraryInitializer;
 use rusty_agentic_pack_manager::infrastructure::pack::index::FsInstallIndexRepository;
 use rusty_agentic_pack_manager::infrastructure::pack::loader::FsPackRepository;
 use rusty_agentic_pack_manager::infrastructure::pack::writer::FsPackWriter;

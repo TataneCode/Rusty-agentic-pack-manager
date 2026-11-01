@@ -119,7 +119,10 @@ fn application_never_imports_infrastructure() {
     for file in rust_files(&application) {
         let source = std::fs::read_to_string(&file).unwrap();
         for line in use_lines(&source, "crate::infrastructure") {
-            violations.push(format!("{}:{line} imports `crate::infrastructure`", file.display()));
+            violations.push(format!(
+                "{}:{line} imports `crate::infrastructure`",
+                file.display()
+            ));
         }
     }
     assert!(

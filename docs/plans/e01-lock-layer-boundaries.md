@@ -1,6 +1,6 @@
 # Plan: E01 — Verrouiller la frontière des fronts (CLI + TUI)
 
-> Status: **draft** — awaiting user approval. Source: `.evolutions/e01-verrouiller-frontieres.md` (audit d'architecture, point 1) via skills `/challenge` then `/plan` (architect). Format: `rust-architecture-planning`. User decisions are marked ✅.
+> Status: **implemented** — branch `vibe/e01-lock-layer-boundaries-7eadec`; gate green (`fmt`, `clippy --all-targets -- -D warnings`, `cargo test` = 145 tests incl. `tests/architecture.rs`). Source: `.evolutions/e01-verrouiller-frontieres.md` (audit d'architecture, point 1) via skills `/challenge` then `/plan` (architect). Format: `rust-architecture-planning`. User decisions are marked ✅.
 
 ## Challenge (framing, per `/challenge`)
 

@@ -3,13 +3,13 @@ use std::path::PathBuf;
 use anyhow::{Context, Result};
 
 use rusty_agentic_pack_manager::application::explorer::service::ExplorerService;
+use rusty_agentic_pack_manager::application::library::traits::LibraryInitializer;
 use rusty_agentic_pack_manager::application::pack::service::PackService;
 use rusty_agentic_pack_manager::application::pack_create::service::PackCreationService;
 use rusty_agentic_pack_manager::application::pack_view::service::PackViewService;
 use rusty_agentic_pack_manager::infrastructure::filesystem::explorer::{
     FsExplorer, FsInstallDestination,
 };
-use rusty_agentic_pack_manager::application::library::traits::LibraryInitializer;
 use rusty_agentic_pack_manager::infrastructure::filesystem::library::FsLibraryInitializer;
 use rusty_agentic_pack_manager::infrastructure::pack::content::FsPackContentRepository;
 use rusty_agentic_pack_manager::infrastructure::pack::index::FsInstallIndexRepository;

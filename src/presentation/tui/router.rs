@@ -1,7 +1,6 @@
 use crate::presentation::tui::app::{App, ConfirmDialog, ConfirmKind, Focus, InputKind, Popup};
 use crate::presentation::tui::common::keys::{map_key, AppAction, KeyContext};
 
-
 /// Screen routing: maps user actions to handlers (pattern rusty-console
 /// router.rs, synchronous). Screens: split screen, viewer, dialogs.
 impl App {

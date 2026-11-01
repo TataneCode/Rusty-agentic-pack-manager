@@ -6,9 +6,9 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use rusty_agentic_pack_manager::application::explorer::service::ExplorerService;
-use rusty_agentic_pack_manager::domain::pack::value_objects::TargetCli;
 use rusty_agentic_pack_manager::application::pack::service::PackService;
 use rusty_agentic_pack_manager::application::pack::traits::PackRepository;
+use rusty_agentic_pack_manager::domain::pack::value_objects::TargetCli;
 use rusty_agentic_pack_manager::infrastructure::filesystem::explorer::{
     FsExplorer, FsInstallDestination,
 };
@@ -176,9 +176,7 @@ fn failed_install_writes_no_index() {
     let root = target.to_str().unwrap();
 
     // First install, then a second one without overwrite aborts on collision.
-    service
-        .install("tdd", "vibe", root, false)
-        .unwrap();
+    service.install("tdd", "vibe", root, false).unwrap();
     let err = service
         .install("tdd", "vibe", root, false)
         .expect_err("collision must abort");
@@ -235,7 +233,7 @@ fn all_shipped_packs_load_and_install() {
     );
 
     for cli in ["vibe", "gemini"] {
-        let target = tmp.path().join(format!("{cli}"));
+        let target = tmp.path().join(cli);
         fs::create_dir_all(&target).unwrap();
         for pack in &packs {
             if !pack.supports(TargetCli::parse(cli).unwrap()) {

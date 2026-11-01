@@ -5,7 +5,7 @@ Verification commands, **in this order**, before any delivery:
 ```bash
 cargo fmt                  # format — no diff must remain
 cargo clippy -- -D warnings # strict lint: CI treats warnings as errors
-cargo test                 # all tests
+cargo test                 # all tests, including the architecture test (`--test architecture`)
 cargo check                # fast compile (MSRV 1.88)
 cargo build --release      # only if the delivery concerns the binary
 ```
