@@ -232,8 +232,12 @@ impl App {
         let pack_name = pack.name.clone();
         // Install for the pack's default CLI (CLI picker is v1.1); the
         // default-CLI rule lives in the application layer.
-        let Ok(cli) = self.pack_service.default_cli(&pack_name) else {
-            return;
+        let cli = match self.pack_service.default_cli(&pack_name) {
+            Ok(cli) => cli,
+            Err(err) => {
+                self.show_error(err.to_string());
+                return;
+            }
         };
         let root = self.current_dir.to_string_lossy().into_owned();
         match self.pack_service.install(&pack_name, &cli, &root, false) {

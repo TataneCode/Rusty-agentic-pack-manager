@@ -47,12 +47,40 @@ fn use_lines(source: &str, needle: &str) -> Vec<usize> {
         .collect()
 }
 
-/// Source with the trailing `#[cfg(test)]` module stripped (used for the
-/// I/O rule on `library.rs`, whose test fixtures legitimately use TempDir).
-fn strip_test_module(source: &str) -> &str {
-    match source.find("#[cfg(test)]") {
-        Some(index) => &source[..index],
-        None => source,
+/// Source with any top-level `#[cfg(test)] mod ... { ... }` block removed
+/// (brace-matched, so code after the test module is still scanned). Used
+/// for the I/O rule on `library.rs`, whose test fixtures legitimately use
+/// TempDir.
+fn strip_test_module(source: &str) -> String {
+    let Some(attr) = source.find("#[cfg(test)]") else {
+        return source.to_string();
+    };
+    let rest = &source[attr..];
+    let Some(mod_kw) = rest.find("mod ") else {
+        return source.to_string();
+    };
+    let after_mod = &rest[mod_kw..];
+    let Some(open) = after_mod.find('{') else {
+        return source.to_string();
+    };
+    let mut depth = 0usize;
+    let mut end = None;
+    for (index, ch) in after_mod[open..].char_indices() {
+        match ch {
+            '{' => depth += 1,
+            '}' => {
+                depth -= 1;
+                if depth == 0 {
+                    end = Some(open + index + 1);
+                    break;
+                }
+            }
+            _ => {}
+        }
+    }
+    match end {
+        Some(end) => format!("{}{}", &source[..attr], &after_mod[end..]),
+        None => source.to_string(),
     }
 }
 
@@ -105,7 +133,7 @@ fn presentation_tui_does_no_direct_io() {
 fn presentation_library_does_no_direct_io_outside_its_tests() {
     let file = src_root().join("presentation").join("library.rs");
     let source = std::fs::read_to_string(&file).unwrap();
-    let violations = direct_io_lines(strip_test_module(&source));
+    let violations = direct_io_lines(&strip_test_module(&source));
     assert!(
         violations.is_empty(),
         "src/presentation/library.rs must not use std::fs outside #[cfg(test)]: lines {violations:?}"
@@ -149,9 +177,10 @@ mod unit {
     }
 
     #[test]
-    fn strip_test_module_keeps_only_the_non_test_part() {
-        let source = "fn a() {}\n#[cfg(test)]\nmod tests {\n    std::fs::remove_file(\"x\");\n}\n";
-        assert_eq!(strip_test_module(source), "fn a() {}\n");
+    fn strip_test_module_removes_the_test_block_but_keeps_code_after_it() {
+        let source =
+            "fn a() {}\n#[cfg(test)]\nmod tests {\n    std::fs::remove_file(\"x\");\n}\nfn after() {}\n";
+        assert_eq!(strip_test_module(source), "fn a() {}\n\nfn after() {}\n");
         assert_eq!(strip_test_module("fn a() {}"), "fn a() {}");
     }
 }
