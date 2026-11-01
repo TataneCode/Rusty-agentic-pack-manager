@@ -2,6 +2,8 @@ use std::path::{Path, PathBuf};
 
 /// System-wide pack library shipped by the RPM/DEB packages.
 const SYSTEM_PACKS_DIR: &str = "/usr/share/rusty-agentic-pack-manager/packs";
+/// System-wide CLI profiles shipped alongside the packs (E02).
+const SYSTEM_CLIS_DIR: &str = "/usr/share/rusty-agentic-pack-manager/clis";
 
 /// The pack library: an ordered list of read roots (user library first)
 /// plus the writable root where new packs are created.
@@ -14,11 +16,22 @@ pub struct PackLibrary {
     pub roots: Vec<PathBuf>,
     /// Writable root: new packs are always created here.
     pub user_root: PathBuf,
+    /// Read roots of the CLI profiles (`clis/<id>.toml`, E02), same order
+    /// and priority as `roots` (user library first).
+    pub profile_roots: Vec<PathBuf>,
 }
 
 impl PackLibrary {
-    pub fn new(roots: Vec<PathBuf>, user_root: PathBuf) -> PackLibrary {
-        PackLibrary { roots, user_root }
+    pub fn new(
+        roots: Vec<PathBuf>,
+        user_root: PathBuf,
+        profile_roots: Vec<PathBuf>,
+    ) -> PackLibrary {
+        PackLibrary {
+            roots,
+            user_root,
+            profile_roots,
+        }
     }
 
     /// Discover the library from the environment. The user root is always
@@ -32,7 +45,17 @@ impl PackLibrary {
             cwd().as_deref(),
             Path::new(SYSTEM_PACKS_DIR),
         );
-        Some(PackLibrary { roots, user_root })
+        let profile_roots = resolve_profile_roots(
+            &user_root,
+            exe_dir().as_deref(),
+            cwd().as_deref(),
+            Path::new(SYSTEM_CLIS_DIR),
+        );
+        Some(PackLibrary {
+            roots,
+            user_root,
+            profile_roots,
+        })
     }
 }
 
@@ -44,6 +67,15 @@ fn user_packs_dir() -> Option<PathBuf> {
         std::env::var_os("HOME").as_deref(),
         std::env::var_os("APPDATA").as_deref(),
     )
+}
+
+/// User CLI profile library: the `clis` directory next to the user packs
+/// (E02), so a user profile overrides a shipped one of the same name.
+fn user_clis_dir(user_packs_root: &Path) -> PathBuf {
+    user_packs_root
+        .parent()
+        .map(|p| p.join("clis"))
+        .unwrap_or_else(|| user_packs_root.join("clis"))
 }
 
 #[cfg_attr(not(windows), allow(unused_variables))]
@@ -85,6 +117,33 @@ fn exe_dir() -> Option<PathBuf> {
 
 fn cwd() -> Option<PathBuf> {
     std::env::current_dir().ok()
+}
+
+/// Ordered, de-duplicated CLI profile roots: the user `clis` dir first,
+/// then `clis` next to the binary, in the cwd, and the system location.
+/// Same rule as `resolve_roots`, on the `clis` directory (E02).
+fn resolve_profile_roots(
+    user_packs_root: &Path,
+    exe_dir: Option<&Path>,
+    cwd: Option<&Path>,
+    system: &Path,
+) -> Vec<PathBuf> {
+    let user = user_clis_dir(user_packs_root);
+    let mut candidates: Vec<PathBuf> = Vec::new();
+    if let Some(dir) = exe_dir {
+        candidates.push(dir.join("clis"));
+    }
+    if let Some(dir) = cwd {
+        candidates.push(dir.join("clis"));
+    }
+    candidates.push(system.to_path_buf());
+    let mut roots: Vec<PathBuf> = vec![user.clone()];
+    for candidate in candidates {
+        if candidate.is_dir() && !roots.contains(&candidate) && candidate != user {
+            roots.push(candidate);
+        }
+    }
+    roots
 }
 
 /// Ordered, de-duplicated read roots: the user root first, then every
@@ -170,6 +229,35 @@ mod tests {
         );
         // The user root is first even though it does not exist yet.
         assert_eq!(roots, vec![user_root, exe_packs, system]);
+    }
+
+    #[test]
+    fn user_clis_dir_sits_next_to_the_user_packs() {
+        assert_eq!(
+            user_clis_dir(Path::new("/xdg/rapm/packs")),
+            PathBuf::from("/xdg/rapm/clis")
+        );
+    }
+
+    #[test]
+    fn resolve_profile_roots_keeps_user_clis_first() {
+        let tmp = tempfile::TempDir::new().unwrap();
+        let user_packs = tmp.path().join("rapm/packs");
+        let user_clis = tmp.path().join("rapm/clis");
+        let exe_clis = tmp.path().join("exe/clis");
+        let system = tmp.path().join("system/clis");
+        std::fs::create_dir_all(&user_clis).unwrap();
+        std::fs::create_dir_all(&exe_clis).unwrap();
+        std::fs::create_dir_all(&system).unwrap();
+
+        let roots = resolve_profile_roots(
+            &user_packs,
+            Some(tmp.path().join("exe").as_path()),
+            Some(tmp.path().join("cwd").as_path()),
+            &system,
+        );
+        // The user clis dir is first even though only it exists.
+        assert_eq!(roots, vec![user_clis, exe_clis, system]);
     }
 
     #[test]

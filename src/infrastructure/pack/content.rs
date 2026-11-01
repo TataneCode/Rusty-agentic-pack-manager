@@ -9,6 +9,7 @@ const TEXT_EXTENSIONS: [&str; 9] = ["md", "js", "toml", "txt", "json", "yaml", "
 /// Reads pack file contents from the pack library (viewer backing).
 /// Roots are in read order (user library first): the first root containing
 /// the pack wins.
+#[derive(Clone)]
 pub struct FsPackContentRepository {
     roots: Vec<PathBuf>,
 }

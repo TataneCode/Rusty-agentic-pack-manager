@@ -17,13 +17,14 @@ Usage:
   --name <name>            Pack name (lowercase, digits, - and _); prompted if omitted
   --version <version>      Semver version (default: 1.0.0)
   --description <text>     Pack description; prompted if omitted
-  --cli <vibe,gemini>      Target CLIs (default: union of the items' destinations)
+  --cli <id,...>           Target CLIs (any CLI with a loaded profile, default: union of the items' destinations)
   --force                  Replace an existing pack of the same name
   --skill <path>           Add a skill (file or directory); repeatable
   --agent <path>           Add an agent (file or directory); repeatable
   --command <path>         Add a command (file or directory); repeatable
-  --vibe-dest <dest>       Install destination for Vibe CLI (applies to the last item)
-  --gemini-dest <dest>     Install destination for Gemini CLI (applies to the last item)
+  --dest <cli>=<dest>      Install destination for any profiled CLI (applies to the last item); repeatable
+  --vibe-dest <dest>       Shortcut for --dest vibe=<dest> (kept for compatibility)
+  --gemini-dest <dest>     Shortcut for --dest gemini=<dest> (kept for compatibility)
   -h, --help               Show this help
 
 Items are copied into the pack under <kind>s/<name>/ (skills/, agents/,
@@ -180,6 +181,20 @@ fn parse_create(tokens: &[String]) -> Result<CliCommand, ApplicationError> {
                     source: PathBuf::from(source),
                     destinations: Vec::new(),
                 });
+            }
+            "--dest" => {
+                let raw = parser.value(flag)?;
+                let Some((cli, dest)) = raw.split_once('=') else {
+                    return Err(ApplicationError::Usage(format!(
+                        "--dest expects <cli>=<dest>, got: {raw}"
+                    )));
+                };
+                let Some(item) = options.items.last_mut() else {
+                    return Err(ApplicationError::Usage(format!(
+                        "{flag} applies to an item: pass --skill/--agent/--command first"
+                    )));
+                };
+                item.destinations.push((cli.to_string(), dest.to_string()));
             }
             "--vibe-dest" | "--gemini-dest" => {
                 let dest = parser.value(flag)?;
@@ -377,6 +392,43 @@ mod tests {
     #[test]
     fn create_requires_at_least_one_item() {
         let err = parse(&args(&["pack", "create", "--name", "x"])).unwrap_err();
+        assert!(matches!(err, ApplicationError::Usage(_)));
+    }
+
+    #[test]
+    fn create_parses_generic_dest_flag() {
+        let command = parse(&args(&[
+            "pack",
+            "create",
+            "--name",
+            "my-pack",
+            "--cli",
+            "claude",
+            "--skill",
+            "./skills/tdd",
+            "--dest",
+            "claude=.claude/skills/tdd/SKILL.md",
+        ]))
+        .unwrap();
+        let Some(CliCommand::Create(options)) = command else {
+            panic!("expected create");
+        };
+        assert_eq!(options.clis, vec!["claude".to_string()]);
+        assert_eq!(
+            options.items[0].destinations,
+            vec![(
+                "claude".to_string(),
+                ".claude/skills/tdd/SKILL.md".to_string()
+            )]
+        );
+    }
+
+    #[test]
+    fn dest_flag_requires_cli_equals_dest() {
+        let err = parse(&args(&[
+            "pack", "create", "--skill", "./tdd", "--dest", "claude",
+        ]))
+        .unwrap_err();
         assert!(matches!(err, ApplicationError::Usage(_)));
     }
 

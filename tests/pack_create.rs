@@ -61,14 +61,19 @@ fn wired(tmp: &TempDir) -> (PackLibrary, PackCreationService, PackService) {
     let system_root = tmp.path().join("system-packs");
     fs::create_dir_all(&user_root).unwrap();
     fs::create_dir_all(&system_root).unwrap();
-    let library = PackLibrary::new(vec![user_root.clone(), system_root], user_root.clone());
+    let library = PackLibrary::new(
+        vec![user_root.clone(), system_root],
+        user_root.clone(),
+        vec![],
+    );
     FsLibraryInitializer
         .ensure_user_root(&library.user_root)
         .unwrap();
     let repository = pack_repo(library.roots.clone());
     let writer = FsPackWriter::new(user_root.clone());
     let creation =
-        PackCreationService::new(Box::new(pack_repo(library.roots.clone())), Box::new(writer));
+        PackCreationService::new(Box::new(pack_repo(library.roots.clone())), Box::new(writer))
+            .with_profiles(test_registry());
     let install = PackService::new(
         Box::new(repository),
         Box::new(FsInstallDestination::new(library.roots.clone())),
@@ -316,7 +321,11 @@ fn library_works_when_the_user_root_does_not_exist_yet() {
     )
     .unwrap();
 
-    let library = PackLibrary::new(vec![user_root.clone(), system_root], user_root.clone());
+    let library = PackLibrary::new(
+        vec![user_root.clone(), system_root],
+        user_root.clone(),
+        vec![],
+    );
     // Regression (review): before the LibraryInitializer port, FsPackRepository::new
     // rejected a missing first root and the TUI failed to start on a fresh
     // machine.
@@ -331,7 +340,8 @@ fn library_works_when_the_user_root_does_not_exist_yet() {
     let creation = PackCreationService::new(
         Box::new(pack_repo(library.roots.clone())),
         Box::new(FsPackWriter::new(library.user_root.clone())),
-    );
+    )
+    .with_profiles(test_registry());
     creation
         .create(&dto(vec![skill_dto(&host)]))
         .expect("creation must succeed");
