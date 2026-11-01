@@ -49,6 +49,6 @@ pub trait InstallIndexRepository: Send {
         &self,
         target_root: &str,
         name: &str,
-        cli: crate::domain::pack::value_objects::TargetCli,
+        cli: crate::domain::cli_profile::value_objects::CliId,
     ) -> Result<(), ApplicationError>;
 }

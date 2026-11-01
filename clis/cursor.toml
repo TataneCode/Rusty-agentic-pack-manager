@@ -1,0 +1,11 @@
+# CLI profile: Cursor (shipped default). Override by placing a cursor.toml
+# in the user CLI library ($XDG_DATA_HOME/rapm/clis).
+[cli]
+name = "cursor"
+label = "Cursor"
+
+[defaults]
+skill     = ".cursor/skills/{name}/SKILL.md"
+skill_dir = ".cursor/skills/{name}/"
+agent     = ".cursor/agents/{name}.md"
+command   = ".cursor/commands/{name}.md"

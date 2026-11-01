@@ -153,7 +153,28 @@ gemini = ".gemini/skills/tdd"
 
 - `name`: lowercase, digits, `-`, `_`; starts with a letter.
 - `version`: semver `MAJOR.MINOR.PATCH` (`-rc.1` suffix allowed).
-- `destinations`: paths relative to the target directory chosen at install time; absolute or upward (`..`) paths are rejected.
+- `cli`: any CLI id with a loaded profile (see below); a pack must target at least one.
+- `destinations`: paths relative to the target directory chosen at install time; absolute or upward (`..`) paths are rejected. **Optional** for a profiled CLI: when omitted, the destination is computed from the CLI profile (`{name}` = item name).
+
+## CLI profiles (`clis/`)
+
+The destination layout of each CLI lives in a profile file `clis/<id>.toml` (shipped in `clis/`, loaded from the user library `$XDG_DATA_HOME/rapm/clis` first, then `clis/` next to the binary, in the cwd, and `/usr/share/rusty-agentic-pack-manager/clis` — first match wins, so a user profile overrides a shipped one):
+
+```toml
+[cli]
+name = "claude"
+label = "Claude Code"
+[defaults]
+skill     = ".claude/skills/{name}/SKILL.md"   # file source
+skill_dir = ".claude/skills/{name}/"            # directory source (optional)
+agent     = ".claude/agents/{name}.md"
+command   = ".claude/commands/{name}.md"
+```
+
+- `{name}` = the item name: the source directory's name, or its parent directory for a file source (`skills/tdd/SKILL.md` -> `tdd`).
+- `{file}` = the source file name, also available in templates.
+- A pack may declare `cli = ["claude"]` with items **without** `[items.destinations]`: destinations are computed from the profile at install time. Explicit destinations always win (retrocompatible with existing packs).
+- Shipped profiles: `vibe`, `gemini`, `claude`, `copilot`, `opencode`, `codex`, `cursor`.
 
 ## Embedded packs
 

@@ -7,11 +7,11 @@ use crate::application::pack_create::dto::{
     CreateItemDto, CreatePackDto, CreatePackResultDto, PackSourceDto,
 };
 use crate::application::pack_create::traits::PackWriter;
+use crate::domain::cli_profile::profile::CliProfileRegistry;
+use crate::domain::cli_profile::value_objects::CliId;
 use crate::domain::pack::entity::{Pack, PackItem};
 use crate::domain::pack::error::DomainError;
-use crate::domain::pack::value_objects::{
-    PackItemKind, PackName, PackVersion, TargetCli, TargetCliMap,
-};
+use crate::domain::pack::value_objects::{PackItemKind, PackName, PackVersion, TargetCliMap};
 
 /// Application service for `rapm pack create`: validates the input, builds
 /// the domain `Pack` (canonical `<kind>s/<name>` sources, one destination
@@ -21,11 +21,23 @@ use crate::domain::pack::value_objects::{
 pub struct PackCreationService {
     repository: Box<dyn PackRepository>,
     writer: Box<dyn PackWriter>,
+    profiles: CliProfileRegistry,
 }
 
 impl PackCreationService {
     pub fn new(repository: Box<dyn PackRepository>, writer: Box<dyn PackWriter>) -> Self {
-        PackCreationService { repository, writer }
+        PackCreationService {
+            repository,
+            writer,
+            profiles: CliProfileRegistry::default(),
+        }
+    }
+
+    /// CLI profiles validating `--cli` and destination keys (E02): a CLI
+    /// with a loaded profile is accepted even if unknown to the v1 enum.
+    pub fn with_profiles(mut self, profiles: CliProfileRegistry) -> Self {
+        self.profiles = profiles;
+        self
     }
 
     pub fn create(&self, dto: &CreatePackDto) -> Result<CreatePackResultDto, ApplicationError> {
@@ -38,16 +50,16 @@ impl PackCreationService {
             ));
         }
 
-        let declared_clis = parse_clis(&dto.clis)?;
-        let (items, sources) = build_items(&dto.items)?;
+        let declared_clis = parse_clis(&dto.clis, &self.profiles)?;
+        let (items, sources) = build_items(&dto.items, &self.profiles)?;
 
         // CLI list: explicit --cli, else the union of the items' destinations.
         let clis = if declared_clis.is_empty() {
-            let mut union: Vec<TargetCli> = Vec::new();
+            let mut union: Vec<CliId> = Vec::new();
             for item in &items {
                 for (cli, _) in item.destinations.iter() {
-                    if !union.contains(&cli) {
-                        union.push(cli);
+                    if !union.contains(cli) {
+                        union.push(cli.clone());
                     }
                 }
             }
@@ -59,7 +71,7 @@ impl PackCreationService {
         // Every item must have a destination for every declared CLI.
         let missing = items
             .iter()
-            .any(|item| clis.iter().any(|cli| item.destinations.get(*cli).is_none()));
+            .any(|item| clis.iter().any(|cli| item.destinations.get(cli).is_none()));
         if missing {
             return Err(ApplicationError::Domain(DomainError::EmptyItemDestination));
         }
@@ -76,10 +88,13 @@ impl PackCreationService {
     }
 }
 
-fn parse_clis(raw: &[String]) -> Result<Vec<TargetCli>, ApplicationError> {
+fn parse_clis(
+    raw: &[String],
+    profiles: &CliProfileRegistry,
+) -> Result<Vec<CliId>, ApplicationError> {
     let mut clis = Vec::new();
     for c in raw {
-        let cli = TargetCli::parse(c)?;
+        let cli = profiles.validate(c)?;
         if !clis.contains(&cli) {
             clis.push(cli);
         }
@@ -92,6 +107,7 @@ fn parse_clis(raw: &[String]) -> Result<Vec<TargetCli>, ApplicationError> {
 /// (they would collide under `<kind>s/<name>`).
 fn build_items(
     dtos: &[CreateItemDto],
+    profiles: &CliProfileRegistry,
 ) -> Result<(Vec<PackItem>, Vec<PackSourceDto>), ApplicationError> {
     let mut items = Vec::new();
     let mut sources = Vec::new();
@@ -107,7 +123,7 @@ fn build_items(
         }
         let mut destinations = TargetCliMap::default();
         for (cli_raw, dest) in &dto.destinations {
-            let cli = TargetCli::parse(cli_raw)?;
+            let cli = profiles.validate(cli_raw)?;
             // Fail fast on destinations that could never install (absolute,
             // escaping, or root-only paths): the same rule the domain
             // enforces at install time.
@@ -170,13 +186,44 @@ mod tests {
             PackName::new(name).unwrap(),
             PackVersion::new("1.0.0").unwrap(),
             String::new(),
-            vec![TargetCli::Vibe],
+            vec![CliId::new("vibe").unwrap()],
             vec![],
         )
         .unwrap()
     }
 
     /// A repository where `find("my-pack")` answers according to `exists`.
+    fn test_registry(ids: &[&str]) -> crate::domain::cli_profile::profile::CliProfileRegistry {
+        use crate::domain::cli_profile::profile::{
+            CliProfile, CliProfileRegistry, DestinationTemplates,
+        };
+        let profile = |id: &str| {
+            CliProfile::new(
+                CliId::new(id).unwrap(),
+                id.to_string(),
+                DestinationTemplates {
+                    skill: ".agents/skills/{name}/SKILL.md".to_string(),
+                    skill_dir: Some(".agents/skills/{name}/".to_string()),
+                    agent: ".agents/{name}.toml".to_string(),
+                    agent_dir: None,
+                    command: ".agents/{name}.toml".to_string(),
+                    command_dir: None,
+                },
+            )
+            .unwrap()
+        };
+        CliProfileRegistry::new(ids.iter().map(|id| profile(id)).collect())
+    }
+
+    fn service_with_registry(
+        exists: bool,
+        registry: crate::domain::cli_profile::profile::CliProfileRegistry,
+        writer: MockPackWriter,
+    ) -> PackCreationService {
+        PackCreationService::new(Box::new(repo_with(exists)), Box::new(writer))
+            .with_profiles(registry)
+    }
+
     fn repo_with(exists: bool) -> MockPackRepository {
         let mut repo = MockPackRepository::new();
         repo.expect_find().times(0..).returning(move |name| {
@@ -204,7 +251,7 @@ mod tests {
             .times(1)
             .withf(|pack, sources| {
                 pack.name.as_str() == "my-pack"
-                    && pack.clis == vec![TargetCli::Vibe, TargetCli::Gemini]
+                    && pack.clis == vec![CliId::new("gemini").unwrap(), CliId::new("vibe").unwrap()]
                     && pack.items.len() == 1
                     && pack.items[0].kind == PackItemKind::Skill
                     && pack.items[0].source == Path::new("skills/tdd")
@@ -214,7 +261,7 @@ mod tests {
             })
             .returning(|_, _| Ok(ok_outcome()));
 
-        let service = PackCreationService::new(Box::new(repo_with(false)), Box::new(writer));
+        let service = service_with_registry(false, test_registry(&["vibe", "gemini"]), writer);
         let result = service.create(&sample_dto()).unwrap();
         assert_eq!(result.pack_name, "my-pack");
         assert_eq!(result.copied_count, 1);
@@ -225,7 +272,7 @@ mod tests {
     fn create_rejects_existing_pack_without_overwrite() {
         let mut writer = MockPackWriter::new();
         writer.expect_write().never();
-        let service = PackCreationService::new(Box::new(repo_with(true)), Box::new(writer));
+        let service = service_with_registry(true, test_registry(&["vibe", "gemini"]), writer);
         let err = service.create(&sample_dto()).unwrap_err();
         assert!(matches!(err, ApplicationError::PackAlreadyExists(_)));
     }
@@ -239,7 +286,7 @@ mod tests {
             .returning(|_, _| Ok(ok_outcome()));
         let mut dto = sample_dto();
         dto.overwrite = true;
-        let service = PackCreationService::new(Box::new(repo_with(true)), Box::new(writer));
+        let service = service_with_registry(true, test_registry(&["vibe", "gemini"]), writer);
         assert!(service.create(&dto).is_ok());
     }
 
@@ -253,7 +300,7 @@ mod tests {
             &[("vibe", ".agents/skills/tdd/")],
         )]);
         dto.clis = vec!["vibe".to_string(), "gemini".to_string()];
-        let service = PackCreationService::new(Box::new(repo_with(false)), Box::new(writer));
+        let service = service_with_registry(false, test_registry(&["vibe", "gemini"]), writer);
         let err = service.create(&dto).unwrap_err();
         assert!(matches!(
             err,
@@ -271,7 +318,7 @@ mod tests {
             item_dto("skill", "./b/tdd", &[("vibe", ".agents/skills/tdd/")]),
         ]);
         dto.clis = vec!["vibe".to_string()];
-        let service = PackCreationService::new(Box::new(repo_with(false)), Box::new(writer));
+        let service = service_with_registry(false, test_registry(&["vibe", "gemini"]), writer);
         let err = service.create(&dto).unwrap_err();
         assert!(matches!(
             err,
@@ -294,7 +341,7 @@ mod tests {
             item_dto("skill", "./tdd", &[("vibe", ".agents/skills/tdd/")]),
             item_dto("command", "./tdd", &[("vibe", ".vibe/commands/tdd.toml")]),
         ]);
-        let service = PackCreationService::new(Box::new(repo_with(false)), Box::new(writer));
+        let service = service_with_registry(false, test_registry(&["vibe", "gemini"]), writer);
         assert!(service.create(&dto).is_ok());
     }
 
@@ -302,7 +349,7 @@ mod tests {
     fn create_rejects_invalid_name_version_kind_and_cli() {
         let mut writer = MockPackWriter::new();
         writer.expect_write().never();
-        let service = PackCreationService::new(Box::new(repo_with(false)), Box::new(writer));
+        let service = service_with_registry(false, test_registry(&["vibe", "gemini"]), writer);
 
         let mut bad_name = sample_dto();
         bad_name.name = "Invalid Name".to_string();
@@ -318,14 +365,36 @@ mod tests {
 
         let mut bad_cli = sample_dto();
         bad_cli.clis = vec!["copilot".to_string()];
-        assert!(service.create(&bad_cli).is_err());
+        let err = service.create(&bad_cli).unwrap_err();
+        assert!(matches!(
+            err,
+            ApplicationError::Domain(DomainError::UnknownCliProfile(_))
+        ));
+    }
+
+    #[test]
+    fn create_accepts_a_cli_known_only_through_a_profile() {
+        let mut writer = MockPackWriter::new();
+        writer
+            .expect_write()
+            .times(1)
+            .withf(|pack, _| pack.clis == vec![CliId::new("claude").unwrap()])
+            .returning(|_, _| Ok(ok_outcome()));
+        let mut dto = sample_dto();
+        dto.clis = vec!["claude".to_string()];
+        dto.items[0].destinations = vec![(
+            "claude".to_string(),
+            ".claude/skills/tdd/SKILL.md".to_string(),
+        )];
+        let service = service_with_registry(false, test_registry(&["claude"]), writer);
+        assert!(service.create(&dto).is_ok());
     }
 
     #[test]
     fn create_rejects_empty_destination_and_source_without_file_name() {
         let mut writer = MockPackWriter::new();
         writer.expect_write().never();
-        let service = PackCreationService::new(Box::new(repo_with(false)), Box::new(writer));
+        let service = service_with_registry(false, test_registry(&["vibe", "gemini"]), writer);
 
         let mut empty_dest = dto(vec![item_dto("skill", "./tdd", &[("vibe", "  ")])]);
         empty_dest.clis = vec!["vibe".to_string()];
@@ -340,7 +409,7 @@ mod tests {
     fn create_rejects_uninstallable_destinations() {
         let mut writer = MockPackWriter::new();
         writer.expect_write().never();
-        let service = PackCreationService::new(Box::new(repo_with(false)), Box::new(writer));
+        let service = service_with_registry(false, test_registry(&["vibe", "gemini"]), writer);
 
         for bad_dest in ["/etc/passwd", "../../outside", ".", "./"] {
             let mut dto = dto(vec![item_dto("skill", "./tdd", &[("vibe", bad_dest)])]);

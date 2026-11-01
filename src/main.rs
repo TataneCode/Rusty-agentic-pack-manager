@@ -2,11 +2,14 @@ use std::path::PathBuf;
 
 use anyhow::{Context, Result};
 
+use rusty_agentic_pack_manager::application::cli_profile::service::CliProfileService;
+use rusty_agentic_pack_manager::application::cli_profile::traits::CliProfileRepository;
 use rusty_agentic_pack_manager::application::explorer::service::ExplorerService;
 use rusty_agentic_pack_manager::application::library::traits::LibraryInitializer;
 use rusty_agentic_pack_manager::application::pack::service::PackService;
 use rusty_agentic_pack_manager::application::pack_create::service::PackCreationService;
 use rusty_agentic_pack_manager::application::pack_view::service::PackViewService;
+use rusty_agentic_pack_manager::infrastructure::cli_profile::loader::FsCliProfileRepository;
 use rusty_agentic_pack_manager::infrastructure::filesystem::explorer::{
     FsExplorer, FsInstallDestination,
 };
@@ -22,18 +25,24 @@ use rusty_agentic_pack_manager::presentation::tui::event::EventHandler;
 use rusty_agentic_pack_manager::presentation::tui::split_view;
 
 fn build_app(start_dir: PathBuf, library: &PackLibrary) -> Result<App> {
-    let pack_repository = FsPackRepository::new(library.roots.clone())
+    let profiles = FsCliProfileRepository::new(library.profile_roots.clone());
+    let registry = profiles.registry().context("CLI profiles unreadable")?;
+    let pack_repository = FsPackRepository::with_profiles(library.roots.clone(), registry)
         .with_context(|| format!("pack library unreadable: {:?}", library.roots))?;
     let destination = FsInstallDestination::new(library.roots.clone());
+    let content =
+        FsPackContentRepository::new(library.roots.clone()).context("pack content repo")?;
     let pack_service = PackService::new(
         Box::new(pack_repository),
         Box::new(destination),
         Box::new(FsInstallIndexRepository),
-    );
-    let explorer = ExplorerService::new(Box::new(FsExplorer));
-    let view_service = PackViewService::new(Box::new(
-        FsPackContentRepository::new(library.roots.clone()).context("pack content repo")?,
+    )
+    .with_profiles(CliProfileService::new(
+        Box::new(profiles),
+        Box::new(content.clone()),
     ));
+    let explorer = ExplorerService::new(Box::new(FsExplorer));
+    let view_service = PackViewService::new(Box::new(content));
     Ok(App::new(pack_service, explorer, view_service, start_dir))
 }
 
@@ -50,13 +59,12 @@ fn ensure_user_root(library: &PackLibrary) -> Result<()> {
 
 fn build_creation_service(library: &PackLibrary) -> Result<PackCreationService> {
     ensure_user_root(library)?;
-    let repository = FsPackRepository::new(library.roots.clone())
+    let profiles = FsCliProfileRepository::new(library.profile_roots.clone());
+    let registry = profiles.registry().context("CLI profiles unreadable")?;
+    let repository = FsPackRepository::with_profiles(library.roots.clone(), registry.clone())
         .with_context(|| format!("pack library unreadable: {:?}", library.roots))?;
     let writer = FsPackWriter::new(library.user_root.clone());
-    Ok(PackCreationService::new(
-        Box::new(repository),
-        Box::new(writer),
-    ))
+    Ok(PackCreationService::new(Box::new(repository), Box::new(writer)).with_profiles(registry))
 }
 
 fn main() -> Result<()> {

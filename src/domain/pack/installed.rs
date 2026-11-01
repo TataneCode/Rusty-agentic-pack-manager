@@ -1,7 +1,8 @@
 use std::path::{Component, Path, PathBuf};
 
+use crate::domain::cli_profile::value_objects::CliId;
 use crate::domain::pack::error::DomainError;
-use crate::domain::pack::value_objects::{PackName, PackVersion, TargetCli};
+use crate::domain::pack::value_objects::{PackName, PackVersion};
 
 /// Name of the installation index file written at the root of a target
 /// repository. Reserved: no pack item may install to this path.
@@ -14,7 +15,7 @@ pub const INDEX_FILENAME: &str = "packs_index.toml";
 pub struct InstalledPack {
     pub name: PackName,
     pub version: PackVersion,
-    pub cli: TargetCli,
+    pub cli: CliId,
     pub paths: Vec<PathBuf>,
 }
 
@@ -22,7 +23,7 @@ impl InstalledPack {
     pub fn new(
         name: PackName,
         version: PackVersion,
-        cli: TargetCli,
+        cli: CliId,
         paths: Vec<PathBuf>,
     ) -> Result<InstalledPack, DomainError> {
         if paths.is_empty() {
@@ -44,8 +45,8 @@ impl InstalledPack {
     }
 
     /// Index key: one entry per (pack name, target CLI).
-    pub fn matches(&self, name: &str, cli: TargetCli) -> bool {
-        self.name.as_str() == name && self.cli == cli
+    pub fn matches(&self, name: &str, cli: &CliId) -> bool {
+        self.name.as_str() == name && self.cli == *cli
     }
 }
 
@@ -74,7 +75,7 @@ mod tests {
         InstalledPack::new(
             PackName::new("tdd").unwrap(),
             PackVersion::new("1.0.0").unwrap(),
-            TargetCli::Vibe,
+            CliId::new("vibe").unwrap(),
             paths,
         )
     }
@@ -87,9 +88,9 @@ mod tests {
         ])
         .unwrap();
         assert_eq!(installed.paths.len(), 2);
-        assert!(installed.matches("tdd", TargetCli::Vibe));
-        assert!(!installed.matches("tdd", TargetCli::Gemini));
-        assert!(!installed.matches("review", TargetCli::Vibe));
+        assert!(installed.matches("tdd", &CliId::new("vibe").unwrap()));
+        assert!(!installed.matches("tdd", &CliId::new("gemini").unwrap()));
+        assert!(!installed.matches("review", &CliId::new("vibe").unwrap()));
     }
 
     #[test]

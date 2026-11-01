@@ -1,0 +1,11 @@
+# CLI profile: Claude Code (shipped default). Override by placing a
+# claude.toml in the user CLI library ($XDG_DATA_HOME/rapm/clis).
+[cli]
+name = "claude"
+label = "Claude Code"
+
+[defaults]
+skill     = ".claude/skills/{name}/SKILL.md"
+skill_dir = ".claude/skills/{name}/"
+agent     = ".claude/agents/{name}.md"
+command   = ".claude/commands/{name}.md"

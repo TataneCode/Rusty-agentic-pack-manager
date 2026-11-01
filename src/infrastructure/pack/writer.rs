@@ -146,26 +146,27 @@ fn copy_dir(source: &Path, destination: &Path) -> Result<(), ApplicationError> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::domain::cli_profile::value_objects::CliId;
     use crate::domain::pack::entity::PackItem;
-    use crate::domain::pack::value_objects::{
-        PackItemKind, PackName, PackVersion, TargetCli, TargetCliMap,
-    };
+    use crate::domain::pack::value_objects::{PackItemKind, PackName, PackVersion, TargetCliMap};
     use std::fs;
     use tempfile::TempDir;
 
     fn sample_pack() -> Pack {
+        let vibe = CliId::new("vibe").unwrap();
+        let gemini = CliId::new("gemini").unwrap();
         Pack::new(
             PackName::new("my-pack").unwrap(),
             PackVersion::new("1.0.0").unwrap(),
             "A test pack".to_string(),
-            vec![TargetCli::Vibe, TargetCli::Gemini],
+            vec![vibe.clone(), gemini.clone()],
             vec![
                 PackItem::new(
                     PackItemKind::Skill,
                     PathBuf::from("skills/tdd"),
                     TargetCliMap::from_pairs(&[
-                        (TargetCli::Vibe, ".agents/skills/tdd/"),
-                        (TargetCli::Gemini, ".gemini/skills/tdd/"),
+                        (vibe.clone(), ".agents/skills/tdd/"),
+                        (gemini.clone(), ".gemini/skills/tdd/"),
                     ]),
                 )
                 .unwrap(),
@@ -173,8 +174,11 @@ mod tests {
                     PackItemKind::Command,
                     PathBuf::from("commands/review.toml"),
                     TargetCliMap::from_pairs(&[
-                        (TargetCli::Vibe, ".vibe/commands/review.toml"),
-                        (TargetCli::Gemini, ".gemini/commands/review.toml"),
+                        (vibe.clone(), ".vibe/commands/review.toml"),
+                        (
+                            CliId::new("gemini").unwrap(),
+                            ".gemini/commands/review.toml",
+                        ),
                     ]),
                 )
                 .unwrap(),

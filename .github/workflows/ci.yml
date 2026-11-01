@@ -81,6 +81,10 @@ jobs:
           installed=$(find /usr/share/rusty-agentic-pack-manager/packs -type f | wc -l)
           echo "pack files: expected=${expected} installed=${installed}"
           test "$expected" -eq "$installed"
+          expected_clis=$(find clis -type f | wc -l)
+          installed_clis=$(find /usr/share/rusty-agentic-pack-manager/clis -type f | wc -l)
+          echo "cli profile files: expected=${expected_clis} installed=${installed_clis}"
+          test "$expected_clis" -eq "$installed_clis"
       - name: Smoke test RPM (extract + contents)
         run: |
           sudo apt-get install -y rpm2cpio cpio
@@ -94,6 +98,10 @@ jobs:
           installed=$(find usr/share/rusty-agentic-pack-manager/packs -type f | wc -l)
           echo "pack files: expected=${expected} installed=${installed}"
           test "$expected" -eq "$installed"
+          expected_clis=$(find "$GITHUB_WORKSPACE/clis" -type f | wc -l)
+          installed_clis=$(find usr/share/rusty-agentic-pack-manager/clis -type f | wc -l)
+          echo "cli profile files: expected=${expected_clis} installed=${installed_clis}"
+          test "$expected_clis" -eq "$installed_clis"
       - uses: actions/upload-artifact@v4
         with:
           name: linux-packages

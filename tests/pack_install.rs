@@ -2,19 +2,52 @@
 //! No TUI, no Docker-style daemon: pure filesystem, wired exactly like
 //! main.rs.
 
+use rusty_agentic_pack_manager::domain::cli_profile::value_objects::CliId;
 use std::fs;
 use std::path::{Path, PathBuf};
 
 use rusty_agentic_pack_manager::application::explorer::service::ExplorerService;
 use rusty_agentic_pack_manager::application::pack::service::PackService;
 use rusty_agentic_pack_manager::application::pack::traits::PackRepository;
-use rusty_agentic_pack_manager::domain::pack::value_objects::TargetCli;
+
 use rusty_agentic_pack_manager::infrastructure::filesystem::explorer::{
     FsExplorer, FsInstallDestination,
 };
 use rusty_agentic_pack_manager::infrastructure::pack::index::FsInstallIndexRepository;
-use rusty_agentic_pack_manager::infrastructure::pack::loader::FsPackRepository;
 use tempfile::TempDir;
+
+fn test_registry() -> rusty_agentic_pack_manager::domain::cli_profile::profile::CliProfileRegistry {
+    use rusty_agentic_pack_manager::domain::cli_profile::profile::{
+        CliProfile, CliProfileRegistry, DestinationTemplates,
+    };
+    use rusty_agentic_pack_manager::domain::cli_profile::value_objects::CliId;
+    let profile = |id: &str| {
+        CliProfile::new(
+            CliId::new(id).unwrap(),
+            id.to_string(),
+            DestinationTemplates {
+                skill: ".agents/skills/{name}/SKILL.md".to_string(),
+                skill_dir: Some(".agents/skills/{name}/".to_string()),
+                agent: ".vibe/agents/{name}.toml".to_string(),
+                agent_dir: None,
+                command: ".vibe/commands/{name}.toml".to_string(),
+                command_dir: None,
+            },
+        )
+        .unwrap()
+    };
+    CliProfileRegistry::new(vec![profile("vibe"), profile("gemini")])
+}
+
+fn pack_repo(
+    roots: Vec<std::path::PathBuf>,
+) -> rusty_agentic_pack_manager::infrastructure::pack::loader::FsPackRepository {
+    rusty_agentic_pack_manager::infrastructure::pack::loader::FsPackRepository::with_profiles(
+        roots,
+        test_registry(),
+    )
+    .unwrap()
+}
 
 fn make_pack(packs_dir: &Path) {
     let pack_dir = packs_dir.join("tdd");
@@ -61,7 +94,7 @@ fn real_pack_installs_into_target_repo() {
     fs::create_dir_all(&packs_dir).unwrap();
     make_pack(&packs_dir);
 
-    let repo = FsPackRepository::new(vec![packs_dir.clone()]).unwrap();
+    let repo = pack_repo(vec![packs_dir.clone()]);
     let destination = FsInstallDestination::new(vec![packs_dir.clone()]);
     let service = PackService::new(
         Box::new(repo),
@@ -99,7 +132,7 @@ fn install_records_the_index_and_uninstall_removes_everything() {
     fs::create_dir_all(&packs_dir).unwrap();
     make_pack(&packs_dir);
 
-    let repo = FsPackRepository::new(vec![packs_dir.clone()]).unwrap();
+    let repo = pack_repo(vec![packs_dir.clone()]);
     let destination = FsInstallDestination::new(vec![packs_dir.clone()]);
     let service = PackService::new(
         Box::new(repo),
@@ -163,7 +196,7 @@ fn failed_install_writes_no_index() {
     fs::create_dir_all(&packs_dir).unwrap();
     make_pack(&packs_dir);
 
-    let repo = FsPackRepository::new(vec![packs_dir.clone()]).unwrap();
+    let repo = pack_repo(vec![packs_dir.clone()]);
     let destination = FsInstallDestination::new(vec![packs_dir.clone()]);
     let service = PackService::new(
         Box::new(repo),
@@ -203,7 +236,7 @@ fn explorer_lists_created_dir() {
 fn missing_pack_is_reported() {
     let tmp = TempDir::new().unwrap();
     fs::create_dir_all(tmp.path().join("packs")).unwrap();
-    let repo = FsPackRepository::new(vec![tmp.path().join("packs")]).unwrap();
+    let repo = pack_repo(vec![tmp.path().join("packs")]);
     let err = repo.find("ghost").unwrap_err();
     assert!(matches!(
         err,
@@ -215,7 +248,7 @@ fn missing_pack_is_reported() {
 fn all_shipped_packs_load_and_install() {
     let tmp = TempDir::new().unwrap();
     let packs_dir = PathBuf::from("packs");
-    let repo = FsPackRepository::new(vec![packs_dir.clone()]).unwrap();
+    let repo = pack_repo(vec![packs_dir.clone()]);
     let packs = repo.list().unwrap();
     assert!(
         packs.len() >= 16,
@@ -236,7 +269,7 @@ fn all_shipped_packs_load_and_install() {
         let target = tmp.path().join(cli);
         fs::create_dir_all(&target).unwrap();
         for pack in &packs {
-            if !pack.supports(TargetCli::parse(cli).unwrap()) {
+            if !pack.supports(&CliId::parse(cli).unwrap()) {
                 continue;
             }
             let result = service
@@ -271,6 +304,6 @@ fn all_shipped_packs_load_and_install() {
         .is_file());
     // The vibe-wise-commands pack does not target Vibe.
     let commands_pack = service.find("vibe-wise-commands").unwrap();
-    assert!(commands_pack.supports(TargetCli::Gemini));
-    assert!(!commands_pack.supports(TargetCli::Vibe));
+    assert!(commands_pack.supports(&CliId::new("gemini").unwrap()));
+    assert!(!commands_pack.supports(&CliId::new("vibe").unwrap()));
 }

@@ -1,4 +1,5 @@
 pub mod domain {
+    pub mod cli_profile;
     pub mod pack {
         pub mod entity;
         pub mod error;
@@ -8,6 +9,7 @@ pub mod domain {
 }
 
 pub mod application {
+    pub mod cli_profile;
     pub mod error;
     pub mod pack {
         pub mod dto;
@@ -35,6 +37,7 @@ pub mod application {
 }
 
 pub mod infrastructure {
+    pub mod cli_profile;
     pub mod pack {
         pub mod content;
         pub mod index;

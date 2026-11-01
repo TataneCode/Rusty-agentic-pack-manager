@@ -3,6 +3,7 @@
 //! and installable through the regular pack pipeline. Wired exactly like
 //! main.rs: real adapters, tempdir library, no TUI.
 
+use rusty_agentic_pack_manager::domain::cli_profile::value_objects::CliId;
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -12,14 +13,46 @@ use rusty_agentic_pack_manager::application::pack::service::PackService;
 use rusty_agentic_pack_manager::application::pack::traits::PackRepository;
 use rusty_agentic_pack_manager::application::pack_create::dto::{CreateItemDto, CreatePackDto};
 use rusty_agentic_pack_manager::application::pack_create::service::PackCreationService;
-use rusty_agentic_pack_manager::domain::pack::value_objects::TargetCli;
+
 use rusty_agentic_pack_manager::infrastructure::filesystem::explorer::FsInstallDestination;
 use rusty_agentic_pack_manager::infrastructure::filesystem::library::FsLibraryInitializer;
 use rusty_agentic_pack_manager::infrastructure::pack::index::FsInstallIndexRepository;
-use rusty_agentic_pack_manager::infrastructure::pack::loader::FsPackRepository;
 use rusty_agentic_pack_manager::infrastructure::pack::writer::FsPackWriter;
 use rusty_agentic_pack_manager::presentation::library::PackLibrary;
 use tempfile::TempDir;
+
+fn test_registry() -> rusty_agentic_pack_manager::domain::cli_profile::profile::CliProfileRegistry {
+    use rusty_agentic_pack_manager::domain::cli_profile::profile::{
+        CliProfile, CliProfileRegistry, DestinationTemplates,
+    };
+    use rusty_agentic_pack_manager::domain::cli_profile::value_objects::CliId;
+    let profile = |id: &str| {
+        CliProfile::new(
+            CliId::new(id).unwrap(),
+            id.to_string(),
+            DestinationTemplates {
+                skill: ".agents/skills/{name}/SKILL.md".to_string(),
+                skill_dir: Some(".agents/skills/{name}/".to_string()),
+                agent: ".vibe/agents/{name}.toml".to_string(),
+                agent_dir: None,
+                command: ".vibe/commands/{name}.toml".to_string(),
+                command_dir: None,
+            },
+        )
+        .unwrap()
+    };
+    CliProfileRegistry::new(vec![profile("vibe"), profile("gemini")])
+}
+
+fn pack_repo(
+    roots: Vec<std::path::PathBuf>,
+) -> rusty_agentic_pack_manager::infrastructure::pack::loader::FsPackRepository {
+    rusty_agentic_pack_manager::infrastructure::pack::loader::FsPackRepository::with_profiles(
+        roots,
+        test_registry(),
+    )
+    .unwrap()
+}
 
 /// The CLI wiring of main.rs: a library rooted at a user root (first) and
 /// a system root (fallback), a creation service writing into the user root.
@@ -28,16 +61,19 @@ fn wired(tmp: &TempDir) -> (PackLibrary, PackCreationService, PackService) {
     let system_root = tmp.path().join("system-packs");
     fs::create_dir_all(&user_root).unwrap();
     fs::create_dir_all(&system_root).unwrap();
-    let library = PackLibrary::new(vec![user_root.clone(), system_root], user_root.clone());
+    let library = PackLibrary::new(
+        vec![user_root.clone(), system_root],
+        user_root.clone(),
+        vec![],
+    );
     FsLibraryInitializer
         .ensure_user_root(&library.user_root)
         .unwrap();
-    let repository = FsPackRepository::new(library.roots.clone()).unwrap();
+    let repository = pack_repo(library.roots.clone());
     let writer = FsPackWriter::new(user_root.clone());
-    let creation = PackCreationService::new(
-        Box::new(FsPackRepository::new(library.roots.clone()).unwrap()),
-        Box::new(writer),
-    );
+    let creation =
+        PackCreationService::new(Box::new(pack_repo(library.roots.clone())), Box::new(writer))
+            .with_profiles(test_registry());
     let install = PackService::new(
         Box::new(repository),
         Box::new(FsInstallDestination::new(library.roots.clone())),
@@ -134,13 +170,16 @@ fn create_builds_a_pack_that_the_library_loads_and_installs() {
     assert!(manifest.contains("name = \"my-pack\""));
 
     // The pack is listed by the library...
-    let repo = FsPackRepository::new(library.roots.clone()).unwrap();
+    let repo = pack_repo(library.roots.clone());
     let packs = repo.list().unwrap();
     assert_eq!(packs.len(), 1);
     assert_eq!(packs[0].name.as_str(), "my-pack");
     assert_eq!(packs[0].items.len(), 3);
     // ...with the CLIs deduced from the items' destinations.
-    assert_eq!(packs[0].clis, vec![TargetCli::Vibe, TargetCli::Gemini]);
+    assert_eq!(
+        packs[0].clis,
+        vec![CliId::new("gemini").unwrap(), CliId::new("vibe").unwrap()]
+    );
 
     // ...and installable like any library pack.
     let target = tmp.path().join("repo");
@@ -170,7 +209,7 @@ fn create_refuses_to_overwrite_without_force() {
     let mut forced = dto(vec![skill_dto(&host)]);
     forced.overwrite = true;
     creation.create(&forced).expect("overwrite must succeed");
-    let repo = FsPackRepository::new(library.roots.clone()).unwrap();
+    let repo = pack_repo(library.roots.clone());
     assert_eq!(repo.list().unwrap().len(), 1);
 }
 
@@ -196,7 +235,7 @@ fn create_rejects_a_missing_source_without_writing() {
     let err = creation.create(&bad).unwrap_err();
     assert!(matches!(err, ApplicationError::FileNotFound(_)));
 
-    let repo = FsPackRepository::new(library.roots.clone()).unwrap();
+    let repo = pack_repo(library.roots.clone());
     assert!(repo.list().unwrap().is_empty());
     // No staging directory is left behind.
     let leftovers: Vec<_> = fs::read_dir(&library.user_root)
@@ -222,7 +261,7 @@ fn user_pack_overrides_a_system_pack_of_the_same_name() {
     .unwrap();
 
     // The library sees the system version first.
-    let repo = FsPackRepository::new(library.roots.clone()).unwrap();
+    let repo = pack_repo(library.roots.clone());
     assert_eq!(repo.find("my-pack").unwrap().version.as_str(), "0.1.0");
 
     // Creating a user pack of the same name shadows it (overwrite via the
@@ -232,7 +271,7 @@ fn user_pack_overrides_a_system_pack_of_the_same_name() {
     forced.overwrite = true;
     creation.create(&forced).unwrap();
 
-    let repo = FsPackRepository::new(library.roots.clone()).unwrap();
+    let repo = pack_repo(library.roots.clone());
     assert_eq!(repo.find("my-pack").unwrap().version.as_str(), "2.0.0");
     // The system pack directory is untouched.
     assert!(system_pack.join("pack.toml").is_file());
@@ -282,22 +321,27 @@ fn library_works_when_the_user_root_does_not_exist_yet() {
     )
     .unwrap();
 
-    let library = PackLibrary::new(vec![user_root.clone(), system_root], user_root.clone());
+    let library = PackLibrary::new(
+        vec![user_root.clone(), system_root],
+        user_root.clone(),
+        vec![],
+    );
     // Regression (review): before the LibraryInitializer port, FsPackRepository::new
     // rejected a missing first root and the TUI failed to start on a fresh
     // machine.
     FsLibraryInitializer
         .ensure_user_root(&library.user_root)
         .unwrap();
-    let repo = FsPackRepository::new(library.roots.clone()).unwrap();
+    let repo = pack_repo(library.roots.clone());
     assert_eq!(repo.list().unwrap()[0].name.as_str(), "tdd");
 
     // Creating a pack afterwards writes into the now-existing user root.
     let host = host_tree(&tmp);
     let creation = PackCreationService::new(
-        Box::new(FsPackRepository::new(library.roots.clone()).unwrap()),
+        Box::new(pack_repo(library.roots.clone())),
         Box::new(FsPackWriter::new(library.user_root.clone())),
-    );
+    )
+    .with_profiles(test_registry());
     creation
         .create(&dto(vec![skill_dto(&host)]))
         .expect("creation must succeed");
@@ -333,6 +377,6 @@ fn create_rejects_uninstallable_destinations_end_to_end() {
         );
     }
     // Nothing was written.
-    let repo = FsPackRepository::new(library.roots.clone()).unwrap();
+    let repo = pack_repo(library.roots.clone());
     assert!(repo.list().unwrap().is_empty());
 }
