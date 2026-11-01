@@ -13,7 +13,6 @@ use rusty_agentic_pack_manager::infrastructure::filesystem::explorer::{
 };
 use rusty_agentic_pack_manager::infrastructure::pack::content::FsPackContentRepository;
 use rusty_agentic_pack_manager::infrastructure::pack::index::FsInstallIndexRepository;
-use rusty_agentic_pack_manager::infrastructure::pack::loader::FsPackRepository;
 use rusty_agentic_pack_manager::presentation::tui::app::{App, Focus};
 use rusty_agentic_pack_manager::presentation::tui::split_view;
 use tempfile::TempDir;

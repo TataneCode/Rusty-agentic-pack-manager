@@ -17,7 +17,6 @@ use rusty_agentic_pack_manager::application::pack_create::service::PackCreationS
 use rusty_agentic_pack_manager::infrastructure::filesystem::explorer::FsInstallDestination;
 use rusty_agentic_pack_manager::infrastructure::filesystem::library::FsLibraryInitializer;
 use rusty_agentic_pack_manager::infrastructure::pack::index::FsInstallIndexRepository;
-use rusty_agentic_pack_manager::infrastructure::pack::loader::FsPackRepository;
 use rusty_agentic_pack_manager::infrastructure::pack::writer::FsPackWriter;
 use rusty_agentic_pack_manager::presentation::library::PackLibrary;
 use tempfile::TempDir;

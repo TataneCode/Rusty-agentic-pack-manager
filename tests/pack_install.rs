@@ -14,7 +14,6 @@ use rusty_agentic_pack_manager::infrastructure::filesystem::explorer::{
     FsExplorer, FsInstallDestination,
 };
 use rusty_agentic_pack_manager::infrastructure::pack::index::FsInstallIndexRepository;
-use rusty_agentic_pack_manager::infrastructure::pack::loader::FsPackRepository;
 use tempfile::TempDir;
 
 fn test_registry() -> rusty_agentic_pack_manager::domain::cli_profile::profile::CliProfileRegistry {

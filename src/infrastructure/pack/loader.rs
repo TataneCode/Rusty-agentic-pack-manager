@@ -221,11 +221,11 @@ gemini = ".gemini/commands/tdd/"
             CliId::new(id).unwrap(),
             id.to_string(),
             DestinationTemplates {
-                skill: format!(".agents/skills/{{name}}/SKILL.md"),
-                skill_dir: Some(format!(".agents/skills/{{name}}/")),
-                agent: format!(".agents/{{name}}.toml"),
+                skill: ".agents/skills/{{name}}/SKILL.md".to_string(),
+                skill_dir: Some(".agents/skills/{{name}}/".to_string()),
+                agent: ".agents/{{name}}.toml".to_string(),
                 agent_dir: None,
-                command: format!(".agents/{{name}}.toml"),
+                command: ".agents/{{name}}.toml".to_string(),
                 command_dir: None,
             },
         )
