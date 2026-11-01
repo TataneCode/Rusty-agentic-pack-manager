@@ -11,7 +11,7 @@ Le statut évolue : `proposé` → `planifié` (plan approuvé dans `docs/plans/
 
 | Priorité | Évolution | Fiche | Statut | Plan | PR | Notes |
 |---|---|---|---|---|---|---|
-| E01 | Verrouiller la frontière des fronts (fix dérives + test d'arch) | [e01-verrouiller-frontieres.md](e01-verrouiller-frontieres.md) | proposé | — | — | Prérequis de toutes les autres. Audit : 2 imports `01_domain` en présentation (`app.rs:7`, `router.rs:1`), décision CLI dans `router.rs:235`, I/O direct dans `library.rs:40` |
+| E01 | Verrouiller la frontière des fronts (fix dérives + test d'arch) | [e01-verrouiller-frontieres.md](e01-verrouiller-frontieres.md) | planifié | [docs/plans/e01-lock-layer-boundaries.md](../docs/plans/e01-lock-layer-boundaries.md) | — | Prérequis de toutes les autres. Audit : 2 imports `01_domain` en présentation (`app.rs:7`, `router.rs:1`), décision CLI dans `router.rs:235`, I/O direct dans `library.rs:40` |
 | E02 | Profils de CLI externes (registry TOML de layouts) | [e02-profils-cli.md](e02-profils-cli.md) | proposé | — | — | Placé tôt (décision UX) : `TargetCli` enum → newtype + profils shipés/surchargeables ; impacte config, packaging, installs. Débloque E03/E07 data-driven |
 | E03 | CLI headless : install / uninstall / list / show | [e03-cli-headless.md](e03-cli-headless.md) | proposé | — | — | Base du harness engineering (scripts, CI) |
 | E04 | Dry-run / plan d'installation (CLI `--dry-run` + prévisu TUI) | [e04-dry-run.md](e04-dry-run.md) | proposé | — | — | « Tester avant d'installer » sans toucher au disque |
