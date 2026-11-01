@@ -7,11 +7,10 @@ use crate::application::pack_create::dto::{
     CreateItemDto, CreatePackDto, CreatePackResultDto, PackSourceDto,
 };
 use crate::application::pack_create::traits::PackWriter;
+use crate::domain::cli_profile::value_objects::CliId;
 use crate::domain::pack::entity::{Pack, PackItem};
 use crate::domain::pack::error::DomainError;
-use crate::domain::pack::value_objects::{
-    PackItemKind, PackName, PackVersion, TargetCli, TargetCliMap,
-};
+use crate::domain::pack::value_objects::{PackItemKind, PackName, PackVersion, TargetCliMap};
 
 /// Application service for `rapm pack create`: validates the input, builds
 /// the domain `Pack` (canonical `<kind>s/<name>` sources, one destination
@@ -43,11 +42,11 @@ impl PackCreationService {
 
         // CLI list: explicit --cli, else the union of the items' destinations.
         let clis = if declared_clis.is_empty() {
-            let mut union: Vec<TargetCli> = Vec::new();
+            let mut union: Vec<CliId> = Vec::new();
             for item in &items {
                 for (cli, _) in item.destinations.iter() {
-                    if !union.contains(&cli) {
-                        union.push(cli);
+                    if !union.contains(cli) {
+                        union.push(cli.clone());
                     }
                 }
             }
@@ -59,7 +58,7 @@ impl PackCreationService {
         // Every item must have a destination for every declared CLI.
         let missing = items
             .iter()
-            .any(|item| clis.iter().any(|cli| item.destinations.get(*cli).is_none()));
+            .any(|item| clis.iter().any(|cli| item.destinations.get(cli).is_none()));
         if missing {
             return Err(ApplicationError::Domain(DomainError::EmptyItemDestination));
         }
@@ -76,10 +75,10 @@ impl PackCreationService {
     }
 }
 
-fn parse_clis(raw: &[String]) -> Result<Vec<TargetCli>, ApplicationError> {
+fn parse_clis(raw: &[String]) -> Result<Vec<CliId>, ApplicationError> {
     let mut clis = Vec::new();
     for c in raw {
-        let cli = TargetCli::parse(c)?;
+        let cli = CliId::parse(c)?;
         if !clis.contains(&cli) {
             clis.push(cli);
         }
@@ -107,7 +106,7 @@ fn build_items(
         }
         let mut destinations = TargetCliMap::default();
         for (cli_raw, dest) in &dto.destinations {
-            let cli = TargetCli::parse(cli_raw)?;
+            let cli = CliId::parse(cli_raw)?;
             // Fail fast on destinations that could never install (absolute,
             // escaping, or root-only paths): the same rule the domain
             // enforces at install time.
@@ -170,7 +169,7 @@ mod tests {
             PackName::new(name).unwrap(),
             PackVersion::new("1.0.0").unwrap(),
             String::new(),
-            vec![TargetCli::Vibe],
+            vec![CliId::new("vibe").unwrap()],
             vec![],
         )
         .unwrap()
@@ -204,7 +203,7 @@ mod tests {
             .times(1)
             .withf(|pack, sources| {
                 pack.name.as_str() == "my-pack"
-                    && pack.clis == vec![TargetCli::Vibe, TargetCli::Gemini]
+                    && pack.clis == vec![CliId::new("gemini").unwrap(), CliId::new("vibe").unwrap()]
                     && pack.items.len() == 1
                     && pack.items[0].kind == PackItemKind::Skill
                     && pack.items[0].source == Path::new("skills/tdd")

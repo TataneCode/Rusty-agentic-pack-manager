@@ -1,9 +1,9 @@
 use std::fmt;
 use std::path::PathBuf;
 
+use crate::domain::cli_profile::value_objects::CliId;
 use crate::domain::pack::entity::{Pack, PackItem};
 use crate::domain::pack::installed::INDEX_FILENAME;
-use crate::domain::pack::value_objects::TargetCli;
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum DomainError {
@@ -12,6 +12,10 @@ pub enum DomainError {
     InvalidVersion(String),
     EmptyCliList,
     UnknownCli(String),
+    InvalidCliId(String),
+    UnknownCliProfile(String),
+    MissingProfileTemplate(String),
+    InvalidProfileTemplate(String),
     UnknownItemKind(String),
     EmptyItemSource,
     EmptyItemDestination,
@@ -31,6 +35,16 @@ impl fmt::Display for DomainError {
             DomainError::InvalidVersion(v) => write!(f, "invalid pack version: {v}"),
             DomainError::EmptyCliList => write!(f, "pack must target at least one CLI"),
             DomainError::UnknownCli(c) => write!(f, "unknown target CLI: {c}"),
+            DomainError::InvalidCliId(c) => write!(f, "invalid CLI id: {c}"),
+            DomainError::UnknownCliProfile(c) => {
+                write!(f, "no CLI profile loaded for: {c}")
+            }
+            DomainError::MissingProfileTemplate(t) => {
+                write!(f, "CLI profile is missing the destination template: {t}")
+            }
+            DomainError::InvalidProfileTemplate(t) => {
+                write!(f, "invalid destination template in CLI profile: {t}")
+            }
             DomainError::UnknownItemKind(k) => write!(f, "unknown pack item kind: {k}"),
             DomainError::EmptyItemSource => write!(f, "pack item source must not be empty"),
             DomainError::EmptyItemDestination => {
@@ -74,7 +88,7 @@ pub struct PlannedCopy {
 /// collision and must be rejected before any filesystem write.
 pub fn plan_install(
     pack: &Pack,
-    cli: TargetCli,
+    cli: &CliId,
     target_root: &std::path::Path,
 ) -> Result<Vec<PlannedCopy>, DomainError> {
     let mut planned = Vec::new();
@@ -98,7 +112,7 @@ pub fn plan_install(
 
 fn resolve_destination(
     item: &PackItem,
-    cli: TargetCli,
+    cli: &CliId,
     target_root: &std::path::Path,
 ) -> Result<PathBuf, DomainError> {
     if item.source.as_os_str().is_empty() {
@@ -192,11 +206,11 @@ mod tests {
             PackName::new("tdd").unwrap(),
             PackVersion::new("1.0.0").unwrap(),
             "TDD pack".to_string(),
-            vec![TargetCli::Vibe],
+            vec![CliId::new("vibe").unwrap()],
             vec![PackItem::new(
                 crate::domain::pack::value_objects::PackItemKind::Skill,
                 PathBuf::from("skills/tdd/SKILL.md"),
-                TargetCliMap::from_pairs(&[(TargetCli::Vibe, ".agents/skills/tdd/")]),
+                TargetCliMap::from_pairs(&[(CliId::new("vibe").unwrap(), ".agents/skills/tdd/")]),
             )
             .unwrap()],
         )
@@ -206,8 +220,12 @@ mod tests {
     #[test]
     fn plan_install_resolves_destination_in_target() {
         let pack = sample_pack();
-        let plan =
-            plan_install(&pack, TargetCli::Vibe, std::path::Path::new("/repo")).expect("plan");
+        let plan = plan_install(
+            &pack,
+            &CliId::new("vibe").unwrap(),
+            std::path::Path::new("/repo"),
+        )
+        .expect("plan");
         assert_eq!(plan.len(), 1);
         assert_eq!(plan[0].source, PathBuf::from("skills/tdd/SKILL.md"));
         assert_eq!(
@@ -222,11 +240,15 @@ mod tests {
         pack.items[0] = PackItem::new(
             crate::domain::pack::value_objects::PackItemKind::Skill,
             PathBuf::from("skills/tdd/SKILL.md"),
-            TargetCliMap::from_pairs(&[(TargetCli::Vibe, "/etc/passwd")]),
+            TargetCliMap::from_pairs(&[(CliId::new("vibe").unwrap(), "/etc/passwd")]),
         )
         .unwrap();
-        let err = plan_install(&pack, TargetCli::Vibe, std::path::Path::new("/repo"))
-            .expect_err("must reject absolute destination");
+        let err = plan_install(
+            &pack,
+            &CliId::new("vibe").unwrap(),
+            std::path::Path::new("/repo"),
+        )
+        .expect_err("must reject absolute destination");
         assert!(matches!(err, DomainError::ItemDestinationOutsideTarget(_)));
     }
 
@@ -236,11 +258,15 @@ mod tests {
         pack.items[0] = PackItem::new(
             crate::domain::pack::value_objects::PackItemKind::Skill,
             PathBuf::from("skills/tdd/SKILL.md"),
-            TargetCliMap::from_pairs(&[(TargetCli::Vibe, "../outside/")]),
+            TargetCliMap::from_pairs(&[(CliId::new("vibe").unwrap(), "../outside/")]),
         )
         .unwrap();
-        let err = plan_install(&pack, TargetCli::Vibe, std::path::Path::new("/repo"))
-            .expect_err("must reject escaping destination");
+        let err = plan_install(
+            &pack,
+            &CliId::new("vibe").unwrap(),
+            std::path::Path::new("/repo"),
+        )
+        .expect_err("must reject escaping destination");
         assert!(matches!(err, DomainError::ItemDestinationOutsideTarget(_)));
     }
 
@@ -250,23 +276,34 @@ mod tests {
             PackItem::new(
                 crate::domain::pack::value_objects::PackItemKind::Skill,
                 PathBuf::from("skills/tdd/SKILL.md"),
-                TargetCliMap::from_pairs(&[(TargetCli::Vibe, ".agents/skills/tdd/SKILL.md")]),
+                TargetCliMap::from_pairs(&[(
+                    CliId::new("vibe").unwrap(),
+                    ".agents/skills/tdd/SKILL.md",
+                )]),
             )
             .unwrap()
         };
         let mut pack = sample_pack();
         pack.items.push(item());
         pack.items.push(item());
-        let err = plan_install(&pack, TargetCli::Vibe, std::path::Path::new("/repo"))
-            .expect_err("must reject collision");
+        let err = plan_install(
+            &pack,
+            &CliId::new("vibe").unwrap(),
+            std::path::Path::new("/repo"),
+        )
+        .expect_err("must reject collision");
         assert!(matches!(err, DomainError::InstallCollision(_)));
     }
 
     #[test]
     fn plan_install_empty_destination_for_cli_is_rejected() {
         let pack = sample_pack();
-        let err = plan_install(&pack, TargetCli::Gemini, std::path::Path::new("/repo"))
-            .expect_err("must reject missing destination");
+        let err = plan_install(
+            &pack,
+            &CliId::new("gemini").unwrap(),
+            std::path::Path::new("/repo"),
+        )
+        .expect_err("must reject missing destination");
         assert!(matches!(err, DomainError::EmptyItemDestination));
     }
 
@@ -315,11 +352,15 @@ mod tests {
         pack.items[0] = PackItem::new(
             crate::domain::pack::value_objects::PackItemKind::Skill,
             PathBuf::from("skills/tdd/SKILL.md"),
-            TargetCliMap::from_pairs(&[(TargetCli::Vibe, "packs_index.toml")]),
+            TargetCliMap::from_pairs(&[(CliId::new("vibe").unwrap(), "packs_index.toml")]),
         )
         .unwrap();
-        let err = plan_install(&pack, TargetCli::Vibe, std::path::Path::new("/repo"))
-            .expect_err("must reject the index file destination");
+        let err = plan_install(
+            &pack,
+            &CliId::new("vibe").unwrap(),
+            std::path::Path::new("/repo"),
+        )
+        .expect_err("must reject the index file destination");
         assert!(matches!(err, DomainError::ReservedDestination(_)));
     }
 
@@ -329,11 +370,15 @@ mod tests {
         pack.items[0] = PackItem::new(
             crate::domain::pack::value_objects::PackItemKind::Skill,
             PathBuf::from("skills/tdd/SKILL.md"),
-            TargetCliMap::from_pairs(&[(TargetCli::Vibe, ".agents/packs_index.toml")]),
+            TargetCliMap::from_pairs(&[(CliId::new("vibe").unwrap(), ".agents/packs_index.toml")]),
         )
         .unwrap();
-        let plan = plan_install(&pack, TargetCli::Vibe, std::path::Path::new("/repo"))
-            .expect("only the root index file is reserved");
+        let plan = plan_install(
+            &pack,
+            &CliId::new("vibe").unwrap(),
+            std::path::Path::new("/repo"),
+        )
+        .expect("only the root index file is reserved");
         assert_eq!(plan.len(), 1);
     }
 }

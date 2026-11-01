@@ -5,10 +5,9 @@ use serde::{Deserialize, Serialize};
 
 use crate::application::error::ApplicationError;
 use crate::application::pack::traits::PackRepository;
+use crate::domain::cli_profile::value_objects::CliId;
 use crate::domain::pack::entity::{Pack, PackItem};
-use crate::domain::pack::value_objects::{
-    PackItemKind, PackName, PackVersion, TargetCli, TargetCliMap,
-};
+use crate::domain::pack::value_objects::{PackItemKind, PackName, PackVersion, TargetCliMap};
 
 /// Raw pack.toml shape (single source of truth for the manifest format:
 /// the loader reads it, the pack writer serializes it).
@@ -103,8 +102,8 @@ impl FsPackRepository {
         let clis = manifest
             .cli
             .iter()
-            .map(|c| TargetCli::parse(c))
-            .collect::<Result<Vec<TargetCli>, _>>()?;
+            .map(|c| CliId::parse(c))
+            .collect::<Result<Vec<CliId>, _>>()?;
 
         let mut items = Vec::new();
         for raw_item in &manifest.items {
@@ -116,7 +115,7 @@ impl FsPackRepository {
             })?;
             let mut destinations = TargetCliMap::default();
             for (cli_raw, dest) in &raw_item.destinations {
-                let cli = TargetCli::parse(cli_raw)?;
+                let cli = CliId::parse(cli_raw)?;
                 destinations.insert(cli, dest.clone());
             }
             items.push(PackItem::new(
@@ -213,7 +212,9 @@ gemini = ".gemini/commands/tdd/"
 
         let pack = repo.find("tdd").unwrap();
         assert_eq!(
-            pack.items[0].destination_for(TargetCli::Gemini).unwrap(),
+            pack.items[0]
+                .destination_for(&CliId::new("gemini").unwrap())
+                .unwrap(),
             ".gemini/commands/tdd/"
         );
     }

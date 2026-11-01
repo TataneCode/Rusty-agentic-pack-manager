@@ -1,4 +1,5 @@
 pub mod domain {
+    pub mod cli_profile;
     pub mod pack {
         pub mod entity;
         pub mod error;

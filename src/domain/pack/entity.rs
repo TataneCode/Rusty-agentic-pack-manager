@@ -1,9 +1,8 @@
 use std::path::PathBuf;
 
+use crate::domain::cli_profile::value_objects::CliId;
 use crate::domain::pack::error::DomainError;
-use crate::domain::pack::value_objects::{
-    PackItemKind, PackName, PackVersion, TargetCli, TargetCliMap,
-};
+use crate::domain::pack::value_objects::{PackItemKind, PackName, PackVersion, TargetCliMap};
 
 /// One agentic item of a pack: a source path inside the pack directory and
 /// its per-CLI destinations (relative to the user-chosen target root).
@@ -31,7 +30,7 @@ impl PackItem {
         })
     }
 
-    pub fn destination_for(&self, cli: TargetCli) -> Option<String> {
+    pub fn destination_for(&self, cli: &CliId) -> Option<String> {
         self.destinations.get(cli).map(|s| s.to_string())
     }
 }
@@ -43,7 +42,7 @@ pub struct Pack {
     pub name: PackName,
     pub version: PackVersion,
     pub description: String,
-    pub clis: Vec<TargetCli>,
+    pub clis: Vec<CliId>,
     pub items: Vec<PackItem>,
 }
 
@@ -52,7 +51,7 @@ impl Pack {
         name: PackName,
         version: PackVersion,
         description: String,
-        clis: Vec<TargetCli>,
+        clis: Vec<CliId>,
         items: Vec<PackItem>,
     ) -> Result<Pack, DomainError> {
         if clis.is_empty() {
@@ -67,8 +66,8 @@ impl Pack {
         })
     }
 
-    pub fn supports(&self, cli: TargetCli) -> bool {
-        self.clis.contains(&cli)
+    pub fn supports(&self, cli: &CliId) -> bool {
+        self.clis.contains(cli)
     }
 }
 
@@ -80,7 +79,7 @@ mod tests {
         PackItem::new(
             kind,
             PathBuf::from(source),
-            TargetCliMap::from_pairs(&[(TargetCli::Vibe, dest)]),
+            TargetCliMap::from_pairs(&[(CliId::new("vibe").unwrap(), dest)]),
         )
         .unwrap()
     }
@@ -104,7 +103,7 @@ mod tests {
             PackName::new("tdd").unwrap(),
             PackVersion::new("1.0.0").unwrap(),
             "desc".to_string(),
-            vec![TargetCli::Vibe],
+            vec![CliId::new("vibe").unwrap()],
             vec![item(
                 PackItemKind::Skill,
                 "skills/tdd",
@@ -112,13 +111,15 @@ mod tests {
             )],
         )
         .unwrap();
-        assert!(pack.supports(TargetCli::Vibe));
-        assert!(!pack.supports(TargetCli::Gemini));
+        let vibe = CliId::new("vibe").unwrap();
+        let gemini = CliId::new("gemini").unwrap();
+        assert!(pack.supports(&vibe));
+        assert!(!pack.supports(&gemini));
         assert_eq!(
-            pack.items[0].destination_for(TargetCli::Vibe).unwrap(),
+            pack.items[0].destination_for(&vibe).unwrap(),
             ".agents/skills/tdd/"
         );
-        assert_eq!(pack.items[0].destination_for(TargetCli::Gemini), None);
+        assert_eq!(pack.items[0].destination_for(&gemini), None);
     }
 
     #[test]

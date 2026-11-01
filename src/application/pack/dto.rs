@@ -4,7 +4,7 @@ use crate::domain::pack::entity::Pack;
 use crate::domain::pack::installed::InstalledPack;
 
 /// UI-facing summary of one pack. CLI identifiers are plain strings
-/// (`TargetCli::as_str()`): DTOs never expose domain types (E01).
+/// (`CliId::as_str()`): DTOs never expose domain types (E01).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PackSummaryDto {
     pub name: String,

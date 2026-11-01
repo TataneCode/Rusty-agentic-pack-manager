@@ -1,47 +1,8 @@
 use std::collections::BTreeMap;
 use std::fmt;
 
+use crate::domain::cli_profile::value_objects::CliId;
 use crate::domain::pack::error::DomainError;
-
-/// CLI able to consume an agentic pack. Extensible: v1 ships Vibe and Gemini.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub enum TargetCli {
-    Vibe,
-    Gemini,
-}
-
-impl TargetCli {
-    pub const ALL: [TargetCli; 2] = [TargetCli::Vibe, TargetCli::Gemini];
-
-    pub fn as_str(&self) -> &'static str {
-        match self {
-            TargetCli::Vibe => "vibe",
-            TargetCli::Gemini => "gemini",
-        }
-    }
-
-    pub fn parse(value: &str) -> Result<TargetCli, DomainError> {
-        match value.trim().to_ascii_lowercase().as_str() {
-            "vibe" => Ok(TargetCli::Vibe),
-            "gemini" => Ok(TargetCli::Gemini),
-            other => Err(DomainError::UnknownCli(other.to_string())),
-        }
-    }
-
-    /// Display label used by the UI (e.g. "Vibe CLI").
-    pub fn label(&self) -> &'static str {
-        match self {
-            TargetCli::Vibe => "Vibe CLI",
-            TargetCli::Gemini => "Gemini CLI",
-        }
-    }
-}
-
-impl fmt::Display for TargetCli {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str(self.as_str())
-    }
-}
 
 /// Non-empty, filesystem-safe pack name: lowercase alphanumeric plus `-`/`_`,
 /// must start with a letter.
@@ -159,23 +120,23 @@ impl PackItemKind {
 /// Per-CLI destinations of one pack item, e.g.
 /// vibe -> ".agents/skills/tdd/", gemini -> ".gemini/commands/tdd".
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
-pub struct TargetCliMap(BTreeMap<TargetCli, String>);
+pub struct TargetCliMap(BTreeMap<CliId, String>);
 
 impl TargetCliMap {
-    pub fn from_pairs(pairs: &[(TargetCli, &str)]) -> TargetCliMap {
+    pub fn from_pairs(pairs: &[(CliId, &str)]) -> TargetCliMap {
         TargetCliMap(
             pairs
                 .iter()
-                .map(|(cli, dest)| (*cli, (*dest).to_string()))
+                .map(|(cli, dest)| (cli.clone(), (*dest).to_string()))
                 .collect(),
         )
     }
 
-    pub fn get(&self, cli: TargetCli) -> Option<&str> {
-        self.0.get(&cli).map(|s| s.as_str())
+    pub fn get(&self, cli: &CliId) -> Option<&str> {
+        self.0.get(cli).map(|s| s.as_str())
     }
 
-    pub fn insert(&mut self, cli: TargetCli, destination: String) {
+    pub fn insert(&mut self, cli: CliId, destination: String) {
         self.0.insert(cli, destination);
     }
 
@@ -183,8 +144,8 @@ impl TargetCliMap {
         self.0.is_empty()
     }
 
-    pub fn iter(&self) -> impl Iterator<Item = (TargetCli, &str)> {
-        self.0.iter().map(|(cli, dest)| (*cli, dest.as_str()))
+    pub fn iter(&self) -> impl Iterator<Item = (&CliId, &str)> {
+        self.0.iter().map(|(cli, dest)| (cli, dest.as_str()))
     }
 }
 
@@ -221,15 +182,6 @@ mod tests {
         assert!(PackVersion::new("v1.0.0").is_err());
         assert!(PackVersion::new("").is_err());
         assert!(PackVersion::new("1.0.0.0").is_err());
-    }
-
-    #[test]
-    fn target_cli_parse_and_display() {
-        assert_eq!(TargetCli::parse("vibe").unwrap(), TargetCli::Vibe);
-        assert_eq!(TargetCli::parse("Gemini").unwrap(), TargetCli::Gemini);
-        assert!(TargetCli::parse("copilot").is_err());
-        assert_eq!(TargetCli::Vibe.to_string(), "vibe");
-        assert_eq!(TargetCli::Vibe.label(), "Vibe CLI");
     }
 
     #[test]

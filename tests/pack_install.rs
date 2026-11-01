@@ -2,13 +2,14 @@
 //! No TUI, no Docker-style daemon: pure filesystem, wired exactly like
 //! main.rs.
 
+use rusty_agentic_pack_manager::domain::cli_profile::value_objects::CliId;
 use std::fs;
 use std::path::{Path, PathBuf};
 
 use rusty_agentic_pack_manager::application::explorer::service::ExplorerService;
 use rusty_agentic_pack_manager::application::pack::service::PackService;
 use rusty_agentic_pack_manager::application::pack::traits::PackRepository;
-use rusty_agentic_pack_manager::domain::pack::value_objects::TargetCli;
+
 use rusty_agentic_pack_manager::infrastructure::filesystem::explorer::{
     FsExplorer, FsInstallDestination,
 };
@@ -236,7 +237,7 @@ fn all_shipped_packs_load_and_install() {
         let target = tmp.path().join(cli);
         fs::create_dir_all(&target).unwrap();
         for pack in &packs {
-            if !pack.supports(TargetCli::parse(cli).unwrap()) {
+            if !pack.supports(&CliId::parse(cli).unwrap()) {
                 continue;
             }
             let result = service
@@ -271,6 +272,6 @@ fn all_shipped_packs_load_and_install() {
         .is_file());
     // The vibe-wise-commands pack does not target Vibe.
     let commands_pack = service.find("vibe-wise-commands").unwrap();
-    assert!(commands_pack.supports(TargetCli::Gemini));
-    assert!(!commands_pack.supports(TargetCli::Vibe));
+    assert!(commands_pack.supports(&CliId::new("gemini").unwrap()));
+    assert!(!commands_pack.supports(&CliId::new("vibe").unwrap()));
 }

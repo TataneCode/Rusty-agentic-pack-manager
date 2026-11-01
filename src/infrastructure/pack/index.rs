@@ -4,8 +4,9 @@ use serde::{Deserialize, Serialize};
 
 use crate::application::error::ApplicationError;
 use crate::application::pack::traits::InstallIndexRepository;
+use crate::domain::cli_profile::value_objects::CliId;
 use crate::domain::pack::installed::{InstalledPack, INDEX_FILENAME};
-use crate::domain::pack::value_objects::{PackName, PackVersion, TargetCli};
+use crate::domain::pack::value_objects::{PackName, PackVersion};
 
 /// Raw packs_index.toml shape: one entry per installed (pack, CLI).
 #[derive(Debug, Default, Serialize, Deserialize)]
@@ -53,7 +54,7 @@ impl FsInstallIndexRepository {
         for raw_entry in &index.packs {
             let name = PackName::new(&raw_entry.name)?;
             let version = PackVersion::new(&raw_entry.version)?;
-            let cli = TargetCli::parse(&raw_entry.cli)?;
+            let cli = CliId::parse(&raw_entry.cli)?;
             entries.push(InstalledPack::new(
                 name,
                 version,
@@ -101,7 +102,7 @@ impl InstallIndexRepository for FsInstallIndexRepository {
     fn record(&self, target_root: &str, entry: &InstalledPack) -> Result<(), ApplicationError> {
         let mut entries = self.load_file(target_root)?;
         // Upsert by (name, cli): a reinstall updates the recorded paths.
-        entries.retain(|e| !e.matches(entry.name.as_str(), entry.cli));
+        entries.retain(|e| !e.matches(entry.name.as_str(), &entry.cli));
         entries.push(entry.clone());
         entries.sort_by(|a, b| {
             a.name
@@ -112,14 +113,9 @@ impl InstallIndexRepository for FsInstallIndexRepository {
         self.save_file(target_root, &entries)
     }
 
-    fn remove(
-        &self,
-        target_root: &str,
-        name: &str,
-        cli: TargetCli,
-    ) -> Result<(), ApplicationError> {
+    fn remove(&self, target_root: &str, name: &str, cli: CliId) -> Result<(), ApplicationError> {
         let mut entries = self.load_file(target_root)?;
-        entries.retain(|e| !e.matches(name, cli));
+        entries.retain(|e| !e.matches(name, &cli));
         self.save_file(target_root, &entries)
     }
 }
@@ -130,7 +126,7 @@ mod tests {
     use std::fs;
     use tempfile::TempDir;
 
-    fn entry(name: &str, cli: TargetCli, paths: &[&str]) -> InstalledPack {
+    fn entry(name: &str, cli: CliId, paths: &[&str]) -> InstalledPack {
         InstalledPack::new(
             PackName::new(name).unwrap(),
             PackVersion::new("1.0.0").unwrap(),
@@ -156,17 +152,25 @@ mod tests {
 
         repo.record(
             root,
-            &entry("tdd", TargetCli::Vibe, &[".agents/skills/tdd"]),
+            &entry("tdd", CliId::new("vibe").unwrap(), &[".agents/skills/tdd"]),
         )
         .unwrap();
         repo.record(
             root,
-            &entry("tdd", TargetCli::Gemini, &[".gemini/skills/tdd"]),
+            &entry(
+                "tdd",
+                CliId::new("gemini").unwrap(),
+                &[".gemini/skills/tdd"],
+            ),
         )
         .unwrap();
         repo.record(
             root,
-            &entry("tdd", TargetCli::Vibe, &[".agents/skills/tdd-v2"]),
+            &entry(
+                "tdd",
+                CliId::new("vibe").unwrap(),
+                &[".agents/skills/tdd-v2"],
+            ),
         )
         .unwrap();
 
@@ -174,7 +178,7 @@ mod tests {
         assert_eq!(entries.len(), 2);
         let vibe = entries
             .iter()
-            .find(|e| e.matches("tdd", TargetCli::Vibe))
+            .find(|e| e.matches("tdd", &CliId::new("vibe").unwrap()))
             .unwrap();
         assert_eq!(vibe.paths, vec![PathBuf::from(".agents/skills/tdd-v2")]);
 
@@ -191,19 +195,24 @@ mod tests {
 
         repo.record(
             root,
-            &entry("tdd", TargetCli::Vibe, &[".agents/skills/tdd"]),
+            &entry("tdd", CliId::new("vibe").unwrap(), &[".agents/skills/tdd"]),
         )
         .unwrap();
         repo.record(
             root,
-            &entry("review", TargetCli::Vibe, &[".agents/skills/review"]),
+            &entry(
+                "review",
+                CliId::new("vibe").unwrap(),
+                &[".agents/skills/review"],
+            ),
         )
         .unwrap();
-        repo.remove(root, "tdd", TargetCli::Vibe).unwrap();
+        repo.remove(root, "tdd", CliId::new("vibe").unwrap())
+            .unwrap();
 
         let entries = repo.load(root).unwrap();
         assert_eq!(entries.len(), 1);
-        assert!(entries[0].matches("review", TargetCli::Vibe));
+        assert!(entries[0].matches("review", &CliId::new("vibe").unwrap()));
     }
 
     #[test]

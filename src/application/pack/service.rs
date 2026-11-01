@@ -7,10 +7,10 @@ use crate::application::pack::dto::{
 use crate::application::pack::traits::{
     InstallDestination, InstallIndexRepository, PackRepository,
 };
+use crate::domain::cli_profile::value_objects::CliId;
 use crate::domain::pack::entity::Pack;
 use crate::domain::pack::error::plan_install;
 use crate::domain::pack::installed::InstalledPack;
-use crate::domain::pack::value_objects::TargetCli;
 
 /// Application service for the packs panel: list, install (traced in the
 /// target's install index), uninstall from the index, and list the
@@ -64,17 +64,17 @@ impl PackService {
 
     /// Default CLI a pack installs for: its first declared CLI, falling
     /// back to `"vibe"` (the v1 default, previously decided by the TUI
-    /// router). Returns the CLI identifier (`TargetCli::as_str()`).
+    /// router). Returns the CLI identifier (`CliId::as_str()`).
     pub fn default_cli(&self, pack_name: &str) -> Result<String, ApplicationError> {
         let pack = self.repository.find(pack_name)?;
         Ok(pack
             .clis
             .first()
             .map(|cli| cli.as_str().to_string())
-            .unwrap_or_else(|| TargetCli::Vibe.as_str().to_string()))
+            .unwrap_or_else(|| "vibe".to_string()))
     }
 
-    /// Install `pack_name` for `cli` (a `TargetCli::as_str()` identifier)
+    /// Install `pack_name` for `cli` (a `CliId::as_str()` identifier)
     /// inside `target_root`. The domain install plan is computed first (no
     /// partial writes on validation errors); existing destinations abort the
     /// install unless `overwrite` is set. On success the installation is
@@ -87,16 +87,16 @@ impl PackService {
         target_root: &str,
         overwrite: bool,
     ) -> Result<InstallResultDto, ApplicationError> {
-        let cli = TargetCli::parse(cli)?;
+        let cli = CliId::parse(cli)?;
         let pack = self.repository.find(pack_name)?;
-        if !pack.supports(cli) {
+        if !pack.supports(&cli) {
             return Err(ApplicationError::Domain(
                 crate::domain::pack::error::DomainError::UnknownCli(cli.as_str().to_string()),
             ));
         }
 
         let root = Path::new(target_root);
-        let plan = plan_install(&pack, cli, root)?;
+        let plan = plan_install(&pack, &cli, root)?;
 
         let mut copied = 0usize;
         for copy in &plan {
@@ -116,7 +116,8 @@ impl PackService {
             .iter()
             .map(|copy| relative_to_root(root, &copy.destination))
             .collect::<Result<Vec<PathBuf>, _>>()?;
-        let entry = InstalledPack::new(pack.name.clone(), pack.version.clone(), cli, paths)?;
+        let entry =
+            InstalledPack::new(pack.name.clone(), pack.version.clone(), cli.clone(), paths)?;
         self.index.record(target_root, &entry)?;
 
         Ok(InstallResultDto {
@@ -136,12 +137,12 @@ impl PackService {
         cli: &str,
         target_root: &str,
     ) -> Result<UninstallResultDto, ApplicationError> {
-        let cli = TargetCli::parse(cli)?;
+        let cli = CliId::parse(cli)?;
         let root = Path::new(target_root);
         let entries = self.index.load(target_root)?;
         let entry = entries
             .iter()
-            .find(|e| e.matches(pack_name, cli))
+            .find(|e| e.matches(pack_name, &cli))
             .ok_or_else(|| ApplicationError::InstallNotFound(format!("{pack_name} ({cli})")))?;
 
         let mut removed = 0usize;
@@ -153,7 +154,7 @@ impl PackService {
             self.destination.remove(&destination)?;
             removed += 1;
         }
-        self.index.remove(target_root, pack_name, cli)?;
+        self.index.remove(target_root, pack_name, cli.clone())?;
 
         Ok(UninstallResultDto {
             pack_name: pack_name.to_string(),
@@ -189,12 +190,12 @@ mod tests {
     use crate::domain::pack::value_objects::{PackItemKind, PackName, PackVersion, TargetCliMap};
     use std::path::PathBuf;
 
-    fn sample_pack(name: &str, cli: TargetCli) -> Pack {
+    fn sample_pack(name: &str, cli: CliId) -> Pack {
         Pack::new(
             PackName::new(name).unwrap(),
             PackVersion::new("1.0.0").unwrap(),
             "desc".to_string(),
-            vec![cli],
+            vec![cli.clone()],
             vec![PackItem::new(
                 PackItemKind::Skill,
                 PathBuf::from("skills/tdd/SKILL.md"),
@@ -205,11 +206,11 @@ mod tests {
         .unwrap()
     }
 
-    fn cli_of(pack: &Pack) -> &'static str {
-        pack.clis[0].as_str()
+    fn cli_of(pack: &Pack) -> String {
+        pack.clis[0].as_str().to_string()
     }
 
-    fn entry_for(pack_name: &str, cli: TargetCli) -> InstalledPack {
+    fn entry_for(pack_name: &str, cli: CliId) -> InstalledPack {
         InstalledPack::new(
             PackName::new(pack_name).unwrap(),
             PackVersion::new("1.0.0").unwrap(),
@@ -240,8 +241,8 @@ mod tests {
     #[test]
     fn list_sorts_by_cli_then_name() {
         let mut repo = MockPackRepository::new();
-        let zeta = sample_pack("zeta", TargetCli::Vibe);
-        let alpha = sample_pack("alpha", TargetCli::Gemini);
+        let zeta = sample_pack("zeta", CliId::new("vibe").unwrap());
+        let alpha = sample_pack("alpha", CliId::new("gemini").unwrap());
         repo.expect_list()
             .returning(move || Ok(vec![zeta.clone(), alpha.clone()]));
         let service = PackService::new(
@@ -250,14 +251,15 @@ mod tests {
             Box::new(MockInstallIndexRepository::new()),
         );
         let dtos = service.list().unwrap();
-        assert_eq!(dtos[0].name, "zeta");
-        assert_eq!(dtos[0].clis[0], "vibe");
-        assert_eq!(dtos[1].name, "alpha");
+        // CLI ids sort lexicographically (data-driven, E02): gemini < vibe.
+        assert_eq!(dtos[0].name, "alpha");
+        assert_eq!(dtos[0].clis[0], "gemini");
+        assert_eq!(dtos[1].name, "zeta");
     }
 
     #[test]
     fn default_cli_is_the_first_declared_cli() {
-        let pack = sample_pack("tdd", TargetCli::Gemini);
+        let pack = sample_pack("tdd", CliId::new("gemini").unwrap());
         let (repo, dest, index) = service_with(pack);
         let service = PackService::new(Box::new(repo), Box::new(dest), Box::new(index));
         assert_eq!(service.default_cli("tdd").unwrap(), "gemini");
@@ -265,7 +267,7 @@ mod tests {
 
     #[test]
     fn install_copies_plan_records_index_and_reports_count() {
-        let pack = sample_pack("tdd", TargetCli::Vibe);
+        let pack = sample_pack("tdd", CliId::new("vibe").unwrap());
         let cli = cli_of(&pack);
         let (repo, mut dest, mut index) = service_with(pack);
 
@@ -283,14 +285,14 @@ mod tests {
             .returning(|_, _| Ok(()));
 
         let service = PackService::new(Box::new(repo), Box::new(dest), Box::new(index));
-        let result = service.install("tdd", cli, "/repo", false).unwrap();
+        let result = service.install("tdd", &cli, "/repo", false).unwrap();
         assert_eq!(result.copied_count, 1);
         assert_eq!(result.pack_name, "tdd");
     }
 
     #[test]
     fn install_does_not_record_index_when_copy_fails() {
-        let pack = sample_pack("tdd", TargetCli::Vibe);
+        let pack = sample_pack("tdd", CliId::new("vibe").unwrap());
         let cli = cli_of(&pack);
         let (repo, mut dest, mut index) = service_with(pack);
 
@@ -300,12 +302,12 @@ mod tests {
         index.expect_record().never();
 
         let service = PackService::new(Box::new(repo), Box::new(dest), Box::new(index));
-        assert!(service.install("tdd", cli, "/repo", false).is_err());
+        assert!(service.install("tdd", &cli, "/repo", false).is_err());
     }
 
     #[test]
     fn install_aborts_when_destination_exists_without_overwrite() {
-        let pack = sample_pack("tdd", TargetCli::Vibe);
+        let pack = sample_pack("tdd", CliId::new("vibe").unwrap());
         let cli = cli_of(&pack);
         let (repo, mut dest, mut index) = service_with(pack);
 
@@ -314,13 +316,13 @@ mod tests {
         index.expect_record().never();
 
         let service = PackService::new(Box::new(repo), Box::new(dest), Box::new(index));
-        let err = service.install("tdd", cli, "/repo", false).unwrap_err();
+        let err = service.install("tdd", &cli, "/repo", false).unwrap_err();
         assert!(matches!(err, ApplicationError::DestinationExists(_)));
     }
 
     #[test]
     fn install_with_overwrite_proceeds_on_existing_destination() {
-        let pack = sample_pack("tdd", TargetCli::Vibe);
+        let pack = sample_pack("tdd", CliId::new("vibe").unwrap());
         let cli = cli_of(&pack);
         let (repo, mut dest, mut index) = service_with(pack);
 
@@ -329,12 +331,12 @@ mod tests {
         index.expect_record().times(1).returning(|_, _| Ok(()));
 
         let service = PackService::new(Box::new(repo), Box::new(dest), Box::new(index));
-        assert!(service.install("tdd", cli, "/repo", true).is_ok());
+        assert!(service.install("tdd", &cli, "/repo", true).is_ok());
     }
 
     #[test]
     fn install_rejects_unsupported_cli() {
-        let pack = sample_pack("tdd", TargetCli::Vibe);
+        let pack = sample_pack("tdd", CliId::new("vibe").unwrap());
         let (repo, dest, index) = service_with(pack);
 
         let service = PackService::new(Box::new(repo), Box::new(dest), Box::new(index));
@@ -353,7 +355,7 @@ mod tests {
         index
             .expect_load()
             .with(mockall::predicate::eq("/repo"))
-            .returning(|_| Ok(vec![entry_for("tdd", TargetCli::Vibe)]));
+            .returning(|_| Ok(vec![entry_for("tdd", CliId::new("vibe").unwrap())]));
 
         let service = PackService::new(
             Box::new(MockPackRepository::new()),
@@ -370,7 +372,7 @@ mod tests {
     #[test]
     fn uninstall_removes_assets_then_index_entry() {
         let mut index = MockInstallIndexRepository::new();
-        let entry = entry_for("tdd", TargetCli::Vibe);
+        let entry = entry_for("tdd", CliId::new("vibe").unwrap());
         let entry_for_load = entry.clone();
         index
             .expect_load()
@@ -381,7 +383,7 @@ mod tests {
             .with(
                 mockall::predicate::eq("/repo"),
                 mockall::predicate::eq("tdd"),
-                mockall::predicate::eq(TargetCli::Vibe),
+                mockall::predicate::eq(CliId::new("vibe").unwrap()),
             )
             .returning(|_, _, _| Ok(()));
 
@@ -408,7 +410,7 @@ mod tests {
     #[test]
     fn uninstall_tolerates_assets_already_missing() {
         let mut index = MockInstallIndexRepository::new();
-        let entry_for_load = entry_for("tdd", TargetCli::Vibe);
+        let entry_for_load = entry_for("tdd", CliId::new("vibe").unwrap());
         index
             .expect_load()
             .returning(move |_| Ok(vec![entry_for_load.clone()]));
@@ -430,7 +432,7 @@ mod tests {
     #[test]
     fn uninstall_keeps_index_entry_when_a_removal_fails() {
         let mut index = MockInstallIndexRepository::new();
-        let entry_for_load = entry_for("tdd", TargetCli::Vibe);
+        let entry_for_load = entry_for("tdd", CliId::new("vibe").unwrap());
         index
             .expect_load()
             .returning(move |_| Ok(vec![entry_for_load.clone()]));

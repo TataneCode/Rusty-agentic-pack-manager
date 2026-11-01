@@ -166,7 +166,7 @@ mod unit {
 
     #[test]
     fn use_lines_finds_imports_in_test_modules_too() {
-        let source = "use crate::domain::pack::value_objects::TargetCli;\n#[cfg(test)]\nmod tests {\n    use crate::domain::Pack;\n}\n";
+        let source = "use crate::domain::pack::value_objects::CliId;\n#[cfg(test)]\nmod tests {\n    use crate::domain::Pack;\n}\n";
         assert_eq!(use_lines(source, "crate::domain"), vec![1, 4]);
     }
 

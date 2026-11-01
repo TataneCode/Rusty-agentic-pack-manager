@@ -3,6 +3,7 @@
 //! and installable through the regular pack pipeline. Wired exactly like
 //! main.rs: real adapters, tempdir library, no TUI.
 
+use rusty_agentic_pack_manager::domain::cli_profile::value_objects::CliId;
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -12,7 +13,7 @@ use rusty_agentic_pack_manager::application::pack::service::PackService;
 use rusty_agentic_pack_manager::application::pack::traits::PackRepository;
 use rusty_agentic_pack_manager::application::pack_create::dto::{CreateItemDto, CreatePackDto};
 use rusty_agentic_pack_manager::application::pack_create::service::PackCreationService;
-use rusty_agentic_pack_manager::domain::pack::value_objects::TargetCli;
+
 use rusty_agentic_pack_manager::infrastructure::filesystem::explorer::FsInstallDestination;
 use rusty_agentic_pack_manager::infrastructure::filesystem::library::FsLibraryInitializer;
 use rusty_agentic_pack_manager::infrastructure::pack::index::FsInstallIndexRepository;
@@ -140,7 +141,10 @@ fn create_builds_a_pack_that_the_library_loads_and_installs() {
     assert_eq!(packs[0].name.as_str(), "my-pack");
     assert_eq!(packs[0].items.len(), 3);
     // ...with the CLIs deduced from the items' destinations.
-    assert_eq!(packs[0].clis, vec![TargetCli::Vibe, TargetCli::Gemini]);
+    assert_eq!(
+        packs[0].clis,
+        vec![CliId::new("gemini").unwrap(), CliId::new("vibe").unwrap()]
+    );
 
     // ...and installable like any library pack.
     let target = tmp.path().join("repo");
