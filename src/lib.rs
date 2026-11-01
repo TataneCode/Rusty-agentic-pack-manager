@@ -37,6 +37,7 @@ pub mod application {
 }
 
 pub mod infrastructure {
+    pub mod cli_profile;
     pub mod pack {
         pub mod content;
         pub mod index;

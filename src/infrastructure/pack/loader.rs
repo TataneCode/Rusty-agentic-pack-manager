@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::application::error::ApplicationError;
 use crate::application::pack::traits::PackRepository;
+use crate::domain::cli_profile::profile::CliProfileRegistry;
 use crate::domain::cli_profile::value_objects::CliId;
 use crate::domain::pack::entity::{Pack, PackItem};
 use crate::domain::pack::value_objects::{PackItemKind, PackName, PackVersion, TargetCliMap};
@@ -61,10 +62,21 @@ impl Manifest {
 #[derive(Debug)]
 pub struct FsPackRepository {
     roots: Vec<PathBuf>,
+    /// CLI profiles validating every `cli` id and destination key of the
+    /// manifests (E02). A CLI with a profile is usable even if it was not
+    /// known to the v1 enum.
+    profiles: CliProfileRegistry,
 }
 
 impl FsPackRepository {
     pub fn new(roots: Vec<PathBuf>) -> Result<FsPackRepository, ApplicationError> {
+        Self::with_profiles(roots, CliProfileRegistry::default())
+    }
+
+    pub fn with_profiles(
+        roots: Vec<PathBuf>,
+        profiles: CliProfileRegistry,
+    ) -> Result<FsPackRepository, ApplicationError> {
         let first = roots
             .first()
             .ok_or_else(|| ApplicationError::NotADirectory("(no pack library root)".to_string()))?;
@@ -73,7 +85,7 @@ impl FsPackRepository {
                 first.to_string_lossy().into_owned(),
             ));
         }
-        Ok(FsPackRepository { roots })
+        Ok(FsPackRepository { roots, profiles })
     }
 
     /// First root (in read order) containing a pack directory named `name`.
@@ -102,7 +114,7 @@ impl FsPackRepository {
         let clis = manifest
             .cli
             .iter()
-            .map(|c| CliId::parse(c))
+            .map(|c| self.profiles.validate(c))
             .collect::<Result<Vec<CliId>, _>>()?;
 
         let mut items = Vec::new();
@@ -115,7 +127,7 @@ impl FsPackRepository {
             })?;
             let mut destinations = TargetCliMap::default();
             for (cli_raw, dest) in &raw_item.destinations {
-                let cli = CliId::parse(cli_raw)?;
+                let cli = self.profiles.validate(cli_raw)?;
                 destinations.insert(cli, dest.clone());
             }
             items.push(PackItem::new(
@@ -196,7 +208,28 @@ gemini = ".gemini/commands/tdd/"
     }
 
     fn repo_with(roots: Vec<PathBuf>) -> FsPackRepository {
-        FsPackRepository::new(roots).unwrap()
+        let registry = crate::domain::cli_profile::profile::CliProfileRegistry::new(vec![
+            test_profile("vibe"),
+            test_profile("gemini"),
+        ]);
+        FsPackRepository::with_profiles(roots, registry).unwrap()
+    }
+
+    fn test_profile(id: &str) -> crate::domain::cli_profile::profile::CliProfile {
+        use crate::domain::cli_profile::profile::DestinationTemplates;
+        crate::domain::cli_profile::profile::CliProfile::new(
+            CliId::new(id).unwrap(),
+            id.to_string(),
+            DestinationTemplates {
+                skill: format!(".agents/skills/{{name}}/SKILL.md"),
+                skill_dir: Some(format!(".agents/skills/{{name}}/")),
+                agent: format!(".agents/{{name}}.toml"),
+                agent_dir: None,
+                command: format!(".agents/{{name}}.toml"),
+                command_dir: None,
+            },
+        )
+        .unwrap()
     }
 
     #[test]
@@ -295,6 +328,55 @@ gemini = ".gemini/commands/tdd/"
 
         let repo = repo_with(vec![user.path().to_path_buf(), system.path().to_path_buf()]);
         assert!(repo.find("tdd").is_ok());
+    }
+
+    #[test]
+    fn cli_ids_are_validated_against_the_profile_registry() {
+        let tmp = TempDir::new().unwrap();
+        write_pack(
+            tmp.path(),
+            "custom",
+            r#"
+name = "custom"
+version = "1.0.0"
+cli = ["vibe", "claude"]
+
+[[items]]
+kind = "skill"
+source = "skills/tdd/SKILL.md"
+[items.destinations]
+claude = ".claude/skills/tdd/SKILL.md"
+"#,
+        );
+        // registry with vibe + claude: both accepted
+        let registry = crate::domain::cli_profile::profile::CliProfileRegistry::new(vec![
+            test_profile("vibe"),
+            test_profile("claude"),
+        ]);
+        let repo =
+            FsPackRepository::with_profiles(vec![tmp.path().to_path_buf()], registry).unwrap();
+        let pack = repo.find("custom").unwrap();
+        assert_eq!(pack.clis.len(), 2);
+        assert_eq!(
+            pack.items[0]
+                .destination_for(&CliId::new("claude").unwrap())
+                .unwrap(),
+            ".claude/skills/tdd/SKILL.md"
+        );
+
+        // empty registry: even "vibe" is rejected
+        let empty = FsPackRepository::with_profiles(
+            vec![tmp.path().to_path_buf()],
+            crate::domain::cli_profile::profile::CliProfileRegistry::default(),
+        )
+        .unwrap();
+        let err = empty.find("custom").unwrap_err();
+        assert!(matches!(
+            err,
+            ApplicationError::Domain(crate::domain::pack::error::DomainError::UnknownCliProfile(
+                _
+            ))
+        ));
     }
 
     #[test]

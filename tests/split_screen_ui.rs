@@ -18,6 +18,39 @@ use rusty_agentic_pack_manager::presentation::tui::app::{App, Focus};
 use rusty_agentic_pack_manager::presentation::tui::split_view;
 use tempfile::TempDir;
 
+fn test_registry() -> rusty_agentic_pack_manager::domain::cli_profile::profile::CliProfileRegistry {
+    use rusty_agentic_pack_manager::domain::cli_profile::profile::{
+        CliProfile, CliProfileRegistry, DestinationTemplates,
+    };
+    use rusty_agentic_pack_manager::domain::cli_profile::value_objects::CliId;
+    let profile = |id: &str| {
+        CliProfile::new(
+            CliId::new(id).unwrap(),
+            id.to_string(),
+            DestinationTemplates {
+                skill: ".agents/skills/{name}/SKILL.md".to_string(),
+                skill_dir: Some(".agents/skills/{name}/".to_string()),
+                agent: ".vibe/agents/{name}.toml".to_string(),
+                agent_dir: None,
+                command: ".vibe/commands/{name}.toml".to_string(),
+                command_dir: None,
+            },
+        )
+        .unwrap()
+    };
+    CliProfileRegistry::new(vec![profile("vibe"), profile("gemini")])
+}
+
+fn pack_repo(
+    roots: Vec<std::path::PathBuf>,
+) -> rusty_agentic_pack_manager::infrastructure::pack::loader::FsPackRepository {
+    rusty_agentic_pack_manager::infrastructure::pack::loader::FsPackRepository::with_profiles(
+        roots,
+        test_registry(),
+    )
+    .unwrap()
+}
+
 fn make_pack(packs_dir: &std::path::Path) {
     let pack_dir = packs_dir.join("review");
     fs::create_dir_all(pack_dir.join("skills/code-review")).unwrap();
@@ -51,7 +84,7 @@ fn build_app(tmp: &TempDir) -> App {
     fs::create_dir_all(tmp.path().join("start/subdir")).unwrap();
     fs::write(tmp.path().join("start/file.txt"), "x").unwrap();
 
-    let repo = FsPackRepository::new(vec![packs_dir.clone()]).unwrap();
+    let repo = pack_repo(vec![packs_dir.clone()]);
     let destination = FsInstallDestination::new(vec![packs_dir.clone()]);
     let pack_service = PackService::new(
         Box::new(repo),
