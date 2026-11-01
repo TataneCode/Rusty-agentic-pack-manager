@@ -59,6 +59,8 @@ rapm pack create --name my-pack \
 
 The pack is written into the user library (canonical layout `<kind>s/<name>/` + a generated `pack.toml`) and is immediately available in the TUI. See [MANUAL.md](MANUAL.md) for the full option list.
 
+The TUI operations are also available headless, for scripts and CI: `rapm list [--cli <cli>] [--installed [--dest <dir>]]`, `rapm show <pack>`, `rapm install <pack> --dest <dir> [--cli <cli>] [--force]`, `rapm uninstall <pack> --dest <dir> [--cli <cli>]` — same rules as the TUI (install index `packs_index.toml`, exit codes 0/1/2). See [MANUAL.md](MANUAL.md#headless-cli-scripts--ci).
+
 ## Embedded packs
 
 The initial pack list (in `packs/`) is built from [docs-tech/llm-cli](https://github.com/TataneCode/docs-tech/tree/main/llm-cli) and rusty-console, made library-agnostic, targeting **Vibe CLI** and **Gemini CLI** first.

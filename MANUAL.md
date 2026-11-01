@@ -44,6 +44,23 @@ rapm pack create \
 
 Rules: every item needs a destination for every declared CLI; two sources of the same kind must not share a file/directory name (they would collide in the canonical layout); an existing pack is refused unless `--force` is passed. Destinations are validated at creation with the same rule as at install time: relative paths only — absolute paths (`/etc/...`), upward escapes (`../...`) and root-only destinations (`.`, `/`) are rejected, so a created pack can always be installed. Exit codes: `0` success (and `--help`), `2` usage error (unknown option, missing value, missing `--name` without a terminal), `1` any other error. Accepted limits: a pack created while the TUI runs appears after the next action; `--force` is best-effort (a crash mid-swap can leave a `<name>.old-<pid>` directory).
 
+## Headless CLI (scripts / CI)
+
+The same operations as the TUI, without a terminal — install, uninstall, list and show are served by the same service with the same rules (destination validation, `packs_index.toml`, exit codes):
+
+```bash
+rapm list [--cli <cli>] [--installed [--dest <dir>]]
+rapm show <pack>
+rapm install <pack> --dest <dir> [--cli <cli>] [--force]
+rapm uninstall <pack> --dest <dir> [--cli <cli>]
+```
+
+- `list` prints one line per pack (`name  version  clis  N item(s)`); `--installed` reads the `packs_index.toml` of `--dest` instead (one line per recorded installation: `name  cli  paths`).
+- `show <pack>` prints the manifest summary: name, version, description, CLIs, then one line per item (`kind  source  cli=dest, ...`).
+- `install` copies the pack's items into `--dest` (default: the current directory), records the installation in `<dest>/packs_index.toml`, and refuses existing destinations unless `--force` is passed. `--cli` defaults to the pack's first declared CLI.
+- `uninstall` removes exactly the assets recorded in the index, then drops the index entry.
+- Exit codes: `0` success, `1` runtime error (unknown pack, destination already exists without `--force`, no recorded install…), `2` usage error.
+
 ## The screen
 
 Three sections, all in shared rounded boxes (rusty-console design):
