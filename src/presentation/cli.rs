@@ -2,6 +2,7 @@ use std::io::{IsTerminal, Write};
 use std::path::PathBuf;
 
 use crate::application::error::ApplicationError;
+use crate::application::pack::service::PackService;
 use crate::application::pack_create::dto::{CreateItemDto, CreatePackDto};
 use crate::application::pack_create::service::PackCreationService;
 
@@ -10,8 +11,28 @@ rapm — Rusty Agentic Pack Manager
 
 Usage:
   rapm                          Launch the TUI
+  rapm list [options]           List available packs (or installed ones)
+  rapm show <pack>              Show a pack's manifest and items
+  rapm install <pack> [options] Install a pack into a target directory
+  rapm uninstall <pack> [options] Uninstall a pack from a target directory
   rapm pack create [options]    Create a pack in the user library and exit
   rapm help                     Show this help
+
+`list` options:
+  --cli <cli>              Only packs supporting this CLI
+  --installed              List installations recorded in the index instead
+  --dest <dir>             Target directory (default: current directory); with --installed, the repository whose packs_index.toml is read
+
+`install` options:
+  --dest <dir>             Target directory (default: current directory)
+  --cli <cli>              Target CLI (default: the pack's first declared CLI)
+  --force                  Overwrite existing destinations
+
+`uninstall` options:
+  --dest <dir>             Target directory (default: current directory)
+  --cli <cli>              Target CLI (default: the pack's first declared CLI)
+
+Exit codes: 0 success, 1 runtime error, 2 usage error.
 
 `pack create` options:
   --name <name>            Pack name (lowercase, digits, - and _); prompted if omitted
@@ -72,17 +93,52 @@ impl Default for CreateOptions {
 pub enum CliCommand {
     Help,
     Create(CreateOptions),
+    List(ListOptions),
+    Show { pack: String },
+    Install(InstallOptions),
+    Uninstall(UninstallOptions),
+}
+
+/// Options of `rapm list`.
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub struct ListOptions {
+    pub cli: Option<String>,
+    pub installed: bool,
+    pub dest: Option<PathBuf>,
+}
+
+/// Options of `rapm install <pack>`.
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub struct InstallOptions {
+    pub pack: String,
+    pub dest: Option<PathBuf>,
+    pub cli: Option<String>,
+    pub force: bool,
+}
+
+/// Options of `rapm uninstall <pack>`.
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub struct UninstallOptions {
+    pub pack: String,
+    pub dest: Option<PathBuf>,
+    pub cli: Option<String>,
 }
 
 /// Run the CLI: parse `args`, execute, and return the process exit code.
-/// `service` and the library wiring are built at the DI point (`main.rs`).
-pub fn run(args: &[String], service: &PackCreationService) -> Result<i32, ApplicationError> {
-    run_with(args, service, &mut prompt_stdin)
+/// `creation` and `pack` services and the library wiring are built at the
+/// DI point (`main.rs`).
+pub fn run(
+    args: &[String],
+    creation: &PackCreationService,
+    pack: &PackService,
+) -> Result<i32, ApplicationError> {
+    run_with(args, creation, pack, &mut prompt_stdin)
 }
 
 fn run_with(
     args: &[String],
-    service: &PackCreationService,
+    creation: &PackCreationService,
+    pack: &PackService,
     prompt: &mut dyn FnMut(&str) -> Option<String>,
 ) -> Result<i32, ApplicationError> {
     match parse(args)? {
@@ -93,7 +149,7 @@ fn run_with(
         }
         Some(CliCommand::Create(options)) => {
             let dto = resolve_dto(&options, prompt)?;
-            let result = service.create(&dto)?;
+            let result = creation.create(&dto)?;
             println!(
                 "created pack '{}' in {} ({} item(s))",
                 result.pack_name,
@@ -102,7 +158,111 @@ fn run_with(
             );
             Ok(0)
         }
+        Some(CliCommand::List(options)) => {
+            run_list(pack, &options)?;
+            Ok(0)
+        }
+        Some(CliCommand::Show { pack: name }) => {
+            run_show(pack, &name)?;
+            Ok(0)
+        }
+        Some(CliCommand::Install(options)) => {
+            let dest = resolve_dest(&options.dest)?;
+            let cli = match &options.cli {
+                Some(cli) => cli.clone(),
+                None => pack.default_cli(&options.pack)?,
+            };
+            let result = pack.install(&options.pack, &cli, &dest, options.force)?;
+            println!(
+                "installed '{}' for {} into {} ({} path(s))",
+                result.pack_name, cli, result.target_root, result.copied_count
+            );
+            Ok(0)
+        }
+        Some(CliCommand::Uninstall(options)) => {
+            let dest = resolve_dest(&options.dest)?;
+            let cli = match &options.cli {
+                Some(cli) => cli.clone(),
+                None => pack.default_cli(&options.pack)?,
+            };
+            let result = pack.uninstall(&options.pack, &cli, &dest)?;
+            println!(
+                "uninstalled '{}' for {} from {} ({} path(s) removed)",
+                result.pack_name, result.cli, dest, result.removed_count
+            );
+            Ok(0)
+        }
     }
+}
+
+/// `--dest` defaults to the current directory (same convention as the TUI,
+/// which starts in the cwd).
+fn resolve_dest(dest: &Option<PathBuf>) -> Result<String, ApplicationError> {
+    match dest {
+        Some(dir) => Ok(dir.to_string_lossy().into_owned()),
+        None => std::env::current_dir()
+            .map(|dir| dir.to_string_lossy().into_owned())
+            .map_err(|err| ApplicationError::Io {
+                path: ".".to_string(),
+                source: err,
+            }),
+    }
+}
+
+fn run_list(pack: &PackService, options: &ListOptions) -> Result<(), ApplicationError> {
+    if options.installed {
+        let dest = resolve_dest(&options.dest)?;
+        let entries = pack.installed_in(&dest)?;
+        let entries: Vec<_> = match &options.cli {
+            Some(cli) => entries.into_iter().filter(|e| e.cli == *cli).collect(),
+            None => entries,
+        };
+        for entry in entries {
+            let paths = entry
+                .paths
+                .iter()
+                .map(|p| p.to_string_lossy().into_owned())
+                .collect::<Vec<_>>()
+                .join(", ");
+            println!("{}  {}  {}", entry.name, entry.cli, paths);
+        }
+    } else {
+        let packs = pack.list()?;
+        for summary in packs.iter().filter(|p| match &options.cli {
+            Some(cli) => p.clis.iter().any(|c| c == cli),
+            None => true,
+        }) {
+            let clis = summary.clis.join(",");
+            println!(
+                "{}  {}  {}  {} item(s)",
+                summary.name, summary.version, clis, summary.item_count
+            );
+        }
+    }
+    Ok(())
+}
+
+fn run_show(pack: &PackService, name: &str) -> Result<(), ApplicationError> {
+    let detail = pack.detail(name)?;
+    println!("name: {}", detail.name);
+    println!("version: {}", detail.version);
+    println!("description: {}", detail.description);
+    println!("clis: {}", detail.clis.join(", "));
+    for item in &detail.items {
+        let destinations = item
+            .destinations
+            .iter()
+            .map(|(cli, dest)| format!("{cli}={dest}"))
+            .collect::<Vec<_>>()
+            .join(", ");
+        println!("{}  {}  {}", item.kind, item.source, destinations);
+    }
+    Ok(())
+}
+
+/// True when `path` looks like a CLI flag (starts with `-`).
+fn is_flag(token: &str) -> bool {
+    token.starts_with('-') && token.len() > 1
 }
 
 /// Fill the interactive fields of the DTO: `--name` and `--description`
@@ -150,8 +310,128 @@ pub fn parse(args: &[String]) -> Result<Option<CliCommand>, ApplicationError> {
                 "unknown 'pack' subcommand: {other}"
             ))),
         },
+        "list" => parse_list(&args[1..]).map(Some),
+        "show" => parse_show(&args[1..]).map(Some),
+        "install" => parse_install(&args[1..]).map(Some),
+        "uninstall" => parse_uninstall(&args[1..]).map(Some),
         other => Err(ApplicationError::Usage(format!("unknown command: {other}"))),
     }
+}
+
+fn parse_list(tokens: &[String]) -> Result<CliCommand, ApplicationError> {
+    let mut options = ListOptions::default();
+    let mut parser = TokenParser { tokens, pos: 0 };
+    while let Some(token) = parser.peek().map(str::to_string) {
+        let flag = token.split('=').next().unwrap_or("");
+        match flag {
+            "-h" | "--help" => return Ok(CliCommand::Help),
+            "--cli" => options.cli = Some(parser.value(flag)?),
+            "--installed" => {
+                parser.advance();
+                options.installed = true;
+            }
+            "--dest" => options.dest = Some(PathBuf::from(parser.value(flag)?)),
+            _ => return Err(ApplicationError::Usage(format!("unknown option: {token}"))),
+        }
+    }
+    Ok(CliCommand::List(options))
+}
+
+fn parse_show(tokens: &[String]) -> Result<CliCommand, ApplicationError> {
+    let mut parser = TokenParser { tokens, pos: 0 };
+    match parser.peek() {
+        None => Err(ApplicationError::Usage(
+            "missing pack name: rapm show <pack>".to_string(),
+        )),
+        Some("-h" | "--help") => Ok(CliCommand::Help),
+        Some(token) if is_flag(token) => {
+            Err(ApplicationError::Usage(format!("unknown option: {token}")))
+        }
+        Some(_) => {
+            parser.advance();
+            let pack = tokens[0].clone();
+            if let Some(extra) = parser.peek() {
+                return Err(ApplicationError::Usage(format!(
+                    "unexpected argument: {extra}"
+                )));
+            }
+            Ok(CliCommand::Show { pack })
+        }
+    }
+}
+
+fn parse_install(tokens: &[String]) -> Result<CliCommand, ApplicationError> {
+    match parse_pack_target(tokens, true)? {
+        None => Ok(CliCommand::Help),
+        Some(target) => Ok(CliCommand::Install(InstallOptions {
+            pack: target.pack,
+            dest: target.dest,
+            cli: target.cli,
+            force: target.force,
+        })),
+    }
+}
+
+fn parse_uninstall(tokens: &[String]) -> Result<CliCommand, ApplicationError> {
+    match parse_pack_target(tokens, false)? {
+        None => Ok(CliCommand::Help),
+        Some(target) => Ok(CliCommand::Uninstall(UninstallOptions {
+            pack: target.pack,
+            dest: target.dest,
+            cli: target.cli,
+        })),
+    }
+}
+
+/// Positional pack name plus the shared `--dest`/`--cli`/`--force` options
+/// of `install` and `uninstall`.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+struct PackTargetOptions {
+    pack: String,
+    dest: Option<PathBuf>,
+    cli: Option<String>,
+    force: bool,
+}
+
+/// Shared parser of `install`/`uninstall`: one positional pack name plus
+/// `--dest`, `--cli` and (for install only) `--force`. `None` = help
+/// requested.
+fn parse_pack_target(
+    tokens: &[String],
+    allow_force: bool,
+) -> Result<Option<PackTargetOptions>, ApplicationError> {
+    let mut target = PackTargetOptions::default();
+    let mut parser = TokenParser { tokens, pos: 0 };
+    while let Some(token) = parser.peek().map(str::to_string) {
+        let flag = token.split('=').next().unwrap_or("");
+        match flag {
+            "-h" | "--help" => return Ok(None),
+            "--dest" => target.dest = Some(PathBuf::from(parser.value(flag)?)),
+            "--cli" => target.cli = Some(parser.value(flag)?),
+            "--force" if allow_force => {
+                parser.advance();
+                target.force = true;
+            }
+            _ if is_flag(&token) => {
+                return Err(ApplicationError::Usage(format!("unknown option: {token}")))
+            }
+            _ => {
+                if !target.pack.is_empty() {
+                    return Err(ApplicationError::Usage(format!(
+                        "unexpected argument: {token}"
+                    )));
+                }
+                parser.advance();
+                target.pack = token;
+            }
+        }
+    }
+    if target.pack.is_empty() {
+        return Err(ApplicationError::Usage(
+            "missing pack name: rapm install <pack> / rapm uninstall <pack>".to_string(),
+        ));
+    }
+    Ok(Some(target))
 }
 
 fn parse_create(tokens: &[String]) -> Result<CliCommand, ApplicationError> {
@@ -457,6 +737,162 @@ mod tests {
     fn missing_value_is_a_usage_error() {
         let err = parse(&args(&["pack", "create", "--name"])).unwrap_err();
         assert!(matches!(err, ApplicationError::Usage(_)));
+    }
+
+    #[test]
+    fn list_parses_cli_installed_and_dest() {
+        let command = parse(&args(&[
+            "list",
+            "--cli",
+            "vibe",
+            "--installed",
+            "--dest=/tmp/repo",
+        ]))
+        .unwrap();
+        assert_eq!(
+            command,
+            Some(CliCommand::List(ListOptions {
+                cli: Some("vibe".to_string()),
+                installed: true,
+                dest: Some(PathBuf::from("/tmp/repo")),
+            }))
+        );
+    }
+
+    #[test]
+    fn list_defaults_to_available_packs() {
+        let command = parse(&args(&["list"])).unwrap();
+        assert_eq!(
+            command,
+            Some(CliCommand::List(ListOptions {
+                cli: None,
+                installed: false,
+                dest: None,
+            }))
+        );
+    }
+
+    #[test]
+    fn list_rejects_unknown_option() {
+        assert!(matches!(
+            parse(&args(&["list", "--wat"])).unwrap_err(),
+            ApplicationError::Usage(_)
+        ));
+    }
+
+    #[test]
+    fn show_takes_one_pack_name() {
+        assert_eq!(
+            parse(&args(&["show", "tdd"])).unwrap(),
+            Some(CliCommand::Show {
+                pack: "tdd".to_string()
+            })
+        );
+        assert!(matches!(
+            parse(&args(&["show"])).unwrap_err(),
+            ApplicationError::Usage(_)
+        ));
+        assert!(matches!(
+            parse(&args(&["show", "tdd", "extra"])).unwrap_err(),
+            ApplicationError::Usage(_)
+        ));
+        assert!(matches!(
+            parse(&args(&["show", "--cli", "vibe"])).unwrap_err(),
+            ApplicationError::Usage(_)
+        ));
+    }
+
+    #[test]
+    fn install_parses_pack_dest_cli_and_force() {
+        let command = parse(&args(&[
+            "install",
+            "tdd",
+            "--dest",
+            "/tmp/repo",
+            "--cli=vibe",
+            "--force",
+        ]))
+        .unwrap();
+        assert_eq!(
+            command,
+            Some(CliCommand::Install(InstallOptions {
+                pack: "tdd".to_string(),
+                dest: Some(PathBuf::from("/tmp/repo")),
+                cli: Some("vibe".to_string()),
+                force: true,
+            }))
+        );
+    }
+
+    #[test]
+    fn install_defaults_dest_cli_and_force() {
+        let command = parse(&args(&["install", "tdd"])).unwrap();
+        assert_eq!(
+            command,
+            Some(CliCommand::Install(InstallOptions {
+                pack: "tdd".to_string(),
+                dest: None,
+                cli: None,
+                force: false,
+            }))
+        );
+    }
+
+    #[test]
+    fn install_requires_a_pack_name_and_rejects_extras() {
+        assert!(matches!(
+            parse(&args(&["install"])).unwrap_err(),
+            ApplicationError::Usage(_)
+        ));
+        assert!(matches!(
+            parse(&args(&["install", "tdd", "other"])).unwrap_err(),
+            ApplicationError::Usage(_)
+        ));
+        assert!(matches!(
+            parse(&args(&["install", "--wat", "tdd"])).unwrap_err(),
+            ApplicationError::Usage(_)
+        ));
+    }
+
+    #[test]
+    fn uninstall_parses_pack_dest_cli_and_rejects_force() {
+        let command = parse(&args(&[
+            "uninstall",
+            "tdd",
+            "--dest",
+            "/tmp/repo",
+            "--cli",
+            "gemini",
+        ]))
+        .unwrap();
+        assert_eq!(
+            command,
+            Some(CliCommand::Uninstall(UninstallOptions {
+                pack: "tdd".to_string(),
+                dest: Some(PathBuf::from("/tmp/repo")),
+                cli: Some("gemini".to_string()),
+            }))
+        );
+        assert!(matches!(
+            parse(&args(&["uninstall", "tdd", "--force"])).unwrap_err(),
+            ApplicationError::Usage(_)
+        ));
+    }
+
+    #[test]
+    fn headless_subcommands_support_help() {
+        for invocation in [
+            args(&["list", "--help"]),
+            args(&["show", "--help"]),
+            args(&["install", "-h"]),
+            args(&["uninstall", "--help"]),
+        ] {
+            assert_eq!(
+                parse(&invocation).unwrap(),
+                Some(CliCommand::Help),
+                "invocation: {invocation:?}"
+            );
+        }
     }
 
     #[test]

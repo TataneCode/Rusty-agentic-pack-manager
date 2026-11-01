@@ -30,6 +30,54 @@ impl PackSummaryDto {
     }
 }
 
+/// One item of a pack, as plain strings for display (`rapm show`).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PackItemDto {
+    pub kind: String,
+    pub source: String,
+    pub destinations: Vec<(String, String)>,
+}
+
+/// Full manifest summary of one pack, for `rapm show` (E03). CLI
+/// identifiers and destinations are plain strings: DTOs never expose
+/// domain types (E01).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PackDetailDto {
+    pub name: String,
+    pub version: String,
+    pub description: String,
+    pub clis: Vec<String>,
+    pub items: Vec<PackItemDto>,
+}
+
+impl PackDetailDto {
+    pub fn from_pack(pack: &Pack) -> PackDetailDto {
+        PackDetailDto {
+            name: pack.name.as_str().to_string(),
+            version: pack.version.as_str().to_string(),
+            description: pack.description.clone(),
+            clis: pack
+                .clis
+                .iter()
+                .map(|cli| cli.as_str().to_string())
+                .collect(),
+            items: pack
+                .items
+                .iter()
+                .map(|item| PackItemDto {
+                    kind: item.kind.as_str().to_string(),
+                    source: item.source.to_string_lossy().into_owned(),
+                    destinations: item
+                        .destinations
+                        .iter()
+                        .map(|(cli, dest)| (cli.as_str().to_string(), dest.to_string()))
+                        .collect(),
+                })
+                .collect(),
+        }
+    }
+}
+
 /// Result of a successful installation.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct InstallResultDto {
