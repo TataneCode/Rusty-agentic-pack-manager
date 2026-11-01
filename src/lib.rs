@@ -29,6 +29,9 @@ pub mod application {
         pub mod service;
         pub mod traits;
     }
+    pub mod library {
+        pub mod traits;
+    }
 }
 
 pub mod infrastructure {
@@ -40,6 +43,7 @@ pub mod infrastructure {
     }
     pub mod filesystem {
         pub mod explorer;
+        pub mod library;
     }
 }
 

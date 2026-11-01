@@ -9,6 +9,8 @@ use rusty_agentic_pack_manager::application::pack_view::service::PackViewService
 use rusty_agentic_pack_manager::infrastructure::filesystem::explorer::{
     FsExplorer, FsInstallDestination,
 };
+use rusty_agentic_pack_manager::application::library::traits::LibraryInitializer;
+use rusty_agentic_pack_manager::infrastructure::filesystem::library::FsLibraryInitializer;
 use rusty_agentic_pack_manager::infrastructure::pack::content::FsPackContentRepository;
 use rusty_agentic_pack_manager::infrastructure::pack::index::FsInstallIndexRepository;
 use rusty_agentic_pack_manager::infrastructure::pack::loader::FsPackRepository;
@@ -35,13 +37,19 @@ fn build_app(start_dir: PathBuf, library: &PackLibrary) -> Result<App> {
     Ok(App::new(pack_service, explorer, view_service, start_dir))
 }
 
+fn ensure_user_root(library: &PackLibrary) -> Result<()> {
+    FsLibraryInitializer
+        .ensure_user_root(&library.user_root)
+        .with_context(|| {
+            format!(
+                "cannot create user pack library: {}",
+                library.user_root.display()
+            )
+        })
+}
+
 fn build_creation_service(library: &PackLibrary) -> Result<PackCreationService> {
-    library.ensure_user_root().with_context(|| {
-        format!(
-            "cannot create user pack library: {}",
-            library.user_root.display()
-        )
-    })?;
+    ensure_user_root(library)?;
     let repository = FsPackRepository::new(library.roots.clone())
         .with_context(|| format!("pack library unreadable: {:?}", library.roots))?;
     let writer = FsPackWriter::new(library.user_root.clone());
@@ -78,13 +86,9 @@ fn main() -> Result<()> {
     }
 
     // The user library is the first read root: make sure it exists so the
-    // TUI also starts on a fresh machine (idempotent create_dir_all).
-    library.ensure_user_root().with_context(|| {
-        format!(
-            "cannot create user pack library: {}",
-            library.user_root.display()
-        )
-    })?;
+    // TUI also starts on a fresh machine (idempotent create_dir_all via the
+    // LibraryInitializer port).
+    ensure_user_root(&library)?;
 
     let start_dir = std::env::current_dir().context("cannot read current directory")?;
 
