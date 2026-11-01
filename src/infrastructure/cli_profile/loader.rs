@@ -70,7 +70,7 @@ impl RawProfile {
 /// named `<id>.toml` wins: a user profile overrides a shipped one of the
 /// same name. Malformed profile files are skipped, like malformed pack
 /// dirs.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct FsCliProfileRepository {
     roots: Vec<PathBuf>,
 }

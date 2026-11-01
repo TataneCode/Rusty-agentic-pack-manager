@@ -30,12 +30,13 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
       - run: cargo build --release
-      - name: Stage dist (binary + packs + docs)
+      - name: Stage dist (binary + packs + CLI profiles + docs)
         shell: bash
         run: |
           mkdir -p dist
           cp "target/release/${{ matrix.bin }}" dist/
           cp -r packs dist/packs
+          cp -r clis dist/clis
           cp LICENSE README.md MANUAL.md dist/
       - name: Create tar.gz (Linux)
         if: runner.os == 'Linux'

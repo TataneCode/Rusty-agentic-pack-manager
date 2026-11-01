@@ -1,0 +1,11 @@
+# CLI profile: GitHub Copilot (shipped default). Override by placing a
+# copilot.toml in the user CLI library ($XDG_DATA_HOME/rapm/clis).
+[cli]
+name = "copilot"
+label = "GitHub Copilot"
+
+[defaults]
+skill     = ".github/skills/{name}/SKILL.md"
+skill_dir = ".github/skills/{name}/"
+agent     = ".github/agents/{name}.agent.md"
+command   = ".github/prompts/{name}.prompt.md"

@@ -17,6 +17,7 @@ import sys
 RPM_MARKER = '{ source = "LICENSE", dest = "/usr/share/licenses/rapm/LICENSE", mode = "644", doc = true },'
 DEB_MARKER = '["LICENSE", "usr/share/doc/rusty-agentic-pack-manager/LICENSE", "644"],'
 DEST_PREFIX = "/usr/share/rusty-agentic-pack-manager/packs/"
+CLI_DEST_PREFIX = "/usr/share/rusty-agentic-pack-manager/clis/"
 
 
 def main() -> int:
@@ -41,6 +42,22 @@ def main() -> int:
         print("no pack files found", file=sys.stderr)
         return 1
 
+    # CLI profiles (E02) ship next to the packs, same layout.
+    cli_count = 0
+    for root, _dirs, files in os.walk("clis"):
+        for name in sorted(files):
+            rel = os.path.relpath(os.path.join(root, name), "clis")
+            rpm_entries.append(
+                f'    {{ source = "clis/{rel}", dest = "{CLI_DEST_PREFIX}{rel}", mode = "644" }},'
+            )
+            deb_entries.append(
+                f'    ["clis/{rel}", "usr/share/rusty-agentic-pack-manager/clis/{rel}", "644"],'
+            )
+            cli_count += 1
+    if not cli_count:
+        print("no CLI profile files found in clis/", file=sys.stderr)
+        return 1
+
     cargo = open("Cargo.toml", encoding="utf-8").read()
     if RPM_MARKER not in cargo or DEB_MARKER not in cargo:
         print("asset marker not found in Cargo.toml", file=sys.stderr)
@@ -48,7 +65,7 @@ def main() -> int:
     cargo = cargo.replace(RPM_MARKER, RPM_MARKER + "\n" + "\n".join(rpm_entries))
     cargo = cargo.replace(DEB_MARKER, DEB_MARKER + "\n" + "\n".join(deb_entries))
     open("Cargo.toml", "w", encoding="utf-8").write(cargo)
-    print(f"expanded {count} pack assets (rpm + deb) into Cargo.toml")
+    print(f"expanded {count} pack + {cli_count} CLI profile assets (rpm + deb) into Cargo.toml")
     return 0
 
 

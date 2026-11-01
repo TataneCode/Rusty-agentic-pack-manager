@@ -1,0 +1,11 @@
+# CLI profile: OpenAI Codex CLI (shipped default). Override by placing a
+# codex.toml in the user CLI library ($XDG_DATA_HOME/rapm/clis).
+[cli]
+name = "codex"
+label = "Codex CLI"
+
+[defaults]
+skill     = ".codex/skills/{name}/SKILL.md"
+skill_dir = ".codex/skills/{name}/"
+agent     = ".codex/agents/{name}.toml"
+command   = ".codex/commands/{name}.md"

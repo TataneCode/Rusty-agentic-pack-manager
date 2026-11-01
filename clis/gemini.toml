@@ -1,0 +1,11 @@
+# CLI profile: Gemini CLI (shipped default). Override by placing a
+# gemini.toml in the user CLI library ($XDG_DATA_HOME/rapm/clis).
+[cli]
+name = "gemini"
+label = "Gemini CLI"
+
+[defaults]
+skill     = ".gemini/skills/{name}/SKILL.md"
+skill_dir = ".gemini/skills/{name}/"
+agent     = ".gemini/agents/{name}.toml"
+command   = ".gemini/commands/{name}.toml"

@@ -1,0 +1,11 @@
+# CLI profile: Vibe CLI (shipped default). Override by placing a vibe.toml
+# in the user CLI library ($XDG_DATA_HOME/rapm/clis).
+[cli]
+name = "vibe"
+label = "Vibe CLI"
+
+[defaults]
+skill     = ".agents/skills/{name}/SKILL.md"
+skill_dir = ".agents/skills/{name}/"
+agent     = ".vibe/agents/{name}.toml"
+command   = ".vibe/commands/{name}.toml"

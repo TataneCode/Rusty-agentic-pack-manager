@@ -27,7 +27,9 @@ pub(crate) struct Manifest {
 pub(crate) struct ManifestItem {
     pub kind: String,
     pub source: String,
-    #[serde(rename = "destinations")]
+    // Optional since E02: a profiled CLI without an explicit destination
+    // gets the profile's default at install time.
+    #[serde(default, rename = "destinations")]
     pub destinations: BTreeMap<String, String>,
 }
 
