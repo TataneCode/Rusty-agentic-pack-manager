@@ -8,7 +8,6 @@ use ratatui::{backend::TestBackend, Terminal as RTerminal};
 use rusty_agentic_pack_manager::application::explorer::service::ExplorerService;
 use rusty_agentic_pack_manager::application::pack::service::PackService;
 use rusty_agentic_pack_manager::application::pack_view::service::PackViewService;
-use rusty_agentic_pack_manager::domain::pack::value_objects::TargetCli;
 use rusty_agentic_pack_manager::infrastructure::filesystem::explorer::{
     FsExplorer, FsInstallDestination,
 };
@@ -103,7 +102,7 @@ fn split_screen_shows_both_panels_and_pack() {
         snapshot.contains("Explorer"),
         "explorer panel title missing"
     );
-    assert!(snapshot.contains("Vibe CLI"), "CLI group header missing");
+    assert!(snapshot.contains("Vibe"), "CLI group header missing");
     assert!(snapshot.contains("review"), "pack entry missing");
     assert!(snapshot.contains("subdir"), "directory entry missing");
 }
@@ -130,7 +129,7 @@ fn installed_panel_lists_pack_and_hides_it_from_available() {
     // r2 lists the installation, with the CLI and item count
     assert_eq!(app.installed.items.len(), 1);
     assert_eq!(app.installed.items[0].name, "review");
-    assert_eq!(app.installed.items[0].cli, TargetCli::Vibe);
+    assert_eq!(app.installed.items[0].cli, "vibe");
     let snapshot = render_snapshot(&mut app);
     assert!(
         snapshot.contains("Installed"),

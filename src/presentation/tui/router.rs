@@ -1,4 +1,3 @@
-use crate::domain::pack::value_objects::TargetCli;
 use crate::presentation::tui::app::{App, ConfirmDialog, ConfirmKind, Focus, InputKind, Popup};
 use crate::presentation::tui::common::keys::{map_key, AppAction, KeyContext};
 
@@ -113,7 +112,7 @@ impl App {
         let Some(entry) = self.selected_installed() else {
             return;
         };
-        let (name, cli, count) = (entry.name.clone(), entry.cli, entry.paths.len());
+        let (name, cli, count) = (entry.name.clone(), entry.cli.clone(), entry.paths.len());
         self.confirm = Some(ConfirmDialog {
             message: format!("Uninstall '{name}' ({cli}) — remove {count} item(s)?"),
             selected_yes: false,
@@ -121,7 +120,7 @@ impl App {
         });
     }
 
-    fn execute_uninstall(&mut self, name: &str, cli: TargetCli) {
+    fn execute_uninstall(&mut self, name: &str, cli: &str) {
         let root = self.current_dir.to_string_lossy().into_owned();
         match self.pack_service.uninstall(name, cli, &root) {
             Ok(result) => {
@@ -192,8 +191,8 @@ impl App {
                             self.execute_delete(&name);
                         }
                         ConfirmKind::Uninstall { name, cli } => {
-                            let (name, cli) = (name.clone(), *cli);
-                            self.execute_uninstall(&name, cli);
+                            let (name, cli) = (name.clone(), cli.clone());
+                            self.execute_uninstall(&name, &cli);
                         }
                     }
                 }
@@ -231,10 +230,17 @@ impl App {
             return;
         };
         let pack_name = pack.name.clone();
-        // Install for the pack's first target CLI (CLI picker is v1.1).
-        let cli = pack.clis.first().copied().unwrap_or(TargetCli::Vibe);
+        // Install for the pack's default CLI (CLI picker is v1.1); the
+        // default-CLI rule lives in the application layer.
+        let cli = match self.pack_service.default_cli(&pack_name) {
+            Ok(cli) => cli,
+            Err(err) => {
+                self.show_error(err.to_string());
+                return;
+            }
+        };
         let root = self.current_dir.to_string_lossy().into_owned();
-        match self.pack_service.install(&pack_name, cli, &root, false) {
+        match self.pack_service.install(&pack_name, &cli, &root, false) {
             Ok(result) => {
                 self.refresh_dir();
                 self.popup = Some(Popup::Success(format!(

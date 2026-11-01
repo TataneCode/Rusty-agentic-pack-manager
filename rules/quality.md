@@ -4,13 +4,13 @@ Verification commands, **in this order**, before any delivery:
 
 ```bash
 cargo fmt                  # format — no diff must remain
-cargo clippy -- -D warnings # strict lint: CI treats warnings as errors
-cargo test                 # all tests
+cargo clippy --all-targets -- -D warnings # strict lint (tests included): CI treats warnings as errors
+cargo test                 # all tests, including the architecture test (`--test architecture`)
 cargo check                # fast compile (MSRV 1.88)
 cargo build --release      # only if the delivery concerns the binary
 ```
 
-Every delivery must pass `fmt` + `clippy -D warnings` + `test` without errors.
+Every delivery must pass `fmt` + `clippy --all-targets -- -D warnings` + `test` without errors.
 
 ## Global style
 

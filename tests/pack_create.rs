@@ -7,12 +7,14 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use rusty_agentic_pack_manager::application::error::ApplicationError;
+use rusty_agentic_pack_manager::application::library::traits::LibraryInitializer;
 use rusty_agentic_pack_manager::application::pack::service::PackService;
 use rusty_agentic_pack_manager::application::pack::traits::PackRepository;
 use rusty_agentic_pack_manager::application::pack_create::dto::{CreateItemDto, CreatePackDto};
 use rusty_agentic_pack_manager::application::pack_create::service::PackCreationService;
 use rusty_agentic_pack_manager::domain::pack::value_objects::TargetCli;
 use rusty_agentic_pack_manager::infrastructure::filesystem::explorer::FsInstallDestination;
+use rusty_agentic_pack_manager::infrastructure::filesystem::library::FsLibraryInitializer;
 use rusty_agentic_pack_manager::infrastructure::pack::index::FsInstallIndexRepository;
 use rusty_agentic_pack_manager::infrastructure::pack::loader::FsPackRepository;
 use rusty_agentic_pack_manager::infrastructure::pack::writer::FsPackWriter;
@@ -27,7 +29,9 @@ fn wired(tmp: &TempDir) -> (PackLibrary, PackCreationService, PackService) {
     fs::create_dir_all(&user_root).unwrap();
     fs::create_dir_all(&system_root).unwrap();
     let library = PackLibrary::new(vec![user_root.clone(), system_root], user_root.clone());
-    library.ensure_user_root().unwrap();
+    FsLibraryInitializer
+        .ensure_user_root(&library.user_root)
+        .unwrap();
     let repository = FsPackRepository::new(library.roots.clone()).unwrap();
     let writer = FsPackWriter::new(user_root.clone());
     let creation = PackCreationService::new(
@@ -142,7 +146,7 @@ fn create_builds_a_pack_that_the_library_loads_and_installs() {
     let target = tmp.path().join("repo");
     fs::create_dir_all(&target).unwrap();
     let installed = install
-        .install("my-pack", TargetCli::Vibe, target.to_str().unwrap(), false)
+        .install("my-pack", "vibe", target.to_str().unwrap(), false)
         .expect("install must succeed");
     assert_eq!(installed.copied_count, 3);
     assert!(target.join(".agents/skills/tdd/SKILL.md").is_file());
@@ -279,10 +283,12 @@ fn library_works_when_the_user_root_does_not_exist_yet() {
     .unwrap();
 
     let library = PackLibrary::new(vec![user_root.clone(), system_root], user_root.clone());
-    // Regression (review): before ensure_user_root, FsPackRepository::new
+    // Regression (review): before the LibraryInitializer port, FsPackRepository::new
     // rejected a missing first root and the TUI failed to start on a fresh
     // machine.
-    library.ensure_user_root().unwrap();
+    FsLibraryInitializer
+        .ensure_user_root(&library.user_root)
+        .unwrap();
     let repo = FsPackRepository::new(library.roots.clone()).unwrap();
     assert_eq!(repo.list().unwrap()[0].name.as_str(), "tdd");
 

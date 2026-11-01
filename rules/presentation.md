@@ -16,7 +16,7 @@ Ratatui rendering, key handling, screen state machine, `main.rs` (DI wiring).
 
 ## Forbidden anti-patterns
 
-- Importing `01_domain` directly or `03_infrastructure` (always via the application).
-- Direct I/O (filesystem calls) in a view or presenter.
+- Importing `01_domain` directly or `03_infrastructure` (always via the application). This applies to `use` statements in co-located `#[cfg(test)]` modules too — test helpers build DTOs, not domain types. Enforced by `tests/architecture.rs`.
+- Direct I/O (filesystem calls) in a view or presenter (enforced by `tests/architecture.rs`; `library.rs` test fixtures on `TempDir` are the only exception, inside `#[cfg(test)]`).
 - Stateful views — `view.rs` stays pure functions.
 - Key handling outside `keys.rs`/dedicated handlers.

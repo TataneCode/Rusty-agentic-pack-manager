@@ -22,7 +22,8 @@ impl PackLibrary {
     }
 
     /// Discover the library from the environment. The user root is always
-    /// the first root; it is created if missing (creation is idempotent).
+    /// the first root. Creation of the user root is delegated to the
+    /// `LibraryInitializer` port (E01: no direct I/O in the presentation).
     pub fn discover() -> Option<PackLibrary> {
         let user_root = user_packs_dir()?;
         let roots = resolve_roots(
@@ -32,12 +33,6 @@ impl PackLibrary {
             Path::new(SYSTEM_PACKS_DIR),
         );
         Some(PackLibrary { roots, user_root })
-    }
-
-    /// Ensure the user root exists (and is a directory). Called before any
-    /// write into the library.
-    pub fn ensure_user_root(&self) -> std::io::Result<()> {
-        std::fs::create_dir_all(&self.user_root)
     }
 }
 
