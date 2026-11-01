@@ -1,5 +1,6 @@
 use std::path::{Path, PathBuf};
 
+use crate::application::cli_profile::service::CliProfileService;
 use crate::application::error::ApplicationError;
 use crate::application::pack::dto::{
     InstallResultDto, InstalledPackDto, PackSummaryDto, UninstallResultDto,
@@ -19,6 +20,7 @@ pub struct PackService {
     repository: Box<dyn PackRepository>,
     destination: Box<dyn InstallDestination>,
     index: Box<dyn InstallIndexRepository>,
+    profiles: Option<CliProfileService>,
 }
 
 impl PackService {
@@ -31,7 +33,15 @@ impl PackService {
             repository,
             destination,
             index,
+            profiles: None,
         }
+    }
+
+    /// Attach the CLI profile resolver (E02): without it, installs only
+    /// work for items with explicit destinations.
+    pub fn with_profiles(mut self, profiles: CliProfileService) -> PackService {
+        self.profiles = Some(profiles);
+        self
     }
 
     /// All packs, sorted by CLI then name for UI grouping.
@@ -94,6 +104,11 @@ impl PackService {
                 crate::domain::pack::error::DomainError::UnknownCli(cli.as_str().to_string()),
             ));
         }
+
+        let pack = match &self.profiles {
+            Some(profiles) => profiles.resolve_pack(&pack, &cli)?,
+            None => pack,
+        };
 
         let root = Path::new(target_root);
         let plan = plan_install(&pack, &cli, root)?;

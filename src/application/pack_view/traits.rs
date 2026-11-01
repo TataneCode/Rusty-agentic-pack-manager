@@ -17,4 +17,11 @@ pub trait PackContentRepository: Send {
     fn list_files(&self, pack_name: &str) -> Result<Vec<PackFileDto>, ApplicationError>;
     /// Read one file's content (UTF-8 text) of pack `pack_name`.
     fn read_file(&self, pack_name: &str, path: &str) -> Result<String, ApplicationError>;
+    /// Whether `path` (relative to the pack dir) is a directory. Used to
+    /// pick the `_dir` destination template of a CLI profile (E02).
+    fn source_is_dir(
+        &self,
+        pack_name: &str,
+        path: &std::path::Path,
+    ) -> Result<bool, ApplicationError>;
 }

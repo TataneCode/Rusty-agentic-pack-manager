@@ -9,6 +9,7 @@ pub mod domain {
 }
 
 pub mod application {
+    pub mod cli_profile;
     pub mod error;
     pub mod pack {
         pub mod dto;

@@ -88,6 +88,20 @@ impl PackContentRepository for FsPackContentRepository {
             source,
         })
     }
+
+    fn source_is_dir(
+        &self,
+        pack_name: &str,
+        path: &std::path::Path,
+    ) -> Result<bool, ApplicationError> {
+        let full = self.pack_dir(pack_name).join(path);
+        if !full.exists() {
+            return Err(ApplicationError::FileNotFound(
+                path.to_string_lossy().into_owned(),
+            ));
+        }
+        Ok(full.is_dir())
+    }
 }
 
 #[cfg(test)]
@@ -147,6 +161,28 @@ mod tests {
                 .unwrap(),
             "print(1)"
         );
+    }
+
+    #[test]
+    fn source_is_dir_reports_file_and_directory() {
+        let tmp = TempDir::new().unwrap();
+        let pack = tmp.path().join("tdd");
+        fs::create_dir_all(pack.join("skills/tdd")).unwrap();
+        fs::create_dir_all(pack.join("commands")).unwrap();
+        fs::write(pack.join("commands/tdd.toml"), "x").unwrap();
+
+        let repo = FsPackContentRepository::new(vec![tmp.path().to_path_buf()]).unwrap();
+        assert!(repo
+            .source_is_dir("tdd", std::path::Path::new("skills/tdd"))
+            .unwrap());
+        assert!(!repo
+            .source_is_dir("tdd", std::path::Path::new("commands/tdd.toml"))
+            .unwrap());
+        assert!(matches!(
+            repo.source_is_dir("tdd", std::path::Path::new("ghost"))
+                .unwrap_err(),
+            ApplicationError::FileNotFound(_)
+        ));
     }
 
     #[test]
