@@ -2,6 +2,7 @@ use std::io::{IsTerminal, Write};
 use std::path::PathBuf;
 
 use crate::application::error::ApplicationError;
+use crate::application::pack::dto::{InstallPlanDto, PlanEntryStatus};
 use crate::application::pack::service::PackService;
 use crate::application::pack_create::dto::{CreateItemDto, CreatePackDto};
 use crate::application::pack_create::service::PackCreationService;
@@ -27,12 +28,15 @@ Usage:
   --dest <dir>             Target directory (default: current directory)
   --cli <cli>              Target CLI (default: the pack's first declared CLI)
   --force                  Overwrite existing destinations
+  --dry-run                Print the install plan (status  source -> destination)
+                           without writing anything; exit 3 when a destination
+                           already exists and --force is absent
 
 `uninstall` options:
   --dest <dir>             Target directory (default: current directory)
   --cli <cli>              Target CLI (default: the pack's first declared CLI)
 
-Exit codes: 0 success, 1 runtime error, 2 usage error.
+Exit codes: 0 success, 1 runtime error, 2 usage error, 3 dry-run with existing destinations without --force.
 
 `pack create` options:
   --name <name>            Pack name (lowercase, digits, - and _); prompted if omitted
@@ -114,6 +118,7 @@ pub struct InstallOptions {
     pub dest: Option<PathBuf>,
     pub cli: Option<String>,
     pub force: bool,
+    pub dry_run: bool,
 }
 
 /// Options of `rapm uninstall <pack>`.
@@ -172,6 +177,11 @@ fn run_with(
                 Some(cli) => cli.clone(),
                 None => pack.default_cli(&options.pack)?,
             };
+            if options.dry_run {
+                let plan = pack.plan_install(&options.pack, &cli, &dest)?;
+                print_plan(&plan);
+                return Ok(dry_run_exit_code(&plan, options.force));
+            }
             let result = pack.install(&options.pack, &cli, &dest, options.force)?;
             println!(
                 "installed '{}' for {} into {} ({} path(s))",
@@ -192,6 +202,39 @@ fn run_with(
             );
             Ok(0)
         }
+    }
+}
+
+/// Print an install plan (E04 dry-run): one line per entry,
+/// `<status>  <source> -> <destination>`.
+fn print_plan(plan: &InstallPlanDto) {
+    println!(
+        "plan for '{}' ({}) in {}:",
+        plan.pack_name, plan.cli, plan.target_root
+    );
+    for entry in &plan.entries {
+        println!(
+            "{}  {} -> {}",
+            entry.status.as_str(),
+            entry.source,
+            entry.destination
+        );
+    }
+}
+
+/// Exit code of `install --dry-run` (E04): 3 when at least one destination
+/// already exists (status other than `ok`) and `--force` is absent — the real
+/// install would abort; 0 otherwise (with `--force` the plan is printed
+/// unchanged and the install would overwrite).
+fn dry_run_exit_code(plan: &InstallPlanDto, force: bool) -> i32 {
+    let has_existing = plan
+        .entries
+        .iter()
+        .any(|entry| entry.status != PlanEntryStatus::Ok);
+    if has_existing && !force {
+        3
+    } else {
+        0
     }
 }
 
@@ -368,6 +411,7 @@ fn parse_install(tokens: &[String]) -> Result<CliCommand, ApplicationError> {
             dest: target.dest,
             cli: target.cli,
             force: target.force,
+            dry_run: target.dry_run,
         })),
     }
 }
@@ -383,22 +427,23 @@ fn parse_uninstall(tokens: &[String]) -> Result<CliCommand, ApplicationError> {
     }
 }
 
-/// Positional pack name plus the shared `--dest`/`--cli`/`--force` options
-/// of `install` and `uninstall`.
+/// Positional pack name plus the shared `--dest`/`--cli` options of
+/// `install` and `uninstall` (plus install-only flags).
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 struct PackTargetOptions {
     pack: String,
     dest: Option<PathBuf>,
     cli: Option<String>,
     force: bool,
+    dry_run: bool,
 }
 
 /// Shared parser of `install`/`uninstall`: one positional pack name plus
-/// `--dest`, `--cli` and (for install only) `--force`. `None` = help
-/// requested.
+/// `--dest`, `--cli` and (for install only) `--force`/`--dry-run`.
+/// `None` = help requested.
 fn parse_pack_target(
     tokens: &[String],
-    allow_force: bool,
+    allow_install_flags: bool,
 ) -> Result<Option<PackTargetOptions>, ApplicationError> {
     let mut target = PackTargetOptions::default();
     let mut parser = TokenParser { tokens, pos: 0 };
@@ -408,9 +453,13 @@ fn parse_pack_target(
             "-h" | "--help" => return Ok(None),
             "--dest" => target.dest = Some(PathBuf::from(parser.value(flag)?)),
             "--cli" => target.cli = Some(parser.value(flag)?),
-            "--force" if allow_force => {
+            "--force" if allow_install_flags => {
                 parser.advance();
                 target.force = true;
+            }
+            "--dry-run" if allow_install_flags => {
+                parser.advance();
+                target.dry_run = true;
             }
             _ if is_flag(&token) => {
                 return Err(ApplicationError::Usage(format!("unknown option: {token}")))
@@ -820,7 +869,52 @@ mod tests {
                 dest: Some(PathBuf::from("/tmp/repo")),
                 cli: Some("vibe".to_string()),
                 force: true,
+                dry_run: false,
             }))
+        );
+    }
+
+    #[test]
+    fn install_parses_dry_run() {
+        let command = parse(&args(&["install", "tdd", "--dest", "/tmp/repo", "--dry-run"]))
+            .unwrap();
+        assert_eq!(
+            command,
+            Some(CliCommand::Install(InstallOptions {
+                pack: "tdd".to_string(),
+                dest: Some(PathBuf::from("/tmp/repo")),
+                cli: None,
+                force: false,
+                dry_run: true,
+            }))
+        );
+    }
+
+    #[test]
+    fn dry_run_exit_code_is_3_only_for_existing_destinations_without_force() {
+        let entry = |status| crate::application::pack::dto::PlanEntryDto {
+            source: "skills/tdd/SKILL.md".to_string(),
+            destination: ".agents/skills/tdd".to_string(),
+            status,
+        };
+        let plan = |statuses: Vec<PlanEntryStatus>| InstallPlanDto {
+            pack_name: "tdd".to_string(),
+            cli: "vibe".to_string(),
+            target_root: "/repo".to_string(),
+            entries: statuses.into_iter().map(entry).collect(),
+        };
+        assert_eq!(dry_run_exit_code(&plan(vec![PlanEntryStatus::Ok]), false), 0);
+        assert_eq!(
+            dry_run_exit_code(&plan(vec![PlanEntryStatus::Collision]), false),
+            3
+        );
+        assert_eq!(
+            dry_run_exit_code(&plan(vec![PlanEntryStatus::Untracked]), false),
+            3
+        );
+        assert_eq!(
+            dry_run_exit_code(&plan(vec![PlanEntryStatus::Collision]), true),
+            0
         );
     }
 
@@ -834,6 +928,7 @@ mod tests {
                 dest: None,
                 cli: None,
                 force: false,
+                dry_run: false,
             }))
         );
     }
@@ -875,6 +970,10 @@ mod tests {
         );
         assert!(matches!(
             parse(&args(&["uninstall", "tdd", "--force"])).unwrap_err(),
+            ApplicationError::Usage(_)
+        ));
+        assert!(matches!(
+            parse(&args(&["uninstall", "tdd", "--dry-run"])).unwrap_err(),
             ApplicationError::Usage(_)
         ));
     }
