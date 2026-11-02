@@ -12,7 +12,7 @@ pub fn packs_help() -> Vec<Line<'static>> {
             "A",
             "Install the selected pack in the explorer's current directory",
         ),
-        help_line("P", "Preview the install plan (dry-run, no write)"),
+        help_line("P", "Preview the install plan"),
         help_line("V", "View the pack files with syntax highlighting"),
         help_line("Ctrl-C", "Quit"),
     ]
