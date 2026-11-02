@@ -51,15 +51,16 @@ The same operations as the TUI, without a terminal — install, uninstall, list 
 ```bash
 rapm list [--cli <cli>] [--installed [--dest <dir>]]
 rapm show <pack>
-rapm install <pack> --dest <dir> [--cli <cli>] [--force]
+rapm install <pack> --dest <dir> [--cli <cli>] [--force] [--dry-run]
 rapm uninstall <pack> --dest <dir> [--cli <cli>]
 ```
 
 - `list` prints one line per pack (`name  version  clis  N item(s)`); `--installed` reads the `packs_index.toml` of `--dest` instead (one line per recorded installation: `name  cli  paths`).
 - `show <pack>` prints the manifest summary: name, version, description, CLIs, then one line per item (`kind  source  cli=dest, ...`).
 - `install` copies the pack's items into `--dest` (default: the current directory), records the installation in `<dest>/packs_index.toml`, and refuses existing destinations unless `--force` is passed. `--cli` defaults to the pack's first declared CLI.
+- `install --dry-run` prints the install plan without writing anything (no file copied, no index entry): one line per item (`status  source -> destination`), where status is `ok` (free destination), `collision` (destination already exists and is recorded in `packs_index.toml`) or `hors index` (destination already exists but is tracked by no index entry). Exit `3` when at least one destination already exists and `--force` is absent; with `--force` the plan is printed unchanged and the exit is `0`.
 - `uninstall` removes exactly the assets recorded in the index, then drops the index entry.
-- Exit codes: `0` success, `1` runtime error (unknown pack, destination already exists without `--force`, no recorded install…), `2` usage error.
+- Exit codes: `0` success, `1` runtime error (unknown pack, destination already exists without `--force`, no recorded install…), `2` usage error, `3` `install --dry-run` with existing destinations and no `--force`.
 
 ## The screen
 
@@ -80,6 +81,7 @@ The focused panel has a cyan border.
 | `Tab` | Move focus to the installed panel |
 | `↑`/`↓` or `k`/`j` | Move in the pack list |
 | `A` | **Install** the selected pack into the explorer's current directory (refreshes the explorer, shows a success popup) |
+| `P` | **Preview** the install plan (dry-run popup: one line per item with status `ok` / `collision` / `hors index`; writes nothing, any key closes) |
 | `V` | **View**: open the pack viewer on the pack's `pack.toml` (`.md`, `.js`, `.toml` files, with syntax highlighting) |
 | `Space` | Contextual help |
 | `Ctrl-C` | Quit |
@@ -112,7 +114,7 @@ Lists the packs recorded as installed in the explorer's current directory (see [
 
 ### Installation
 
-`A` on the packs panel installs immediately into the **explorer's current directory** and refreshes the explorer. Navigate the explorer first (Tab, Enter/Backspace) to choose the target directory.
+`A` on the packs panel installs immediately into the **explorer's current directory** and refreshes the explorer. Navigate the explorer first (Tab, Enter/Backspace) to choose the target directory. `P` shows the same plan as `rapm install --dry-run` as a popup before installing (no write).
 
 The install targets the **pack's first declared CLI** (all shipped packs declare `["vibe", "gemini"]` except `vibe-wise-commands`, which is Gemini-only, so Vibe destinations are used; a CLI picker is planned for v1.1). If a destination already exists, the install is refused (no silent overwrite) and an error message is shown.
 

@@ -876,8 +876,14 @@ mod tests {
 
     #[test]
     fn install_parses_dry_run() {
-        let command = parse(&args(&["install", "tdd", "--dest", "/tmp/repo", "--dry-run"]))
-            .unwrap();
+        let command = parse(&args(&[
+            "install",
+            "tdd",
+            "--dest",
+            "/tmp/repo",
+            "--dry-run",
+        ]))
+        .unwrap();
         assert_eq!(
             command,
             Some(CliCommand::Install(InstallOptions {
@@ -903,7 +909,10 @@ mod tests {
             target_root: "/repo".to_string(),
             entries: statuses.into_iter().map(entry).collect(),
         };
-        assert_eq!(dry_run_exit_code(&plan(vec![PlanEntryStatus::Ok]), false), 0);
+        assert_eq!(
+            dry_run_exit_code(&plan(vec![PlanEntryStatus::Ok]), false),
+            0
+        );
         assert_eq!(
             dry_run_exit_code(&plan(vec![PlanEntryStatus::Collision]), false),
             3

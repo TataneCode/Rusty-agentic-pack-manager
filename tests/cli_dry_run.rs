@@ -127,7 +127,11 @@ fn dry_run_marks_an_indexed_destination_collision_and_exits_3() {
 
     let output = rapm(tmp.path(), &["install", "tdd", "--dest", dest, "--dry-run"]);
     assert_eq!(output.status.code(), Some(3), "stdout: {}", stdout(&output));
-    assert!(stdout(&output).contains("collision"), "stdout: {}", stdout(&output));
+    assert!(
+        stdout(&output).contains("collision"),
+        "stdout: {}",
+        stdout(&output)
+    );
 }
 
 #[test]
@@ -156,10 +160,20 @@ fn dry_run_on_an_unknown_pack_exits_1() {
     let (tmp, target) = workspace();
     let output = rapm(
         tmp.path(),
-        &["install", "ghost", "--dest", target.to_str().unwrap(), "--dry-run"],
+        &[
+            "install",
+            "ghost",
+            "--dest",
+            target.to_str().unwrap(),
+            "--dry-run",
+        ],
     );
     assert_eq!(output.status.code(), Some(1));
-    assert!(stderr(&output).contains("ghost"), "stderr: {}", stderr(&output));
+    assert!(
+        stderr(&output).contains("ghost"),
+        "stderr: {}",
+        stderr(&output)
+    );
 }
 
 #[test]
@@ -167,7 +181,13 @@ fn uninstall_rejects_dry_run_as_a_usage_error() {
     let (tmp, target) = workspace();
     let output = rapm(
         tmp.path(),
-        &["uninstall", "tdd", "--dest", target.to_str().unwrap(), "--dry-run"],
+        &[
+            "uninstall",
+            "tdd",
+            "--dest",
+            target.to_str().unwrap(),
+            "--dry-run",
+        ],
     );
     assert_eq!(output.status.code(), Some(2));
 }

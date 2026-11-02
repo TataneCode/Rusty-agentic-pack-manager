@@ -499,7 +499,9 @@ mod tests {
             vec![PathBuf::from(".agents/skills/other")],
         )
         .unwrap();
-        index.expect_load().returning(move |_| Ok(vec![other.clone()]));
+        index
+            .expect_load()
+            .returning(move |_| Ok(vec![other.clone()]));
 
         let service = PackService::new(Box::new(repo), Box::new(dest), Box::new(index));
         let plan = service.plan_install("tdd", "vibe", "/repo").unwrap();
@@ -513,9 +515,7 @@ mod tests {
         let (repo, dest, index) = service_with(pack);
 
         let service = PackService::new(Box::new(repo), Box::new(dest), Box::new(index));
-        let err = service
-            .plan_install("tdd", "gemini", "/repo")
-            .unwrap_err();
+        let err = service.plan_install("tdd", "gemini", "/repo").unwrap_err();
         assert!(matches!(
             err,
             ApplicationError::Domain(DomainError::UnknownCli(_))
