@@ -71,6 +71,7 @@ impl App {
             AppAction::NavigateUp => self.pack_list.select_previous(),
             AppAction::NavigateDown => self.pack_list.select_next(),
             AppAction::Apply => self.install_here(),
+            AppAction::PlanPreview => self.preview_plan(),
             AppAction::View => self.open_viewer(),
             AppAction::Help => self.popup = Some(Popup::Help),
             AppAction::ToggleFocus => self.focus = Focus::Installed,
@@ -220,6 +221,28 @@ impl App {
         if let Some(parent) = self.current_dir.parent() {
             self.current_dir = parent.to_path_buf();
             self.refresh_dir();
+        }
+    }
+
+    /// Preview the install plan of the selected pack (E04, 'P'): compute
+    /// the plan for the pack's default CLI in the explorer's current
+    /// directory and show it as a popup. 'A' stays the direct install.
+    fn preview_plan(&mut self) {
+        let Some(pack) = self.selected_pack() else {
+            return;
+        };
+        let pack_name = pack.name.clone();
+        let cli = match self.pack_service.default_cli(&pack_name) {
+            Ok(cli) => cli,
+            Err(err) => {
+                self.show_error(err.to_string());
+                return;
+            }
+        };
+        let root = self.current_dir.to_string_lossy().into_owned();
+        match self.pack_service.plan_install(&pack_name, &cli, &root) {
+            Ok(plan) => self.popup = Some(Popup::Plan(plan)),
+            Err(err) => self.show_error(err.to_string()),
         }
     }
 

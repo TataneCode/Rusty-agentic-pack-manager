@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 
 use crate::application::explorer::service::ExplorerService;
-use crate::application::pack::dto::{InstalledPackDto, PackSummaryDto};
+use crate::application::pack::dto::{InstallPlanDto, InstalledPackDto, PackSummaryDto};
 use crate::application::pack::service::PackService;
 use crate::application::pack_view::service::PackViewService;
 use crate::presentation::tui::common::widgets::{SelectList, TextInput};
@@ -37,6 +37,8 @@ pub enum Popup {
     Help,
     Error(String),
     Success(String),
+    /// Install plan preview (E04, 'P' on the packs panel).
+    Plan(InstallPlanDto),
 }
 
 /// What a text-input dialog is being used for.
