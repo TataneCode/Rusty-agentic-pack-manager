@@ -3,14 +3,15 @@ use std::path::{Path, PathBuf};
 use crate::application::cli_profile::service::CliProfileService;
 use crate::application::error::ApplicationError;
 use crate::application::pack::dto::{
-    InstallResultDto, InstalledPackDto, PackDetailDto, PackSummaryDto, UninstallResultDto,
+    InstallPlanDto, InstallResultDto, InstalledPackDto, PackDetailDto, PackSummaryDto,
+    PlanEntryDto, PlanEntryStatus, UninstallResultDto,
 };
 use crate::application::pack::traits::{
     InstallDestination, InstallIndexRepository, PackRepository,
 };
 use crate::domain::cli_profile::value_objects::CliId;
 use crate::domain::pack::entity::Pack;
-use crate::domain::pack::error::plan_install;
+use crate::domain::pack::error::{plan_install, DomainError, PlannedCopy};
 use crate::domain::pack::installed::InstalledPack;
 
 /// Application service for the packs panel: list, install (traced in the
@@ -102,21 +103,7 @@ impl PackService {
         target_root: &str,
         overwrite: bool,
     ) -> Result<InstallResultDto, ApplicationError> {
-        let cli = CliId::parse(cli)?;
-        let pack = self.repository.find(pack_name)?;
-        if !pack.supports(&cli) {
-            return Err(ApplicationError::Domain(
-                crate::domain::pack::error::DomainError::UnknownCli(cli.as_str().to_string()),
-            ));
-        }
-
-        let pack = match &self.profiles {
-            Some(profiles) => profiles.resolve_pack(&pack, &cli)?,
-            None => pack,
-        };
-
-        let root = Path::new(target_root);
-        let plan = plan_install(&pack, &cli, root)?;
+        let (pack, cli, root, plan) = self.resolve_plan(pack_name, cli, target_root)?;
 
         let mut copied = 0usize;
         for copy in &plan {
@@ -134,7 +121,7 @@ impl PackService {
 
         let paths = plan
             .iter()
-            .map(|copy| relative_to_root(root, &copy.destination))
+            .map(|copy| relative_to_root(&root, &copy.destination))
             .collect::<Result<Vec<PathBuf>, _>>()?;
         let entry =
             InstalledPack::new(pack.name.clone(), pack.version.clone(), cli.clone(), paths)?;
@@ -145,6 +132,80 @@ impl PackService {
             target_root: target_root.to_string(),
             copied_count: copied,
         })
+    }
+
+    /// Compute the install plan of `pack_name` for `cli` inside
+    /// `target_root` without writing anything (E04 dry-run). Each planned
+    /// copy is classified against the disk (`exists`) and the install index
+    /// (tracked paths): `Ok` = free destination, `Collision` = existing
+    /// destination recorded in the index, `Untracked` = existing destination
+    /// owned by no index entry.
+    pub fn plan_install(
+        &self,
+        pack_name: &str,
+        cli: &str,
+        target_root: &str,
+    ) -> Result<InstallPlanDto, ApplicationError> {
+        let (pack, cli, root, plan) = self.resolve_plan(pack_name, cli, target_root)?;
+
+        let tracked: std::collections::HashSet<PathBuf> = self
+            .index
+            .load(target_root)?
+            .iter()
+            .flat_map(|entry| entry.paths.iter().cloned())
+            .collect();
+
+        let mut entries = Vec::with_capacity(plan.len());
+        for copy in &plan {
+            let relative = relative_to_root(&root, &copy.destination)?;
+            let status = if !self.destination.exists(&copy.destination) {
+                PlanEntryStatus::Ok
+            } else if tracked.contains(&relative) {
+                PlanEntryStatus::Collision
+            } else {
+                PlanEntryStatus::Untracked
+            };
+            entries.push(PlanEntryDto {
+                source: copy.source.to_string_lossy().into_owned(),
+                destination: relative.to_string_lossy().into_owned(),
+                status,
+            });
+        }
+
+        Ok(InstallPlanDto {
+            pack_name: pack.name.as_str().to_string(),
+            cli: cli.as_str().to_string(),
+            target_root: target_root.to_string(),
+            entries,
+        })
+    }
+
+    /// Resolve `pack_name` for `cli` (CLI profiles applied, E02) and compute
+    /// its strict domain install plan inside `target_root`. Shared by
+    /// `plan_install` (E04 dry-run) and `install` so both see exactly the
+    /// same entries.
+    fn resolve_plan(
+        &self,
+        pack_name: &str,
+        cli: &str,
+        target_root: &str,
+    ) -> Result<(Pack, CliId, PathBuf, Vec<PlannedCopy>), ApplicationError> {
+        let cli = CliId::parse(cli)?;
+        let pack = self.repository.find(pack_name)?;
+        if !pack.supports(&cli) {
+            return Err(ApplicationError::Domain(DomainError::UnknownCli(
+                cli.as_str().to_string(),
+            )));
+        }
+
+        let pack = match &self.profiles {
+            Some(profiles) => profiles.resolve_pack(&pack, &cli)?,
+            None => pack,
+        };
+
+        let root = Path::new(target_root).to_path_buf();
+        let plan = plan_install(&pack, &cli, &root)?;
+        Ok((pack, cli, root, plan))
     }
 
     /// Uninstall a pack recorded in the index of `target_root`: remove every
@@ -380,6 +441,80 @@ mod tests {
         let service = PackService::new(Box::new(repo), Box::new(dest), Box::new(index));
         let err = service
             .install("tdd", "gemini", "/repo", false)
+            .unwrap_err();
+        assert!(matches!(
+            err,
+            ApplicationError::Domain(DomainError::UnknownCli(_))
+        ));
+    }
+
+    #[test]
+    fn plan_install_marks_free_destinations_ok_without_any_write() {
+        let pack = sample_pack("tdd", CliId::new("vibe").unwrap());
+        let (repo, mut dest, mut index) = service_with(pack);
+
+        dest.expect_exists().returning(|_| false);
+        dest.expect_copy().never();
+        index.expect_load().returning(|_| Ok(vec![]));
+        index.expect_record().never();
+
+        let service = PackService::new(Box::new(repo), Box::new(dest), Box::new(index));
+        let plan = service.plan_install("tdd", "vibe", "/repo").unwrap();
+        assert_eq!(plan.pack_name, "tdd");
+        assert_eq!(plan.cli, "vibe");
+        assert_eq!(plan.target_root, "/repo");
+        assert_eq!(plan.entries.len(), 1);
+        assert_eq!(plan.entries[0].source, "skills/tdd/SKILL.md");
+        assert_eq!(plan.entries[0].destination, ".agents/skills/tdd");
+        assert_eq!(plan.entries[0].status, PlanEntryStatus::Ok);
+    }
+
+    #[test]
+    fn plan_install_marks_indexed_existing_destination_as_collision() {
+        let pack = sample_pack("tdd", CliId::new("vibe").unwrap());
+        let (repo, mut dest, mut index) = service_with(pack);
+
+        dest.expect_exists().returning(|_| true);
+        index
+            .expect_load()
+            .returning(|_| Ok(vec![entry_for("tdd", CliId::new("vibe").unwrap())]));
+
+        let service = PackService::new(Box::new(repo), Box::new(dest), Box::new(index));
+        let plan = service.plan_install("tdd", "vibe", "/repo").unwrap();
+        assert_eq!(plan.entries[0].status, PlanEntryStatus::Collision);
+    }
+
+    #[test]
+    fn plan_install_marks_untracked_existing_destination_as_hors_index() {
+        let pack = sample_pack("tdd", CliId::new("vibe").unwrap());
+        let (repo, mut dest, mut index) = service_with(pack);
+
+        dest.expect_exists().returning(|_| true);
+        // The index records another pack's path only: this destination is
+        // on disk but tracked by no index entry.
+        let other = InstalledPack::new(
+            PackName::new("other").unwrap(),
+            PackVersion::new("1.0.0").unwrap(),
+            CliId::new("vibe").unwrap(),
+            vec![PathBuf::from(".agents/skills/other")],
+        )
+        .unwrap();
+        index.expect_load().returning(move |_| Ok(vec![other.clone()]));
+
+        let service = PackService::new(Box::new(repo), Box::new(dest), Box::new(index));
+        let plan = service.plan_install("tdd", "vibe", "/repo").unwrap();
+        assert_eq!(plan.entries[0].status, PlanEntryStatus::Untracked);
+        assert_eq!(plan.entries[0].status.as_str(), "hors index");
+    }
+
+    #[test]
+    fn plan_install_rejects_unsupported_cli() {
+        let pack = sample_pack("tdd", CliId::new("vibe").unwrap());
+        let (repo, dest, index) = service_with(pack);
+
+        let service = PackService::new(Box::new(repo), Box::new(dest), Box::new(index));
+        let err = service
+            .plan_install("tdd", "gemini", "/repo")
             .unwrap_err();
         assert!(matches!(
             err,
