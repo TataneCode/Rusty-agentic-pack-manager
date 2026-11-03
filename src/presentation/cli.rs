@@ -78,11 +78,13 @@ pub struct AddOptions {
 
 /// Run the CLI: parse `args`, execute, and return the process exit code.
 /// `pack` and `admin` services and the library wiring are built at the DI
-/// point (`main.rs`).
+/// point (`main.rs`). `admin` is only required by `add`/`remove`: the DI
+/// point builds it lazily for those commands alone, so read-only commands
+/// never touch the user library.
 pub fn run(
     args: &[String],
-    admin: &PackAdminService,
     pack: &PackService,
+    admin: Option<&PackAdminService>,
 ) -> Result<i32, ApplicationError> {
     match parse(args)? {
         None => Ok(0),
@@ -111,12 +113,20 @@ pub fn run(
             Ok(0)
         }
         Some(CliCommand::Add(options)) => {
+            let Some(admin) = admin else {
+                return Err(ApplicationError::Usage(
+                    "rapm add needs the library admin service".to_string(),
+                ));
+            };
             let dto = AddPackDto {
                 dir: options.dir.clone(),
                 name: options.name.clone(),
                 overwrite: options.force,
             };
             let result = admin.add_from_dir(&dto)?;
+            for warning in &result.warnings {
+                eprintln!("warning: {warning}");
+            }
             println!(
                 "added pack '{}' from {} into {} ({} item(s))",
                 result.pack_name,
@@ -127,6 +137,11 @@ pub fn run(
             Ok(0)
         }
         Some(CliCommand::Remove { pack: name }) => {
+            let Some(admin) = admin else {
+                return Err(ApplicationError::Usage(
+                    "rapm remove needs the library admin service".to_string(),
+                ));
+            };
             let result = admin.remove(&name)?;
             println!(
                 "removed pack '{}' from {}",

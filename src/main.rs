@@ -63,8 +63,10 @@ fn ensure_user_root(library: &PackLibrary) -> Result<()> {
 
 /// The `PackAdminService` behind `rapm add` / `rapm remove` (E13): packs
 /// are written to (and removed from) the writable root of the library.
+/// Built only for those commands: read-only CLI commands must not create
+/// the user library directory as a side effect (the writer creates the
+/// root itself on `add`; repositories tolerate a missing root).
 fn build_admin_service(library: &PackLibrary) -> Result<PackAdminService> {
-    ensure_user_root(library)?;
     let profiles = FsCliProfileRepository::new(library.profile_roots.clone());
     let registry = profiles.registry().context("CLI profiles unreadable")?;
     let repository = FsPackRepository::with_profiles(library.roots.clone(), registry.clone())
@@ -122,9 +124,22 @@ fn main() -> Result<()> {
     // The CLI runs before any terminal setup: `rapm <subcommand>` never
     // enters raw mode, `rapm` alone launches the TUI.
     if cli::is_cli_invocation(&args) {
-        let admin = build_admin_service(&library)?;
+        // Parse first, then DI: the admin service (the only one writing to
+        // the user library) is built solely for `add`/`remove`, so that
+        // `install`/`uninstall`/`help` stay strictly read-only.
+        let needs_admin = matches!(
+            cli::parse(&args),
+            Ok(Some(
+                cli::CliCommand::Add(_) | cli::CliCommand::Remove { .. }
+            ))
+        );
+        let admin = if needs_admin {
+            Some(build_admin_service(&library)?)
+        } else {
+            None
+        };
         let pack = build_pack_service(&library, config.default_cli.clone())?;
-        match cli::run(&args, &admin, &pack) {
+        match cli::run(&args, &pack, admin.as_ref()) {
             Ok(code) => std::process::exit(code),
             Err(err) => {
                 eprintln!("error: {err}");

@@ -20,6 +20,10 @@ pub struct AddPackResultDto {
     pub pack_name: String,
     pub pack_dir: PathBuf,
     pub item_count: usize,
+    /// Non-fatal issues noticed at creation, e.g. an item for which no
+    /// loaded CLI profile provides a template (it gets no destination and
+    /// could not be installed). Printed as warnings by the CLI.
+    pub warnings: Vec<String>,
 }
 
 /// Result of a successful `remove`.

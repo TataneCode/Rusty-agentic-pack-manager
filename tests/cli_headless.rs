@@ -154,6 +154,24 @@ fn install_defaults_to_the_packs_first_declared_cli_and_dest_to_cwd() {
 }
 
 #[test]
+fn read_only_commands_do_not_create_the_user_library() {
+    let (tmp, target) = workspace();
+    let user_lib = tmp.path().join("xdg/rapm/packs");
+    assert!(!user_lib.exists());
+    for args in [
+        vec!["install", "tdd", "--dest", target.to_str().unwrap()],
+        vec!["uninstall", "tdd", "--dest", target.to_str().unwrap()],
+        vec!["help"],
+    ] {
+        let output = rapm(tmp.path(), &args);
+        assert_ne!(output.status.code(), Some(2), "args {args:?}");
+    }
+    // install/uninstall/help are read-only w.r.t. the user library: the
+    // directory is created only by `add`.
+    assert!(!user_lib.exists(), "user library must not be created");
+}
+
+#[test]
 fn install_unknown_pack_exits_1() {
     let (tmp, target) = workspace();
     let output = rapm(

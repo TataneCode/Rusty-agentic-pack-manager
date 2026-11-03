@@ -28,6 +28,10 @@ impl BaseDirScanner for FsBaseDirScanner {
             let mut entries: Vec<_> = entries.flatten().collect();
             entries.sort_by_key(|entry| entry.file_name());
             for entry in entries {
+                // Hidden entries (.DS_Store, .git/, .foo) are never pack items.
+                if entry.file_name().to_string_lossy().starts_with('.') {
+                    continue;
+                }
                 let host_path = entry.path();
                 items.push(ScannedItem {
                     kind: *kind,
@@ -90,6 +94,22 @@ mod tests {
         assert!(!items
             .iter()
             .any(|item| item.pack_source.starts_with("docs")));
+    }
+
+    #[test]
+    fn scan_ignores_hidden_entries_in_kind_directories() {
+        let tmp = TempDir::new().unwrap();
+        let base = base_tree(&tmp);
+        fs::write(base.join("skills/.DS_Store"), "junk").unwrap();
+        fs::create_dir_all(base.join("rules/.git")).unwrap();
+        fs::write(base.join("commands/.hidden.toml"), "junk").unwrap();
+        let items = FsBaseDirScanner.scan(&base).unwrap();
+        assert_eq!(items.len(), 4);
+        assert!(!items.iter().any(|item| {
+            item.pack_source
+                .file_name()
+                .is_some_and(|name| name.to_string_lossy().starts_with('.'))
+        }));
     }
 
     #[test]

@@ -69,6 +69,8 @@ fn base_pack(tmp: &TempDir) -> std::path::PathBuf {
     fs::create_dir_all(base.join("commands")).unwrap();
     fs::write(base.join("commands/review.toml"), "cmd").unwrap();
     fs::write(base.join("README.md"), "not an item").unwrap();
+    // Hidden entries are never imported as items.
+    fs::write(base.join("skills/.DS_Store"), "junk").unwrap();
     base
 }
 
@@ -87,6 +89,8 @@ fn add_imports_a_directory_as_a_pack_and_generates_the_manifest() {
     assert!(pack_dir.join("commands/review.toml").is_file());
     // Root files that are not in a kind directory are not copied.
     assert!(!pack_dir.join("README.md").exists());
+    // Hidden entries of kind directories are not imported either.
+    assert!(!pack_dir.join("skills/.DS_Store").exists());
 
     // The generated pack.toml traces the whole content, with one
     // destination per loaded profile (here: vibe only).
@@ -265,8 +269,15 @@ vibe = ".agents/skills/tdd"
 }
 
 #[test]
-fn remove_rejects_an_invalid_name_with_exit_2_or_1() {
+fn remove_rejects_an_invalid_name_with_exit_1() {
     let tmp = workspace();
+    // The name passes parsing (positional) but fails `PackName` validation
+    // in the service: a runtime error, exit 1 (usage errors are exit 2).
     let output = rapm(tmp.path(), &["remove", "../escape"]);
-    assert!(matches!(output.status.code(), Some(1) | Some(2)));
+    assert_eq!(output.status.code(), Some(1));
+    assert!(
+        stderr(&output).contains("invalid pack name"),
+        "stderr: {}",
+        stderr(&output)
+    );
 }

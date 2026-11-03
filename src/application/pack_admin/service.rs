@@ -92,6 +92,20 @@ impl PackAdminService {
         }
 
         let item_count = items.len();
+        // An item no loaded profile has a template for gets zero
+        // destinations: the pack is still created (fail-safe at install
+        // time), but the user is warned at creation time.
+        let warnings = items
+            .iter()
+            .filter(|item| item.destinations.is_empty())
+            .map(|item| {
+                format!(
+                    "item '{}' has no destination: no loaded CLI profile has a template for kind '{}'",
+                    item.source.to_string_lossy(),
+                    item.kind.as_str()
+                )
+            })
+            .collect();
         let pack = Pack::new(
             name.clone(),
             PackVersion::new("1.0.0")?,
@@ -104,6 +118,7 @@ impl PackAdminService {
             pack_name: pack.name.as_str().to_string(),
             pack_dir: outcome.pack_dir,
             item_count,
+            warnings,
         })
     }
 
@@ -421,7 +436,12 @@ mod tests {
             name: Some("my-pack".to_string()),
             overwrite: false,
         };
-        assert!(service.add_from_dir(&dto).is_ok());
+        let result = service.add_from_dir(&dto).unwrap();
+        // The rule item gets no destination (no rule template): a warning
+        // is emitted at creation time.
+        assert_eq!(result.warnings.len(), 1);
+        assert!(result.warnings[0].contains("rules/no-panic.md"));
+        assert!(result.warnings[0].contains("rule"));
     }
 
     #[test]
