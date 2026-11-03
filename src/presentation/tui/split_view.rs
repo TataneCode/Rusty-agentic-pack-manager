@@ -239,6 +239,27 @@ fn render_popups(frame: &mut Frame, app: &App) {
             ))];
             action_bar::render_popup(frame, frame.area(), " Success ", lines);
         }
+        Some(Popup::Plan(plan)) => {
+            let mut lines = vec![Line::from(Span::styled(
+                format!(
+                    "'{}' for {} in {} — {} entr(y/ies)",
+                    plan.pack_name,
+                    plan.cli,
+                    plan.target_root,
+                    plan.entries.len()
+                ),
+                Theme::header_style(),
+            ))];
+            for entry in &plan.entries {
+                lines.push(Line::from(format!(
+                    "{}  {} -> {}",
+                    entry.status.as_str(),
+                    entry.source,
+                    entry.destination
+                )));
+            }
+            action_bar::render_popup(frame, frame.area(), " Plan ", lines);
+        }
         None => {}
     }
 }

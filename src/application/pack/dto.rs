@@ -113,3 +113,45 @@ pub struct UninstallResultDto {
     pub cli: String,
     pub removed_count: usize,
 }
+
+/// Status of one planned copy in an install plan (E04 dry-run).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PlanEntryStatus {
+    /// Destination is free: the install would copy here.
+    Ok,
+    /// Destination already exists on disk and is recorded in the install
+    /// index (owned by an installed pack).
+    Collision,
+    /// Destination already exists on disk but is not tracked by the index
+    /// (a user file).
+    Untracked,
+}
+
+impl PlanEntryStatus {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            PlanEntryStatus::Ok => "ok",
+            PlanEntryStatus::Collision => "collision",
+            PlanEntryStatus::Untracked => "hors index",
+        }
+    }
+}
+
+/// One entry of an install plan: a source file inside the pack mapped to
+/// its destination (relative to the target root), with its status.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PlanEntryDto {
+    pub source: String,
+    pub destination: String,
+    pub status: PlanEntryStatus,
+}
+
+/// Install plan of one pack for one CLI inside a target root, computable
+/// without any write (E04): the dry-run result shared by the CLI and the TUI.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct InstallPlanDto {
+    pub pack_name: String,
+    pub cli: String,
+    pub target_root: String,
+    pub entries: Vec<PlanEntryDto>,
+}

@@ -10,6 +10,7 @@ pub enum AppAction {
     Enter,
     Back,
     Apply,        // 'a' on packs panel: install in the explorer's current dir
+    PlanPreview,  // 'P' on packs panel: preview the install plan (E04)
     View,         // 'v' on packs panel
     Uninstall,    // 'u' on installed panel: remove a recorded installation
     CreateFolder, // 'r' on explorer panel
@@ -54,6 +55,7 @@ pub fn map_key(key: &KeyEvent, context: KeyContext) -> Option<AppAction> {
         (KeyCode::Backspace, KeyContext::Dialog) => None,
         (KeyCode::Backspace, _) => Some(AppAction::Back),
         (KeyCode::Char('a'), KeyContext::PacksPanel) => Some(AppAction::Apply),
+        (KeyCode::Char('P'), KeyContext::PacksPanel) => Some(AppAction::PlanPreview),
         (KeyCode::Char('v'), KeyContext::PacksPanel) => Some(AppAction::View),
         (KeyCode::Char('u'), KeyContext::InstalledPanel) => Some(AppAction::Uninstall),
         (KeyCode::Char('r'), KeyContext::ExplorerPanel) => Some(AppAction::CreateFolder),
@@ -86,6 +88,23 @@ mod tests {
         assert_eq!(
             map_key(&key(KeyCode::Char('D')), KeyContext::ExplorerPanel),
             Some(AppAction::ForceDelete)
+        );
+    }
+
+    #[test]
+    fn packs_panel_maps_plan_preview_on_uppercase_p() {
+        assert_eq!(
+            map_key(&key(KeyCode::Char('P')), KeyContext::PacksPanel),
+            Some(AppAction::PlanPreview)
+        );
+        // Lowercase 'p' stays unmapped.
+        assert_eq!(
+            map_key(&key(KeyCode::Char('p')), KeyContext::PacksPanel),
+            None
+        );
+        assert_eq!(
+            map_key(&key(KeyCode::Char('P')), KeyContext::InstalledPanel),
+            None
         );
     }
 

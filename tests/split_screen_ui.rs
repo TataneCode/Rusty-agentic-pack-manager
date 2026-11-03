@@ -294,6 +294,56 @@ fn key(code: crossterm::event::KeyCode) -> crossterm::event::KeyEvent {
 }
 
 #[test]
+fn plan_preview_on_p_shows_the_install_plan_and_writes_nothing() {
+    let tmp = TempDir::new().unwrap();
+    let mut app = build_app(&tmp);
+    app.dispatch(&key(crossterm::event::KeyCode::Char('P')));
+    assert!(matches!(
+        app.popup,
+        Some(rusty_agentic_pack_manager::presentation::tui::app::Popup::Plan(_))
+    ));
+    let snapshot = render_snapshot(&mut app);
+    assert!(snapshot.contains("Plan"), "plan popup title missing");
+    assert!(snapshot.contains("review"), "pack name missing");
+    assert!(snapshot.contains("ok"), "ok status missing");
+    assert!(snapshot.contains("skills/code-review"), "source missing");
+    assert!(
+        snapshot.contains(".agents/skills/code-review"),
+        "destination missing"
+    );
+    // E04 acceptance: the preview is a dry-run, nothing is written.
+    assert!(!tmp.path().join("start/packs_index.toml").exists());
+    assert!(!tmp.path().join("start/.agents").exists());
+
+    // Any key closes the popup.
+    app.dispatch(&key(crossterm::event::KeyCode::Char(' ')));
+    assert!(app.popup.is_none());
+}
+
+#[test]
+fn plan_preview_marks_an_existing_untracked_destination_hors_index() {
+    let tmp = TempDir::new().unwrap();
+    let mut app = build_app(&tmp);
+    // A user file already sits at the destination (no index entry tracks it).
+    fs::create_dir_all(tmp.path().join("start/.agents/skills/code-review")).unwrap();
+    app.dispatch(&key(crossterm::event::KeyCode::Char('P')));
+    let snapshot = render_snapshot(&mut app);
+    assert!(snapshot.contains("hors index"), "snapshot: {snapshot}");
+}
+
+#[test]
+fn packs_help_lists_the_plan_preview_key() {
+    let tmp = TempDir::new().unwrap();
+    let mut app = build_app(&tmp);
+    app.dispatch(&key(crossterm::event::KeyCode::Char(' ')));
+    let snapshot = render_snapshot(&mut app);
+    assert!(
+        snapshot.contains("Preview the install plan"),
+        "packs help must mention P: {snapshot}"
+    );
+}
+
+#[test]
 fn rename_opens_prefilled_input_and_renames() {
     let tmp = TempDir::new().unwrap();
     let mut app = build_app(&tmp);
