@@ -1,6 +1,12 @@
 # Plan: configurable pack library path (`rapm config`) + TUI startup guard
 
-> Status: **draft** — awaiting user approval. Source: review of PR #5 (comment) + user request for a configuration file controlling the packs location. Format: `challenge` framing embedded below, then `rust-architecture-planning`.
+> Status: **superseded** — remplacé par [E12](../../.evolutions/e12-fichier-configuration.md)
+> et [ADR-0001](../adr/0001-refonte-cli-config-ajout-par-repertoire.md) : la configuration
+> est un fichier TOML édité à la main (`packs_dir` + `default_cli`) lu par la CLI et le
+> TUI, sans sous-commande `rapm config`, sans `extra_roots` ni variable d'env. Ce
+> brouillon reste en historique. Source: review of PR #5 (comment) + user request for
+> a configuration file controlling the packs location. Format: `challenge` framing
+> embedded below, then `rust-architecture-planning`.
 
 ## Challenge (framing, per `/challenge`)
 

@@ -31,6 +31,7 @@ No outer layer may import an inner layer. The UI never sees the domain: DTOs + s
 | Delivery / quality | `rules/quality.md` (fmt, clippy, tests) | — |
 | Review a diff / a PR | `/self-review` then `/review` + `rules/` | — |
 | Plan history | `docs/plans/` | — |
+| Architecture decisions (ADR) | [docs/adr/](docs/adr/) | — |
 
 ## Project status
 

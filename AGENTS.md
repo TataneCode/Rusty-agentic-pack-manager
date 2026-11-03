@@ -43,6 +43,7 @@ Business skills invoked by the roles above: `rust-architecture-planning`, `rust-
 | Agent/skill procedures | [.agents/skills/](.agents/skills/) + [AGENT_ARCHITECTURE.md](AGENT_ARCHITECTURE.md) |
 | Agent roles (agnostic Markdown) | [agents/](agents/) |
 | Vibe CLI wiring | [.vibe/](.vibe/) (`agents/`, `prompts/`, `config.toml`) |
+| Architecture decisions (ADR) | [docs/adr/](docs/adr/) |
 
 ## Non-negotiable conventions
 
