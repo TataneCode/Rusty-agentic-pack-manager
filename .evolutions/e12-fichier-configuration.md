@@ -1,6 +1,6 @@
 # E12 — Fichier de configuration (`packs_dir`, `default_cli`) lu par CLI et TUI
 
-- **Statut** : planifié
+- **Statut** : en cours
 - **Source** : consigne utilisateur + [ADR-0001](../docs/adr/0001-refonte-cli-config-ajout-par-repertoire.md).
   Remplace le brouillon `docs/plans/pack-library-config.md` (supersédé).
 - **Décision liée** : [ADR-0001](../docs/adr/0001-refonte-cli-config-ajout-par-repertoire.md)

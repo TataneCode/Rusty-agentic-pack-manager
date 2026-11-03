@@ -25,6 +25,7 @@ pub enum DomainError {
     EmptyInstallPaths,
     InstallPathOutsideTarget(String),
     DuplicateItemSource(String),
+    InvalidLibraryPath(String),
 }
 
 impl fmt::Display for DomainError {
@@ -67,6 +68,9 @@ impl fmt::Display for DomainError {
             }
             DomainError::DuplicateItemSource(s) => {
                 write!(f, "duplicate pack item source: {s}")
+            }
+            DomainError::InvalidLibraryPath(p) => {
+                write!(f, "invalid library path (absolute path required): {p}")
             }
         }
     }

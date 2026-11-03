@@ -30,9 +30,9 @@ E07 sont notés supersédés.
 | E08 | Dépendances entre packs (`depends` + check à l'install) | [e08-depends.md](e08-depends.md) | archivé | — | — | Non repris en gen 2 |
 | E09 | Scope `user` d'installation (`--scope user\|project`, index global) | [e09-scope-user.md](e09-scope-user.md) | archivé | — | — | Non repris en gen 2 |
 | E10 | Détection de drift + `upgrade` (index vs disque vs version) | [e10-drift-upgrade.md](e10-drift-upgrade.md) | archivé | — | — | Non repris en gen 2 |
-| E11 | CLI simplifiée : commandes fondamentales uniquement | [e11-cli-simplifiee.md](e11-cli-simplifiee.md) | planifié | [docs/plans/e11-cli-simplifiee.md](../docs/plans/e11-cli-simplifiee.md) | — | Supprime `list`/`show`/`pack create`/`--dry-run`/`--cli` ; ADR-0001 |
-| E12 | Fichier de configuration (`packs_dir`, `default_cli`) lu par CLI et TUI | [e12-fichier-configuration.md](e12-fichier-configuration.md) | planifié | [docs/plans/e12-fichier-configuration.md](../docs/plans/e12-fichier-configuration.md) | — | Remplace le brouillon `pack-library-config.md` ; ADR-0001 |
-| E13 | `rapm add <dir>` / `rapm remove <name>` + kind `rules` | [e13-ajout-par-repertoire.md](e13-ajout-par-repertoire.md) | planifié | [docs/plans/e13-ajout-par-repertoire.md](../docs/plans/e13-ajout-par-repertoire.md) | — | Scan `agents/ skills/ rules/ commands/` → `pack.toml` généré ; ADR-0001 |
+| E11 | CLI simplifiée : commandes fondamentales uniquement | [e11-cli-simplifiee.md](e11-cli-simplifiee.md) | en cours | [docs/plans/e11-cli-simplifiee.md](../docs/plans/e11-cli-simplifiee.md) | — | Supprime `list`/`show`/`pack create`/`--dry-run`/`--cli` ; ADR-0001 |
+| E12 | Fichier de configuration (`packs_dir`, `default_cli`) lu par CLI et TUI | [e12-fichier-configuration.md](e12-fichier-configuration.md) | en cours | [docs/plans/e12-fichier-configuration.md](../docs/plans/e12-fichier-configuration.md) | — | Remplace le brouillon `pack-library-config.md` ; ADR-0001 |
+| E13 | `rapm add <dir>` / `rapm remove <name>` + kind `rules` | [e13-ajout-par-repertoire.md](e13-ajout-par-repertoire.md) | en cours | [docs/plans/e13-ajout-par-repertoire.md](../docs/plans/e13-ajout-par-repertoire.md) | — | Scan `agents/ skills/ rules/ commands/` → `pack.toml` généré ; ADR-0001 |
 | E14 | Log ADR (`docs/adr/`) + archivage de la génération 1 | [e14-log-adr.md](e14-log-adr.md) | en cours | [ADR-0001](../docs/adr/0001-refonte-cli-config-ajout-par-repertoire.md) | — | Ce changement même |
 
 ## Génération 1 — correspondance avec l'ancienne numérotation (archivée)

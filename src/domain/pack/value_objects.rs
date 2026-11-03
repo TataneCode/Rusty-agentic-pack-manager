@@ -86,14 +86,27 @@ impl fmt::Display for PackVersion {
 pub enum PackItemKind {
     Skill,
     Agent,
+    Rule,
     Command,
 }
 
 impl PackItemKind {
+    /// Every kind, in canonical scan order (used when importing a pack from
+    /// a base directory, E13).
+    pub fn all() -> &'static [PackItemKind] {
+        &[
+            PackItemKind::Skill,
+            PackItemKind::Agent,
+            PackItemKind::Rule,
+            PackItemKind::Command,
+        ]
+    }
+
     pub fn as_str(&self) -> &'static str {
         match self {
             PackItemKind::Skill => "skill",
             PackItemKind::Agent => "agent",
+            PackItemKind::Rule => "rule",
             PackItemKind::Command => "command",
         }
     }
@@ -103,6 +116,7 @@ impl PackItemKind {
         match self {
             PackItemKind::Skill => "skills",
             PackItemKind::Agent => "agents",
+            PackItemKind::Rule => "rules",
             PackItemKind::Command => "commands",
         }
     }
@@ -111,6 +125,7 @@ impl PackItemKind {
         match value.trim().to_ascii_lowercase().as_str() {
             "skill" => Ok(PackItemKind::Skill),
             "agent" => Ok(PackItemKind::Agent),
+            "rule" => Ok(PackItemKind::Rule),
             "command" => Ok(PackItemKind::Command),
             other => Err(DomainError::UnknownItemKind(other.to_string())),
         }
@@ -187,6 +202,7 @@ mod tests {
     #[test]
     fn pack_item_kind_parse() {
         assert_eq!(PackItemKind::parse("skill").unwrap(), PackItemKind::Skill);
+        assert_eq!(PackItemKind::parse("rule").unwrap(), PackItemKind::Rule);
         assert_eq!(
             PackItemKind::parse("COMMAND").unwrap(),
             PackItemKind::Command
@@ -198,6 +214,23 @@ mod tests {
     fn pack_item_kind_plural_dir() {
         assert_eq!(PackItemKind::Skill.plural_dir(), "skills");
         assert_eq!(PackItemKind::Agent.plural_dir(), "agents");
+        assert_eq!(PackItemKind::Rule.plural_dir(), "rules");
         assert_eq!(PackItemKind::Command.plural_dir(), "commands");
+    }
+
+    #[test]
+    fn pack_item_kind_all_covers_every_variant() {
+        assert_eq!(
+            PackItemKind::all(),
+            &[
+                PackItemKind::Skill,
+                PackItemKind::Agent,
+                PackItemKind::Rule,
+                PackItemKind::Command,
+            ]
+        );
+        for kind in PackItemKind::all() {
+            assert_eq!(&PackItemKind::parse(kind.as_str()).unwrap(), kind);
+        }
     }
 }

@@ -1,6 +1,6 @@
 # E11 — CLI simplifiée : commandes fondamentales uniquement
 
-- **Statut** : planifié
+- **Statut** : en cours
 - **Source** : consigne utilisateur — la CLI a dérivé, `pack create` est trop complexe.
 - **Décision liée** : [ADR-0001](../docs/adr/0001-refonte-cli-config-ajout-par-repertoire.md)
 

@@ -30,6 +30,8 @@ fn test_registry() -> rusty_agentic_pack_manager::domain::cli_profile::profile::
                 skill_dir: Some(".agents/skills/{name}/".to_string()),
                 agent: ".vibe/agents/{name}.toml".to_string(),
                 agent_dir: None,
+                rule: None,
+                rule_dir: None,
                 command: ".vibe/commands/{name}.toml".to_string(),
                 command_dir: None,
             },

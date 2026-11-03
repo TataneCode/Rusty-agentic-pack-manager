@@ -227,6 +227,8 @@ gemini = ".gemini/commands/tdd/"
                 skill_dir: Some(".agents/skills/{{name}}/".to_string()),
                 agent: ".agents/{{name}}.toml".to_string(),
                 agent_dir: None,
+                rule: None,
+                rule_dir: None,
                 command: ".agents/{{name}}.toml".to_string(),
                 command_dir: None,
             },

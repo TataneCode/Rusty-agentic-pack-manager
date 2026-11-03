@@ -1,6 +1,6 @@
 # E13 — `rapm add <dir>` / `rapm remove <name>` + kind `rules`
 
-- **Statut** : planifié
+- **Statut** : en cours
 - **Source** : consigne utilisateur — ajouter un pack directement à partir d'un
   répertoire, sans inputs multiples.
 - **Décision liée** : [ADR-0001](../docs/adr/0001-refonte-cli-config-ajout-par-repertoire.md)

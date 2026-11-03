@@ -1,5 +1,8 @@
 pub mod domain {
     pub mod cli_profile;
+    pub mod config {
+        pub mod value_objects;
+    }
     pub mod pack {
         pub mod entity;
         pub mod error;
@@ -10,13 +13,18 @@ pub mod domain {
 
 pub mod application {
     pub mod cli_profile;
+    pub mod config {
+        pub mod dto;
+        pub mod service;
+        pub mod traits;
+    }
     pub mod error;
     pub mod pack {
         pub mod dto;
         pub mod service;
         pub mod traits;
     }
-    pub mod pack_create {
+    pub mod pack_admin {
         pub mod dto;
         pub mod service;
         pub mod traits;
@@ -38,7 +46,12 @@ pub mod application {
 
 pub mod infrastructure {
     pub mod cli_profile;
+    pub mod config {
+        pub mod fs_config;
+    }
     pub mod pack {
+        pub mod scan;
+
         pub mod content;
         pub mod index;
         pub mod loader;

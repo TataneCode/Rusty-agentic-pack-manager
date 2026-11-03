@@ -1,5 +1,7 @@
 use std::path::{Path, PathBuf};
 
+use crate::application::config::dto::AppConfigDto;
+
 /// System-wide pack library shipped by the RPM/DEB packages.
 const SYSTEM_PACKS_DIR: &str = "/usr/share/rusty-agentic-pack-manager/packs";
 /// System-wide CLI profiles shipped alongside the packs (E02).
@@ -38,7 +40,17 @@ impl PackLibrary {
     /// the first root. Creation of the user root is delegated to the
     /// `LibraryInitializer` port (E01: no direct I/O in the presentation).
     pub fn discover() -> Option<PackLibrary> {
-        let user_root = user_packs_dir()?;
+        Self::discover_with(&AppConfigDto::default())
+    }
+
+    /// Discover the library, honoring the user configuration (E12):
+    /// `config.packs_dir` becomes the user root (first read root, writable
+    /// root) instead of the XDG default. The CLI profile roots stay derived
+    /// from the XDG user root, so profiles keep a stable location even when
+    /// `packs_dir` points elsewhere.
+    pub fn discover_with(config: &AppConfigDto) -> Option<PackLibrary> {
+        let xdg_root = user_packs_dir()?;
+        let user_root = config.packs_dir.clone().unwrap_or_else(|| xdg_root.clone());
         let roots = resolve_roots(
             &user_root,
             exe_dir().as_deref(),
@@ -46,7 +58,7 @@ impl PackLibrary {
             Path::new(SYSTEM_PACKS_DIR),
         );
         let profile_roots = resolve_profile_roots(
-            &user_root,
+            &xdg_root,
             exe_dir().as_deref(),
             cwd().as_deref(),
             Path::new(SYSTEM_CLIS_DIR),
@@ -258,6 +270,34 @@ mod tests {
         );
         // The user clis dir is first even though only it exists.
         assert_eq!(roots, vec![user_clis, exe_clis, system]);
+    }
+
+    #[test]
+    fn discover_with_uses_packs_dir_as_user_root_when_configured() {
+        let tmp = tempfile::TempDir::new().unwrap();
+        let config = AppConfigDto {
+            packs_dir: Some(tmp.path().join("custom-packs")),
+            default_cli: None,
+        };
+        // discover_with reads the env for the XDG root; call the pure
+        // resolution directly to stay env-independent.
+        let xdg_root = tmp.path().join("xdg/rapm/packs");
+        let user_root = config.packs_dir.clone().unwrap_or_else(|| xdg_root.clone());
+        let roots = resolve_roots(
+            &user_root,
+            Some(tmp.path().join("exe").as_path()),
+            None,
+            Path::new("/system/packs"),
+        );
+        assert_eq!(roots[0], tmp.path().join("custom-packs"));
+        // Profile roots stay derived from the XDG root, not from packs_dir.
+        let profile_roots = resolve_profile_roots(
+            &xdg_root,
+            Some(tmp.path().join("exe").as_path()),
+            None,
+            Path::new("/system/clis"),
+        );
+        assert_eq!(profile_roots[0], tmp.path().join("xdg/rapm/clis"));
     }
 
     #[test]
