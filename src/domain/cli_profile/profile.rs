@@ -17,6 +17,10 @@ pub struct DestinationTemplates {
     pub skill_dir: Option<String>,
     pub agent: String,
     pub agent_dir: Option<String>,
+    /// Rules are optional (E13): legacy user profiles without a `rule`
+    /// template stay valid; rule items simply get no destination for them.
+    pub rule: Option<String>,
+    pub rule_dir: Option<String>,
     pub command: String,
     pub command_dir: Option<String>,
 }
@@ -24,16 +28,17 @@ pub struct DestinationTemplates {
 impl DestinationTemplates {
     fn for_kind(&self, kind: PackItemKind, source_is_dir: bool) -> Result<&str, DomainError> {
         let (base, dir) = match kind {
-            PackItemKind::Skill => (&self.skill, &self.skill_dir),
-            PackItemKind::Agent => (&self.agent, &self.agent_dir),
-            PackItemKind::Command => (&self.command, &self.command_dir),
+            PackItemKind::Skill => (Some(self.skill.as_str()), &self.skill_dir),
+            PackItemKind::Agent => (Some(self.agent.as_str()), &self.agent_dir),
+            PackItemKind::Rule => (self.rule.as_deref(), &self.rule_dir),
+            PackItemKind::Command => (Some(self.command.as_str()), &self.command_dir),
         };
         if source_is_dir {
             dir.as_deref().ok_or_else(|| {
                 DomainError::MissingProfileTemplate(format!("{}_dir", kind.as_str()))
             })
         } else {
-            Ok(base)
+            base.ok_or_else(|| DomainError::MissingProfileTemplate(kind.as_str().to_string()))
         }
     }
 }
@@ -84,10 +89,16 @@ impl DestinationTemplates {
             .into_iter()
             .map(|s| s.as_str())
             .chain(
-                [&self.skill_dir, &self.agent_dir, &self.command_dir]
-                    .into_iter()
-                    .flatten()
-                    .map(|s| s.as_str()),
+                [
+                    &self.rule,
+                    &self.skill_dir,
+                    &self.agent_dir,
+                    &self.rule_dir,
+                    &self.command_dir,
+                ]
+                .into_iter()
+                .flatten()
+                .map(|s| s.as_str()),
             )
     }
 }
@@ -185,6 +196,8 @@ mod tests {
             skill_dir: Some(".agents/skills/{name}/".to_string()),
             agent: ".vibe/agents/{name}.toml".to_string(),
             agent_dir: None,
+            rule: Some(".vibe/rules/{name}.md".to_string()),
+            rule_dir: None,
             command: ".vibe/commands/{name}.toml".to_string(),
             command_dir: None,
         }
@@ -230,6 +243,27 @@ mod tests {
         let p = profile();
         let dest = p.destination(&item("skills/tdd"), true).unwrap();
         assert_eq!(dest, ".agents/skills/tdd/");
+    }
+
+    #[test]
+    fn destination_renders_rule_template() {
+        let p = profile();
+        let mut rule = item("rules/no-panic.md");
+        rule.kind = PackItemKind::Rule;
+        let dest = p.destination(&rule, false).unwrap();
+        assert_eq!(dest, ".vibe/rules/no-panic.md");
+    }
+
+    #[test]
+    fn destination_rejects_rule_when_the_profile_has_no_rule_template() {
+        let mut templates = templates();
+        templates.rule = None;
+        let p =
+            CliProfile::new(CliId::new("vibe").unwrap(), "Vibe".to_string(), templates).unwrap();
+        let mut rule = item("rules/no-panic.md");
+        rule.kind = PackItemKind::Rule;
+        let err = p.destination(&rule, false).unwrap_err();
+        assert!(matches!(err, DomainError::MissingProfileTemplate(_)));
     }
 
     #[test]

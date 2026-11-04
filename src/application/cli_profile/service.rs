@@ -60,6 +60,8 @@ mod tests {
             skill_dir: Some(".claude/skills/{name}/".to_string()),
             agent: ".claude/agents/{name}.md".to_string(),
             agent_dir: None,
+            rule: None,
+            rule_dir: None,
             command: ".claude/commands/{name}.md".to_string(),
             command_dir: None,
         }

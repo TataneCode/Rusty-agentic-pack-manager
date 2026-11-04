@@ -14,6 +14,8 @@ pub enum ApplicationError {
     NotADirectory(String),
     #[error("invalid pack manifest {path}: {message}")]
     InvalidManifest { path: String, message: String },
+    #[error("invalid configuration file {path}: {message}")]
+    InvalidConfig { path: String, message: String },
     #[error("invalid name '{name}' for {context}")]
     InvalidName { context: String, name: String },
     #[error("destination already exists: {0}")]
@@ -22,6 +24,8 @@ pub enum ApplicationError {
     InstallNotFound(String),
     #[error("pack already exists: {0}")]
     PackAlreadyExists(String),
+    #[error("no pack content found in {0} (expected one of: agents/, skills/, rules/, commands/)")]
+    NoPackContent(String),
     #[error("usage error: {0}")]
     Usage(String),
     #[error("io error on {path}: {source}")]

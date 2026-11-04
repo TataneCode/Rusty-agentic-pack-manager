@@ -3,8 +3,8 @@ use std::path::{Path, PathBuf};
 use crate::application::cli_profile::service::CliProfileService;
 use crate::application::error::ApplicationError;
 use crate::application::pack::dto::{
-    InstallPlanDto, InstallResultDto, InstalledPackDto, PackDetailDto, PackSummaryDto,
-    PlanEntryDto, PlanEntryStatus, UninstallResultDto,
+    InstallPlanDto, InstallResultDto, InstalledPackDto, PackSummaryDto, PlanEntryDto,
+    PlanEntryStatus, UninstallResultDto,
 };
 use crate::application::pack::traits::{
     InstallDestination, InstallIndexRepository, PackRepository,
@@ -22,6 +22,8 @@ pub struct PackService {
     destination: Box<dyn InstallDestination>,
     index: Box<dyn InstallIndexRepository>,
     profiles: Option<CliProfileService>,
+    /// Default target CLI from the user configuration (E12), if any.
+    default_cli: Option<String>,
 }
 
 impl PackService {
@@ -35,6 +37,7 @@ impl PackService {
             destination,
             index,
             profiles: None,
+            default_cli: None,
         }
     }
 
@@ -42,6 +45,14 @@ impl PackService {
     /// work for items with explicit destinations.
     pub fn with_profiles(mut self, profiles: CliProfileService) -> PackService {
         self.profiles = Some(profiles);
+        self
+    }
+
+    /// Attach the configured default target CLI (E12, `default_cli` of the
+    /// config file): it wins over the pack's first declared CLI whenever
+    /// the pack supports it.
+    pub fn with_default_cli(mut self, cli: Option<String>) -> PackService {
+        self.default_cli = cli;
         self
     }
 
@@ -60,11 +71,6 @@ impl PackService {
         self.repository.find(name)
     }
 
-    /// Full manifest of one pack as a display DTO (`rapm show`, E03).
-    pub fn detail(&self, name: &str) -> Result<PackDetailDto, ApplicationError> {
-        Ok(PackDetailDto::from_pack(&self.repository.find(name)?))
-    }
-
     /// Installations recorded in the install index of `target_root`.
     pub fn installed_in(
         &self,
@@ -78,11 +84,18 @@ impl PackService {
             .collect())
     }
 
-    /// Default CLI a pack installs for: its first declared CLI, falling
-    /// back to `"vibe"` (the v1 default, previously decided by the TUI
-    /// router). Returns the CLI identifier (`CliId::as_str()`).
+    /// Default CLI a pack installs for: the configured `default_cli`
+    /// (E12) when the pack declares it, else the pack's first declared
+    /// CLI, falling back to `"vibe"` (the v1 default, previously decided
+    /// by the TUI router). Returns the CLI identifier (`CliId::as_str()`).
     pub fn default_cli(&self, pack_name: &str) -> Result<String, ApplicationError> {
         let pack = self.repository.find(pack_name)?;
+        if let Some(configured) = &self.default_cli {
+            let cli = CliId::parse(configured)?;
+            if pack.supports(&cli) {
+                return Ok(cli.as_str().to_string());
+            }
+        }
         Ok(pack
             .clis
             .first()
@@ -347,21 +360,32 @@ mod tests {
     }
 
     #[test]
-    fn detail_maps_the_pack_to_a_display_dto() {
+    fn default_cli_prefers_the_configured_cli_when_the_pack_supports_it() {
+        let pack = sample_pack("tdd", CliId::new("gemini").unwrap());
+        let (repo, dest, index) = service_with(pack);
+        let service = PackService::new(Box::new(repo), Box::new(dest), Box::new(index))
+            .with_default_cli(Some("gemini".to_string()));
+        assert_eq!(service.default_cli("tdd").unwrap(), "gemini");
+    }
+
+    #[test]
+    fn default_cli_falls_back_to_the_first_declared_cli_when_the_pack_does_not_support_the_configured_one(
+    ) {
+        // The pack declares only vibe; the config says gemini (unsupported).
         let pack = sample_pack("tdd", CliId::new("vibe").unwrap());
         let (repo, dest, index) = service_with(pack);
-        let service = PackService::new(Box::new(repo), Box::new(dest), Box::new(index));
-        let dto = service.detail("tdd").unwrap();
-        assert_eq!(dto.name, "tdd");
-        assert_eq!(dto.version, "1.0.0");
-        assert_eq!(dto.clis, vec!["vibe".to_string()]);
-        assert_eq!(dto.items.len(), 1);
-        assert_eq!(dto.items[0].kind, "skill");
-        assert_eq!(dto.items[0].source, "skills/tdd/SKILL.md");
-        assert_eq!(
-            dto.items[0].destinations,
-            vec![("vibe".to_string(), ".agents/skills/tdd/".to_string())]
-        );
+        let service = PackService::new(Box::new(repo), Box::new(dest), Box::new(index))
+            .with_default_cli(Some("gemini".to_string()));
+        assert_eq!(service.default_cli("tdd").unwrap(), "vibe");
+    }
+
+    #[test]
+    fn default_cli_rejects_a_malformed_configured_cli() {
+        let pack = sample_pack("tdd", CliId::new("vibe").unwrap());
+        let (repo, dest, index) = service_with(pack);
+        let service = PackService::new(Box::new(repo), Box::new(dest), Box::new(index))
+            .with_default_cli(Some("Not An Id".to_string()));
+        assert!(service.default_cli("tdd").is_err());
     }
 
     #[test]

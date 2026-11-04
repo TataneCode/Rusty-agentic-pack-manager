@@ -49,17 +49,17 @@ Architecture rules, design and action patterns are taken from [rusty-console](ht
 
 Packs are searched, in order: the **user library** (`$XDG_DATA_HOME/rapm/packs/` or `~/.local/share/rapm/packs/`, `%APPDATA%\rapm\packs` on Windows), `<binary directory>/packs/`, `./packs`, then `/usr/share/rusty-agentic-pack-manager/packs/` (system install). The first location containing a pack wins: a user pack overrides a system pack of the same name.
 
-New packs are created from any list of files/directories with the CLI:
+New packs are added from a directory with the CLI — the directory may contain `agents/`, `skills/`, `rules/` and `commands/`, each entry becoming one pack item:
 
 ```bash
-rapm pack create --name my-pack \
-  --skill ./skills/tdd --vibe-dest .agents/skills/tdd/ --gemini-dest .gemini/skills/tdd/ \
-  --command ./commands/review.toml --vibe-dest .vibe/commands/review.toml --gemini-dest .gemini/commands/review.toml
+rapm add ./my-pack              # pack name = directory name
+rapm add ./my-pack --name custom --force
+rapm remove my-pack             # delete a pack from the user library
 ```
 
-The pack is written into the user library (canonical layout `<kind>s/<name>/` + a generated `pack.toml`) and is immediately available in the TUI. See [MANUAL.md](MANUAL.md) for the full option list.
+The pack is written into the user library (canonical layout `<kind>s/<name>/` + a generated `pack.toml` with one destination per CLI profile) and is immediately available in the TUI. The library location (`packs_dir`) and the default install target (`default_cli`) are set in the config file `$XDG_CONFIG_HOME/rapm/config.toml`. See [MANUAL.md](MANUAL.md).
 
-The TUI operations are also available headless, for scripts and CI: `rapm list [--cli <cli>] [--installed [--dest <dir>]]`, `rapm show <pack>`, `rapm install <pack> --dest <dir> [--cli <cli>] [--force]`, `rapm uninstall <pack> --dest <dir> [--cli <cli>]` — same rules as the TUI (install index `packs_index.toml`, exit codes 0/1/2). See [MANUAL.md](MANUAL.md#headless-cli-scripts--ci).
+The fundamental commands are also available headless, for scripts and CI: `rapm install <pack> [--dest <dir>] [--force]`, `rapm uninstall <pack> [--dest <dir>]`, `rapm add <dir>`, `rapm remove <name>` — same rules as the TUI (install index `packs_index.toml`, exit codes 0/1/2). See [MANUAL.md](MANUAL.md#headless-cli-scripts--ci).
 
 ## Embedded packs
 

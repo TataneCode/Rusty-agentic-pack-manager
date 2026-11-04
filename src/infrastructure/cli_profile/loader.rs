@@ -33,6 +33,10 @@ struct RawDefaults {
     #[serde(default)]
     agent_dir: Option<String>,
     #[serde(default)]
+    rule: Option<String>,
+    #[serde(default)]
+    rule_dir: Option<String>,
+    #[serde(default)]
     command: Option<String>,
     #[serde(default)]
     command_dir: Option<String>,
@@ -58,6 +62,9 @@ impl RawProfile {
             skill_dir: self.defaults.skill_dir,
             agent: self.defaults.agent.ok_or_else(|| missing("agent"))?,
             agent_dir: self.defaults.agent_dir,
+            // Optional (E13): legacy user profiles without `rule` stay valid.
+            rule: self.defaults.rule,
+            rule_dir: self.defaults.rule_dir,
             command: self.defaults.command.ok_or_else(|| missing("command"))?,
             command_dir: self.defaults.command_dir,
         };

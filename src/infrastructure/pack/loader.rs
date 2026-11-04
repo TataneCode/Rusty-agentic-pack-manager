@@ -79,12 +79,12 @@ impl FsPackRepository {
         roots: Vec<PathBuf>,
         profiles: CliProfileRegistry,
     ) -> Result<FsPackRepository, ApplicationError> {
-        let first = roots
-            .first()
-            .ok_or_else(|| ApplicationError::NotADirectory("(no pack library root)".to_string()))?;
-        if !first.is_dir() {
+        // A missing root is an empty library, not an error: the user root
+        // may not exist yet on a fresh machine (read-only CLI commands must
+        // work without creating it). Only an empty root list is rejected.
+        if roots.is_empty() {
             return Err(ApplicationError::NotADirectory(
-                first.to_string_lossy().into_owned(),
+                "(no pack library root)".to_string(),
             ));
         }
         Ok(FsPackRepository { roots, profiles })
@@ -148,10 +148,10 @@ impl PackRepository for FsPackRepository {
         let mut packs = Vec::new();
         let mut seen = std::collections::HashSet::new();
         for root in &self.roots {
-            let entries = std::fs::read_dir(root).map_err(|source| ApplicationError::Io {
-                path: root.to_string_lossy().into_owned(),
-                source,
-            })?;
+            // A missing root contributes no packs (fresh machine).
+            let Ok(entries) = std::fs::read_dir(root) else {
+                continue;
+            };
             for entry in entries {
                 let entry = entry.map_err(|source| ApplicationError::Io {
                     path: root.to_string_lossy().into_owned(),
@@ -227,6 +227,8 @@ gemini = ".gemini/commands/tdd/"
                 skill_dir: Some(".agents/skills/{{name}}/".to_string()),
                 agent: ".agents/{{name}}.toml".to_string(),
                 agent_dir: None,
+                rule: None,
+                rule_dir: None,
                 command: ".agents/{{name}}.toml".to_string(),
                 command_dir: None,
             },
@@ -283,10 +285,23 @@ gemini = ".gemini/commands/tdd/"
     }
 
     #[test]
-    fn missing_first_root_is_rejected() {
-        let err = FsPackRepository::new(vec![PathBuf::from("/definitely/not/here")]).unwrap_err();
-        assert!(matches!(err, ApplicationError::NotADirectory(_)));
-        assert!(FsPackRepository::new(vec![]).is_err());
+    fn missing_first_root_is_tolerated_as_an_empty_library() {
+        let tmp = TempDir::new().unwrap();
+        let system = tmp.path().join("system");
+        write_pack(&system, "tdd", TDD_MANIFEST);
+        let repo = repo_with(vec![PathBuf::from("/definitely/not/here"), system.clone()]);
+        // The missing user root contributes nothing; the system root still works.
+        assert_eq!(repo.list().unwrap().len(), 1);
+        assert!(repo.find("tdd").is_ok());
+        assert!(matches!(
+            repo.find("ghost").unwrap_err(),
+            ApplicationError::PackNotFound(_)
+        ));
+        // An empty root list is still rejected.
+        assert!(matches!(
+            FsPackRepository::new(vec![]).unwrap_err(),
+            ApplicationError::NotADirectory(_)
+        ));
     }
 
     #[test]

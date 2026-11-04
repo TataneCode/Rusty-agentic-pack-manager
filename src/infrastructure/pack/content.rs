@@ -16,12 +16,10 @@ pub struct FsPackContentRepository {
 
 impl FsPackContentRepository {
     pub fn new(roots: Vec<PathBuf>) -> Result<FsPackContentRepository, ApplicationError> {
-        let first = roots
-            .first()
-            .ok_or_else(|| ApplicationError::NotADirectory("(no pack library root)".to_string()))?;
-        if !first.is_dir() {
+        // A missing root is an empty library, not an error (fresh machine).
+        if roots.is_empty() {
             return Err(ApplicationError::NotADirectory(
-                first.to_string_lossy().into_owned(),
+                "(no pack library root)".to_string(),
             ));
         }
         Ok(FsPackContentRepository { roots })
@@ -196,6 +194,20 @@ mod tests {
         ));
         let err = repo.read_file("nope", "x.md").unwrap_err();
         assert!(matches!(err, ApplicationError::FileNotFound(_)));
+    }
+
+    #[test]
+    fn missing_first_root_is_tolerated_as_an_empty_library() {
+        let tmp = TempDir::new().unwrap();
+        let system = tmp.path().join("system");
+        fs::create_dir_all(system.join("tdd")).unwrap();
+        fs::write(system.join("tdd/pack.toml"), "name = 'tdd'").unwrap();
+        let repo = FsPackContentRepository::new(vec![tmp.path().join("missing-user-root"), system])
+            .unwrap();
+        let files = repo.list_files("tdd").unwrap();
+        assert_eq!(files.len(), 1);
+        assert_eq!(files[0].path, "pack.toml");
+        assert!(FsPackContentRepository::new(vec![]).is_err());
     }
 
     #[test]

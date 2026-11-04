@@ -1,8 +1,8 @@
 use std::path::{Path, PathBuf};
 
 use crate::application::error::ApplicationError;
-use crate::application::pack_create::dto::{PackSourceDto, PackWriteOutcomeDto};
-use crate::application::pack_create::traits::PackWriter;
+use crate::application::pack_admin::dto::{PackSourceDto, PackWriteOutcomeDto};
+use crate::application::pack_admin::traits::PackWriter;
 use crate::domain::pack::entity::Pack;
 use crate::infrastructure::pack::loader::Manifest;
 
@@ -125,6 +125,27 @@ impl PackWriter for FsPackWriter {
             pack_dir: final_dir,
             copied_count: sources.len(),
         })
+    }
+
+    fn remove(&self, name: &str) -> Result<PathBuf, ApplicationError> {
+        // Defense in depth: the service validates the name with `PackName`;
+        // the writer still refuses anything that is not a single path
+        // component, so a removal can never escape the user root.
+        if Path::new(name).components().count() != 1 {
+            return Err(ApplicationError::InvalidName {
+                context: "pack removal".to_string(),
+                name: name.to_string(),
+            });
+        }
+        let dir = self.user_root.join(name);
+        if !dir.is_dir() {
+            return Err(ApplicationError::PackNotFound(format!(
+                "{name} (in {})",
+                self.user_root.display()
+            )));
+        }
+        std::fs::remove_dir_all(&dir).map_err(|e| io_err(&dir, e))?;
+        Ok(dir)
     }
 }
 
@@ -294,6 +315,42 @@ mod tests {
             .map(|e| e.unwrap().file_name())
             .collect();
         assert_eq!(leftovers, vec![std::ffi::OsString::from("my-pack")]);
+    }
+
+    #[test]
+    fn remove_deletes_a_pack_from_the_user_root() {
+        let tmp = TempDir::new().unwrap();
+        let user_root = tmp.path().join("packs");
+        let pack_dir = user_root.join("my-pack");
+        fs::create_dir_all(&pack_dir).unwrap();
+        fs::write(pack_dir.join("pack.toml"), "name = \"my-pack\"").unwrap();
+
+        let writer = FsPackWriter::new(user_root.clone());
+        let removed = writer.remove("my-pack").unwrap();
+        assert_eq!(removed, pack_dir);
+        assert!(!pack_dir.exists());
+    }
+
+    #[test]
+    fn remove_of_a_missing_pack_is_pack_not_found() {
+        let tmp = TempDir::new().unwrap();
+        let user_root = tmp.path().join("packs");
+        fs::create_dir_all(&user_root).unwrap();
+        let writer = FsPackWriter::new(user_root);
+        let err = writer.remove("ghost").unwrap_err();
+        assert!(matches!(err, ApplicationError::PackNotFound(_)));
+    }
+
+    #[test]
+    fn remove_rejects_names_that_are_not_a_single_component() {
+        let tmp = TempDir::new().unwrap();
+        let user_root = tmp.path().join("packs");
+        fs::create_dir_all(user_root.join("elsewhere")).unwrap();
+        let writer = FsPackWriter::new(user_root.clone());
+        assert!(writer.remove("../elsewhere").is_err());
+        assert!(writer.remove("a/b").is_err());
+        // Nothing was touched outside the root.
+        assert!(user_root.join("elsewhere").is_dir());
     }
 
     #[test]
