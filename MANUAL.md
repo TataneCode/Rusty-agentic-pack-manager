@@ -79,8 +79,8 @@ rapm help
 Three sections, all in shared rounded boxes (rusty-console design):
 
 - **Header**: application title + selected pack.
-- **Split screen**: **Packs** (left top, available packs grouped by target CLI, one row per CLI) / **Installed** (left bottom, packs installed in the explorer's current directory) / **Explorer** (right, host file tree — folders in blue, listed first).
-- **Footer**: the two always-available commands — `Tab: Switch panel | Space: Help`. All contextual keys live in the Space help.
+- **Split screen**: **Packs** (left top, available packs grouped by target CLI, one row per CLI; each CLI line shows the number of available packs and can be collapsed with `c`) / **Installed** (left bottom, packs installed in the explorer's current directory) / **Explorer** (right, host file tree — folders in blue, listed first).
+- **Footer**: the always-available commands — `Tab: Switch panel | Shift+Tab: Reverse | Space: Help`. All contextual keys live in the Space help.
 
 The focused panel has a cyan border.
 
@@ -90,13 +90,15 @@ The focused panel has a cyan border.
 
 | Key | Action |
 |---|---|
-| `Tab` | Move focus to the installed panel |
+| `Tab` / `Shift+Tab` | Move focus to the installed panel / back to the explorer panel |
+| `Shift+P` / `Shift+I` / `Shift+E` | Direct access to the packs / installed / explorer panel (from any panel) |
 | `↑`/`↓` or `k`/`j` | Move in the pack list |
-| `A` | **Install** the selected pack into the explorer's current directory (refreshes the explorer, shows a success popup) |
-| `P` | **Preview** the install plan (dry-run popup: one line per item with status `ok` / `collision` / `hors index`; writes nothing, any key closes) |
-| `V` | **View**: open the pack viewer on the pack's `pack.toml` (`.md`, `.js`, `.toml` files, with syntax highlighting) |
+| `c` | Collapse/expand the CLI group of the selected row (the CLI line keeps the count of available packs) |
+| `a` | **Install** the selected pack into the explorer's current directory (refreshes the explorer, shows a success popup) |
+| `p` | **Preview** the install plan (dry-run popup: one line per item with status `ok` / `collision` / `hors index`; writes nothing, any key closes) |
+| `v` | **View**: open the pack viewer on the pack's `pack.toml` (`.md`, `.js`, `.toml` files, with syntax highlighting) |
 | `Space` | Contextual help |
-| `Ctrl-C` | Quit |
+| `Ctrl+C` | Quit |
 
 ### Installed panel (left bottom focus)
 
@@ -104,31 +106,33 @@ Lists the packs recorded as installed in the explorer's current directory (see [
 
 | Key | Action |
 |---|---|
-| `Tab` | Move focus to the explorer |
+| `Tab` / `Shift+Tab` | Move focus to the explorer / back to the packs panel |
+| `Shift+P` / `Shift+I` / `Shift+E` | Direct access to the packs / installed / explorer panel (from any panel) |
 | `↑`/`↓` or `k`/`j` | Move in the installed list |
-| `U` | **Uninstall** the selected pack: removes every file it installed (confirmation dialog), then forgets the installation |
+| `u` | **Uninstall** the selected pack: removes every file it installed (confirmation dialog), then forgets the installation |
 | `Space` | Contextual help |
-| `Ctrl-C` | Quit |
+| `Ctrl+C` | Quit |
 
 ### Explorer panel (right focus)
 
 | Key | Action |
 |---|---|
-| `Tab` | Move focus to the packs |
+| `Tab` / `Shift+Tab` | Move focus to the packs / back to the installed panel |
+| `Shift+P` / `Shift+I` / `Shift+E` | Direct access to the packs / installed / explorer panel (from any panel) |
 | `↑`/`↓` or `k`/`j` | Move in the list |
 | `Enter` | Open the selected folder |
 | `Backspace` | Go to the parent folder |
-| `R` | Create a folder in the current directory (input dialog: name, `Enter` validates, `Esc` cancels) |
-| `M` | Rename the selected folder/file (input dialog prefilled with the current name) |
-| `D` | Delete the selected folder/file (confirmation dialog; `Shift-D` forces a non-empty folder) |
+| `r` | Create a folder in the current directory (input dialog: name, `Enter` validates, `Esc` cancels) |
+| `m` | Rename the selected folder/file (input dialog prefilled with the current name) |
+| `d` | Delete the selected folder/file (confirmation dialog; `Shift+D` forces a non-empty folder) |
 | `Space` | Contextual help |
-| `Ctrl-C` | Quit |
+| `Ctrl+C` | Quit |
 
 ### Installation
 
-`A` on the packs panel installs immediately into the **explorer's current directory** and refreshes the explorer. Navigate the explorer first (Tab, Enter/Backspace) to choose the target directory. `P` shows the install plan as a popup before installing (no write).
+`a` on the packs panel installs immediately into the **explorer's current directory** and refreshes the explorer. Navigate the explorer first (Tab, Enter/Backspace) to choose the target directory. `p` shows the install plan as a popup before installing (no write).
 
-In the TUI, each pack is listed **once per target CLI** (the list is grouped under each CLI a pack declares), and `A` installs for the **CLI of the selected row** (all shipped packs declare `["vibe", "gemini"]` except `vibe-wise-commands`, which is Gemini-only). If a destination already exists, the install is refused (no silent overwrite) and an error message is shown.
+In the TUI, each pack is listed **once per target CLI** (the list is grouped under each CLI a pack declares, and each CLI line shows how many packs are available for it), and `a` installs for the **CLI of the selected row** (all shipped packs declare `["vibe", "gemini"]` except `vibe-wise-commands`, which is Gemini-only). If a destination already exists, the install is refused (no silent overwrite) and an error message is shown.
 
 ### Installation index
 
@@ -144,25 +148,27 @@ paths = [".agents/skills/tdd", ".vibe/agents/tdd-orchestrator.toml"]
 
 - One entry per installed `(pack, CLI)` couple; reinstalling overwrites the entry.
 - `paths` lists the paths (relative to the target root) actually copied at install time. They are the source of truth for uninstalling.
-- `U` on the Installed panel removes those paths (files or whole directories) and drops the entry. Assets already deleted by hand are tolerated.
+- `u` on the Installed panel removes those paths (files or whole directories) and drops the entry. Assets already deleted by hand are tolerated.
 - The index is written **after** the files are copied: a failed install leaves no entry.
 - `packs_index.toml` is reserved: no pack item may install to this path, and deleting it by hand loses the tracking (uninstall becomes impossible from the TUI).
 
 ### Uninstalling
 
-`U` on the Installed panel asks for confirmation, then removes every asset listed in the pack's index entry (files and directories, recursively) and drops the entry. The pack becomes available again in the Packs panel. Uninstalling is idempotent: assets missing on disk (deleted by hand since the install) are skipped.
+`u` on the Installed panel asks for confirmation, then removes every asset listed in the pack's index entry (files and directories, recursively) and drops the entry. The pack becomes available again in the Packs panel. Uninstalling is idempotent: assets missing on disk (deleted by hand since the install) are skipped.
 
-### Viewer (after `V`)
+### Viewer (after `v`)
 
 The viewer opens on the pack's `pack.toml` manifest.
 
 | Key | Action |
 |---|---|
-| `Tab` | Switch between the file list and the content |
+| `Tab` / `Shift+Tab` | Switch between the file list and the content |
 | `Enter` | Show the selected file's content |
-| `↑`/`↓` | Scroll / change file |
+| `↑`/`↓` or `k`/`j` | Scroll / change file |
 | `Backspace` | Go back to the file list |
 | `Esc` | Close the viewer |
+| `Space` | Contextual help |
+| `Ctrl+C` | Quit |
 
 ## Pack format
 

@@ -13,7 +13,7 @@ use rusty_agentic_pack_manager::infrastructure::filesystem::explorer::{
 };
 use rusty_agentic_pack_manager::infrastructure::pack::content::FsPackContentRepository;
 use rusty_agentic_pack_manager::infrastructure::pack::index::FsInstallIndexRepository;
-use rusty_agentic_pack_manager::presentation::tui::app::{App, Focus};
+use rusty_agentic_pack_manager::presentation::tui::app::{App, Focus, PackLine};
 use rusty_agentic_pack_manager::presentation::tui::split_view;
 use tempfile::TempDir;
 
@@ -223,6 +223,151 @@ fn tab_cycles_through_packs_installed_and_explorer() {
 }
 
 #[test]
+fn shift_tab_reverses_the_focus_cycle() {
+    let tmp = TempDir::new().unwrap();
+    let mut app = build_app(&tmp);
+    let back = key(crossterm::event::KeyCode::BackTab);
+    assert_eq!(app.focus, Focus::Packs);
+    app.dispatch(&back);
+    assert_eq!(app.focus, Focus::Explorer, "Shift+Tab from packs goes back");
+    app.dispatch(&back);
+    assert_eq!(app.focus, Focus::Installed);
+    app.dispatch(&back);
+    assert_eq!(app.focus, Focus::Packs);
+    // mixed forward/backward stays consistent
+    app.dispatch(&key(crossterm::event::KeyCode::Tab));
+    app.dispatch(&back);
+    assert_eq!(app.focus, Focus::Packs);
+}
+
+#[test]
+fn shift_p_i_e_jump_directly_to_their_panel_from_any_panel() {
+    let tmp = TempDir::new().unwrap();
+    let mut app = build_app(&tmp);
+    app.focus = Focus::Explorer;
+    app.dispatch(&shifted('p'));
+    assert_eq!(app.focus, Focus::Packs);
+    app.dispatch(&shifted('i'));
+    assert_eq!(app.focus, Focus::Installed);
+    app.dispatch(&shifted('e'));
+    assert_eq!(app.focus, Focus::Explorer);
+    // legacy terminals report Shift+letter as the uppercase char alone
+    app.dispatch(&key(crossterm::event::KeyCode::Char('P')));
+    assert_eq!(app.focus, Focus::Packs);
+}
+
+#[test]
+fn c_collapses_and_expands_the_cli_group_and_the_header_keeps_the_count() {
+    let tmp = TempDir::new().unwrap();
+    let packs_dir = tmp.path().join("packs");
+    fs::create_dir_all(&packs_dir).unwrap();
+    make_pack(&packs_dir); // review, vibe only
+    make_multi_cli_pack(&packs_dir); // multi-cli, vibe + gemini
+    fs::create_dir_all(tmp.path().join("start")).unwrap();
+    let mut app = wire_app(&packs_dir, &tmp.path().join("start"));
+
+    // rows sort by CLI then name: the cursor starts on the first pack row
+    // (multi-cli under gemini), right after the gemini header
+    assert!(matches!(
+        app.pack_list.selected(),
+        Some(PackLine::Pack(p)) if p.clis[0] == "gemini"
+    ));
+    let snapshot = render_snapshot(&mut app);
+    assert!(
+        snapshot.contains("Gemini (1)"),
+        "count on the CLI line: {snapshot}"
+    );
+    assert!(
+        snapshot.contains("Vibe (2)"),
+        "count on the CLI line: {snapshot}"
+    );
+    assert_eq!(snapshot.matches("Multi CLI pack").count(), 2);
+
+    // 'c' collapses the gemini group: its row disappears, the count stays
+    app.dispatch(&key(crossterm::event::KeyCode::Char('c')));
+    assert!(app.collapsed_clis.contains("gemini"));
+    assert!(app
+        .pack_list
+        .items
+        .iter()
+        .all(|l| !matches!(l, PackLine::Pack(p) if p.clis[0] == "gemini")));
+    let snapshot = render_snapshot(&mut app);
+    assert!(
+        snapshot.contains("Gemini (1)"),
+        "count stays on the collapsed line: {snapshot}"
+    );
+    assert_eq!(
+        snapshot.matches("Multi CLI pack").count(),
+        1,
+        "only the vibe row remains: {snapshot}"
+    );
+
+    // the cursor stays on the gemini header, so 'c' again expands it back
+    assert!(matches!(
+        app.pack_list.selected(),
+        Some(PackLine::Cli(cli)) if cli == "gemini"
+    ));
+    app.dispatch(&key(crossterm::event::KeyCode::Char('c')));
+    assert!(app.collapsed_clis.is_empty());
+    let snapshot = render_snapshot(&mut app);
+    assert_eq!(snapshot.matches("Multi CLI pack").count(), 2);
+}
+
+#[test]
+fn help_uses_lowercase_keys_and_plus_combos_in_all_windows() {
+    let tmp = TempDir::new().unwrap();
+    let mut app = build_app(&tmp);
+
+    // packs panel help
+    app.dispatch(&key(crossterm::event::KeyCode::Char(' ')));
+    let snapshot = render_snapshot(&mut app);
+    assert!(snapshot.contains("Tab / Shift+Tab"), "{snapshot}");
+    assert!(
+        snapshot.contains("Shift+P / Shift+I / Shift+E"),
+        "{snapshot}"
+    );
+    assert!(snapshot.contains("Ctrl+C"), "{snapshot}");
+    assert!(snapshot.contains("Install the selected pack"), "{snapshot}");
+    assert!(snapshot.contains("Preview the install plan"), "{snapshot}");
+    app.dispatch(&key(crossterm::event::KeyCode::Esc));
+
+    // explorer help: lowercase r/m/d, Shift+D with a plus
+    app.focus = Focus::Explorer;
+    app.dispatch(&key(crossterm::event::KeyCode::Char(' ')));
+    let snapshot = render_snapshot(&mut app);
+    assert!(snapshot.contains("Shift+D"), "{snapshot}");
+    assert!(snapshot.contains("Create a folder here"), "{snapshot}");
+    assert!(!snapshot.contains("Ctrl-C"), "combos use '+': {snapshot}");
+    app.dispatch(&key(crossterm::event::KeyCode::Esc));
+
+    // confirm dialog hint
+    fs::write(tmp.path().join("start/file.txt"), "x").unwrap();
+    app.refresh_dir();
+    app.dir_entries.state.select(Some(1));
+    app.dispatch(&key(crossterm::event::KeyCode::Char('d')));
+    let snapshot = render_snapshot(&mut app);
+    assert!(snapshot.contains("Enter: confirm"), "{snapshot}");
+    assert!(snapshot.contains("Esc: cancel"), "{snapshot}");
+    app.dispatch(&key(crossterm::event::KeyCode::Esc));
+
+    // input dialog hint
+    app.dispatch(&key(crossterm::event::KeyCode::Char('r')));
+    let snapshot = render_snapshot(&mut app);
+    assert!(snapshot.contains("Enter: confirm"), "{snapshot}");
+    assert!(snapshot.contains("Esc: cancel"), "{snapshot}");
+}
+
+#[test]
+fn ctrl_c_quits_from_the_viewer_too() {
+    let tmp = TempDir::new().unwrap();
+    let mut app = build_app(&tmp);
+    app.dispatch(&key(crossterm::event::KeyCode::Char('v')));
+    assert!(app.viewer.is_some());
+    app.dispatch(&ctrl('c'));
+    assert!(app.quit, "Ctrl+C must quit from the viewer");
+}
+
+#[test]
 fn installed_panel_lists_pack_and_hides_it_from_available() {
     let tmp = TempDir::new().unwrap();
     let mut app = build_app(&tmp);
@@ -244,7 +389,11 @@ fn installed_panel_lists_pack_and_hides_it_from_available() {
 
     // r1 no longer offers the installed pack
     assert!(app.packs.iter().all(|p| p.name != "review"));
-    assert!(app.pack_list.items.iter().all(|p| p.name != "review"));
+    assert!(app
+        .pack_list
+        .items
+        .iter()
+        .all(|l| !matches!(l, PackLine::Pack(p) if p.name == "review")));
 }
 
 #[test]
@@ -363,11 +512,18 @@ fn key(code: crossterm::event::KeyCode) -> crossterm::event::KeyEvent {
     crossterm::event::KeyEvent::new(code, crossterm::event::KeyModifiers::NONE)
 }
 
+fn shifted(c: char) -> crossterm::event::KeyEvent {
+    crossterm::event::KeyEvent::new(
+        crossterm::event::KeyCode::Char(c),
+        crossterm::event::KeyModifiers::SHIFT,
+    )
+}
+
 #[test]
 fn plan_preview_on_p_shows_the_install_plan_and_writes_nothing() {
     let tmp = TempDir::new().unwrap();
     let mut app = build_app(&tmp);
-    app.dispatch(&key(crossterm::event::KeyCode::Char('P')));
+    app.dispatch(&key(crossterm::event::KeyCode::Char('p')));
     assert!(matches!(
         app.popup,
         Some(rusty_agentic_pack_manager::presentation::tui::app::Popup::Plan(_))
@@ -396,7 +552,7 @@ fn plan_preview_marks_an_existing_untracked_destination_hors_index() {
     let mut app = build_app(&tmp);
     // A user file already sits at the destination (no index entry tracks it).
     fs::create_dir_all(tmp.path().join("start/.agents/skills/code-review")).unwrap();
-    app.dispatch(&key(crossterm::event::KeyCode::Char('P')));
+    app.dispatch(&key(crossterm::event::KeyCode::Char('p')));
     let snapshot = render_snapshot(&mut app);
     assert!(snapshot.contains("hors index"), "snapshot: {snapshot}");
 }

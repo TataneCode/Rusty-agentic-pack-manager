@@ -37,10 +37,10 @@ pub fn action_bar_line(help_text: &str) -> Line<'static> {
     Line::from(spans)
 }
 
-/// The two always-available commands (user decision: the contextual actions
+/// The always-available commands (user decision: the contextual actions
 /// live in the Space help, not in the footer).
 pub fn base_footer_text() -> String {
-    "Tab: Switch panel | Space: Help".to_string()
+    "Tab: Switch panel | Shift+Tab: Reverse | Space: Help".to_string()
 }
 
 pub fn render_action_bar(frame: &mut Frame, area: Rect, help_text: &str) {
@@ -80,6 +80,11 @@ pub fn action_label(action: AppAction) -> &'static str {
     match action {
         AppAction::Quit => "Quit",
         AppAction::ToggleFocus => "Switch panel",
+        AppAction::ToggleFocusBack => "Reverse panel",
+        AppAction::FocusPacks => "Packs panel",
+        AppAction::FocusInstalled => "Installed panel",
+        AppAction::FocusExplorer => "Explorer panel",
+        AppAction::ToggleCliGroup => "Toggle CLI group",
         AppAction::NavigateUp => "Up",
         AppAction::NavigateDown => "Down",
         AppAction::Enter => "Open",

@@ -1,3 +1,4 @@
+use std::collections::BTreeSet;
 use std::path::PathBuf;
 
 use crate::application::explorer::service::ExplorerService;
@@ -12,6 +13,15 @@ pub enum Focus {
     Packs,
     Installed,
     Explorer,
+}
+
+/// One display line of the packs panel: a CLI group header (carrying the
+/// CLI id, always visible with its available-pack count) or a pack row
+/// (hidden while its CLI group is collapsed).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum PackLine {
+    Cli(String),
+    Pack(PackSummaryDto),
 }
 
 /// What a yes/no confirmation dialog is being used for.
@@ -37,7 +47,7 @@ pub enum Popup {
     Help,
     Error(String),
     Success(String),
-    /// Install plan preview (E04, 'P' on the packs panel).
+    /// Install plan preview (E04, 'p' on the packs panel).
     Plan(InstallPlanDto),
 }
 
@@ -59,7 +69,7 @@ pub struct ConfirmDialog {
 /// Full application state (pattern rusty-console App, synchronous).
 pub struct App {
     pub packs: Vec<PackSummaryDto>,
-    pub pack_list: SelectList<PackSummaryDto>,
+    pub pack_list: SelectList<PackLine>,
     pub installed: SelectList<InstalledPackDto>,
     pub explorer: ExplorerService,
     pub pack_service: PackService,
@@ -67,6 +77,8 @@ pub struct App {
     pub current_dir: PathBuf,
     pub dir_entries: SelectList<(String, bool)>,
     pub focus: Focus,
+    /// CLI ids whose group is collapsed in the packs panel ('c' toggles).
+    pub collapsed_clis: BTreeSet<String>,
     pub popup: Option<Popup>,
     pub input: Option<TextInput>,
     pub input_kind: Option<InputKind>,
@@ -98,7 +110,6 @@ impl App {
             .installed_in(start_dir.to_string_lossy().as_ref())
             .unwrap_or_default();
         let packs = filter_available(&all_packs, &installed);
-        let pack_list = SelectList::new(packs.clone());
         let installed = SelectList::new(installed);
         let entries: Vec<(String, bool)> = explorer
             .list(start_dir.to_string_lossy().as_ref())
@@ -110,9 +121,9 @@ impl App {
             })
             .unwrap_or_default();
         let dir_entries = SelectList::new(entries);
-        App {
+        let mut app = App {
             packs,
-            pack_list,
+            pack_list: SelectList::new(Vec::new()),
             installed,
             explorer,
             pack_service,
@@ -120,6 +131,7 @@ impl App {
             current_dir: start_dir,
             dir_entries,
             focus: Focus::Packs,
+            collapsed_clis: BTreeSet::new(),
             popup: None,
             input: None,
             input_kind: None,
@@ -127,7 +139,9 @@ impl App {
             viewer: None,
             highlighter: crate::presentation::tui::viewer::highlight::Highlighter::new(),
             quit: false,
-        }
+        };
+        app.apply_cli_visibility();
+        app
     }
 
     pub fn refresh_dir(&mut self) {
@@ -154,9 +168,70 @@ impl App {
         let installed = self.pack_service.installed_in(&root).unwrap_or_default();
         let all_packs = self.pack_service.list().unwrap_or_default();
         let available = filter_available(&all_packs, &installed);
-        self.packs = available.clone();
-        self.pack_list = SelectList::new(available);
+        self.packs = available;
+        self.apply_cli_visibility();
         self.installed = SelectList::new(installed);
+    }
+
+    /// Rebuild the packs panel lines from `packs`: one CLI header per group
+    /// (always visible), plus the pack rows of the non-collapsed groups.
+    /// Rows are sorted by CLI then name, so groups are consecutive. The
+    /// selection index is kept, clamped.
+    fn apply_cli_visibility(&mut self) {
+        let selected = self.pack_list.selected_index();
+        let mut lines: Vec<PackLine> = Vec::new();
+        let mut current_cli: Option<String> = None;
+        for pack in &self.packs {
+            let cli = pack.clis.first().cloned().unwrap_or_default();
+            if current_cli.as_deref() != Some(cli.as_str()) {
+                current_cli = Some(cli.clone());
+                lines.push(PackLine::Cli(cli.clone()));
+            }
+            if !self.collapsed_clis.contains(&cli) {
+                lines.push(PackLine::Pack(pack.clone()));
+            }
+        }
+        self.pack_list = SelectList::new(lines);
+        match selected {
+            Some(index) if index < self.pack_list.items.len() => {
+                self.pack_list.state.select(Some(index));
+            }
+            // Fresh list: start on the first pack row, not on a CLI header.
+            _ => {
+                if let Some(first_pack) = self
+                    .pack_list
+                    .items
+                    .iter()
+                    .position(|line| matches!(line, PackLine::Pack(_)))
+                {
+                    self.pack_list.state.select(Some(first_pack));
+                }
+            }
+        }
+    }
+
+    /// 'c' on the packs panel: collapse the CLI group under the cursor (a
+    /// group header or one of its rows), or expand it back. The cursor is
+    /// placed on the group header so a second 'c' toggles the same group.
+    pub fn toggle_cli_group(&mut self) {
+        let Some(cli) = self.pack_list.selected().map(|line| match line {
+            PackLine::Cli(cli) => cli.clone(),
+            PackLine::Pack(pack) => pack.clis.first().cloned().unwrap_or_default(),
+        }) else {
+            return;
+        };
+        if !self.collapsed_clis.remove(&cli) {
+            self.collapsed_clis.insert(cli.clone());
+        }
+        self.apply_cli_visibility();
+        if let Some(header) = self
+            .pack_list
+            .items
+            .iter()
+            .position(|line| matches!(line, PackLine::Cli(c) if *c == cli))
+        {
+            self.pack_list.state.select(Some(header));
+        }
     }
 
     pub fn selected_entry(&self) -> Option<&(String, bool)> {
@@ -164,7 +239,10 @@ impl App {
     }
 
     pub fn selected_pack(&self) -> Option<&PackSummaryDto> {
-        self.pack_list.selected()
+        match self.pack_list.selected() {
+            Some(PackLine::Pack(pack)) => Some(pack),
+            _ => None,
+        }
     }
 
     pub fn selected_installed(&self) -> Option<&InstalledPackDto> {

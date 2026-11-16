@@ -59,10 +59,23 @@ impl App {
             return;
         }
 
-        match self.focus {
-            Focus::Packs => self.handle_packs_action(action),
-            Focus::Installed => self.handle_installed_action(action),
-            Focus::Explorer => self.handle_explorer_action(action),
+        // Direct panel access and reverse focus work from any panel.
+        match action {
+            AppAction::FocusPacks => self.focus = Focus::Packs,
+            AppAction::FocusInstalled => self.focus = Focus::Installed,
+            AppAction::FocusExplorer => self.focus = Focus::Explorer,
+            AppAction::ToggleFocusBack => {
+                self.focus = match self.focus {
+                    Focus::Packs => Focus::Explorer,
+                    Focus::Installed => Focus::Packs,
+                    Focus::Explorer => Focus::Installed,
+                };
+            }
+            _ => match self.focus {
+                Focus::Packs => self.handle_packs_action(action),
+                Focus::Installed => self.handle_installed_action(action),
+                Focus::Explorer => self.handle_explorer_action(action),
+            },
         }
     }
 
@@ -73,6 +86,7 @@ impl App {
             AppAction::Apply => self.install_here(),
             AppAction::PlanPreview => self.preview_plan(),
             AppAction::View => self.open_viewer(),
+            AppAction::ToggleCliGroup => self.toggle_cli_group(),
             AppAction::Help => self.popup = Some(Popup::Help),
             AppAction::ToggleFocus => self.focus = Focus::Installed,
             _ => {}
@@ -224,10 +238,10 @@ impl App {
         }
     }
 
-    /// Preview the install plan of the selected pack row (E04, 'P'): the
+    /// Preview the install plan of the selected pack row (E04, 'p'): the
     /// pack is listed once per target CLI, so the plan is computed for the
     /// CLI of the selected row, in the explorer's current directory.
-    /// 'A' stays the direct install.
+    /// 'a' stays the direct install.
     fn preview_plan(&mut self) {
         let Some(pack) = self.selected_pack() else {
             return;
@@ -252,7 +266,7 @@ impl App {
     }
 
     /// Install the selected pack row in the explorer's current directory
-    /// (user decision: 'A' alone, no separate install mode). The pack is
+    /// (user decision: 'a' alone, no separate install mode). The pack is
     /// listed once per target CLI: the row's CLI is the install target.
     /// The headless CLI keeps the default_cli rule (application layer).
     fn install_here(&mut self) {
@@ -325,11 +339,15 @@ impl App {
     }
 
     fn handle_viewer_action(&mut self, action: AppAction) {
+        if let AppAction::Quit = action {
+            self.quit = true;
+            return;
+        }
         let Some(viewer) = &mut self.viewer else {
             return;
         };
         match action {
-            AppAction::ToggleFocus => {
+            AppAction::ToggleFocus | AppAction::ToggleFocusBack => {
                 if !viewer.files.items.is_empty() {
                     viewer.show_content = !viewer.show_content
                 }
