@@ -1,0 +1,6 @@
+{
+  "name": "rtk",
+  "version": "1.0.0",
+  "description": "Reduce LLM token consumption by 60-90% using RTK (Rust Token Killer) to filter and compress shell command outputs. Ships a BeforeTool hook that rewrites run_shell_command calls through `rtk rewrite`, plus the rtk-optimization skill.",
+  "contextFileName": "GEMINI.md"
+}

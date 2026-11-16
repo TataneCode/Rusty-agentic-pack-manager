@@ -1,0 +1,8 @@
+description = "Analyze agent session history for missed RTK opportunities (runs `rtk discover`)"
+prompt = """
+RTK discover output (commands that should have been run through rtk):
+
+!{rtk discover}
+
+List the missed opportunities, most expensive first, with the estimated token savings per command. If the output shows rtk is not installed, say so and point to https://github.com/rtk-ai/rtk#installation.
+"""

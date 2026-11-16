@@ -1,0 +1,17 @@
+{
+  "hooks": {
+    "BeforeTool": [
+      {
+        "matcher": "run_shell_command",
+        "hooks": [
+          {
+            "name": "rtk-rewrite",
+            "type": "command",
+            "command": "bash \"${extensionPath}${/}hooks${/}rtk-rewrite.sh\"",
+            "timeout": 5000
+          }
+        ]
+      }
+    ]
+  }
+}
