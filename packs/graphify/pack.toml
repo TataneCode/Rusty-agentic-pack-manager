@@ -1,0 +1,11 @@
+name = "graphify"
+version = "1.0.0"
+description = "graphify (Graphify-Labs/graphify, MIT) already ships native Gemini CLI support (`graphify install --platform gemini`), so there is nothing to port. This pack only installs a rule with the install/usage note (Gemini CLI platform install, or the cross-framework Agent Skills install for Vibe CLI)."
+cli = ["vibe", "gemini"]
+
+[[items]]
+kind = "rule"
+source = "rules/graphify.md"
+[items.destinations]
+vibe = ".vibe/rules/graphify.md"
+gemini = ".gemini/rules/graphify.md"

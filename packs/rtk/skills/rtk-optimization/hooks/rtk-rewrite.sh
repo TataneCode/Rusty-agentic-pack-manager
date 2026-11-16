@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
-# rtk-hook-version: 3 (Gemini CLI port)
+# rtk-hook-version: 3 (Gemini CLI port, shipped by the rtk pack)
 # RTK Gemini CLI hook — rewrites run_shell_command calls to use rtk for token savings.
+# Packs have no hook slot: register it manually in ~/.gemini/settings.json,
+#   BeforeTool / matcher "run_shell_command" /
+#   command: bash "$GEMINI_PROJECT_DIR/.gemini/skills/rtk-optimization/hooks/rtk-rewrite.sh"
 # Requires: rtk >= 0.23.0, jq
 #
 # Thin delegating hook: all rewrite logic lives in `rtk rewrite`, which is the

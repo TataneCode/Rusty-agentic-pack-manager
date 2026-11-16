@@ -4,7 +4,7 @@
 //! 1. a pack declared for ailed CLI with a profile but no enum recompiles
 //!    installs (here: `claude`, unknown to the v1 enum);
 //! 2. a user profile overrides the shipped profile of the same name;
-//! 3. the 16 existing packs still install unmodified (loop over the real
+//! 3. the 20 shipped packs still install unmodified (loop over the real
 //!    `packs/*/pack.toml` + real `clis/`).
 
 use std::fs;
@@ -177,7 +177,7 @@ fn a_cli_without_any_profile_is_rejected() {
     );
 }
 
-/// Criterion 3: the 16 existing packs still install unmodified. Loads the
+/// Criterion 3: the 20 shipped packs still install unmodified. Loads the
 /// real `packs/*/pack.toml` with the real shipped `clis/` and runs the
 /// domain install plan for every declared CLI.
 #[test]
@@ -198,7 +198,7 @@ fn all_shipped_packs_plan_an_install_for_every_declared_cli() {
     let resolver = CliProfileService::new(Box::new(profiles), Box::new(content));
 
     let packs = repository.list().unwrap();
-    assert_eq!(packs.len(), 16, "the 16 shipped packs must load");
+    assert_eq!(packs.len(), 20, "the 20 shipped packs must load");
 
     let tmp = TempDir::new().unwrap();
     let target = tmp.path().join("repo");

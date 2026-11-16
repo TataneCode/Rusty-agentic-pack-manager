@@ -1,0 +1,39 @@
+name = "rtk"
+version = "1.0.0"
+description = "RTK (Rust Token Killer, rtk-ai/rtk, MIT) reduces LLM token consumption by 60-90% by filtering/compressing shell output; the rtk binary is used as-is. Ships the rtk-optimization skill (with the optional BeforeTool rewrite hook script), an always-on rule, and /rtk-gain, /rtk-discover, /rtk-proxy commands. Requires rtk >= 0.23.0 and jq on PATH for the hook."
+cli = ["vibe", "gemini"]
+
+[[items]]
+kind = "skill"
+source = "skills/rtk-optimization"
+[items.destinations]
+vibe = ".agents/skills/rtk-optimization"
+gemini = ".gemini/skills/rtk-optimization"
+
+[[items]]
+kind = "rule"
+source = "rules/rtk.md"
+[items.destinations]
+vibe = ".vibe/rules/rtk.md"
+gemini = ".gemini/rules/rtk.md"
+
+[[items]]
+kind = "command"
+source = "commands/rtk-gain.toml"
+[items.destinations]
+vibe = ".vibe/commands/rtk-gain.toml"
+gemini = ".gemini/commands/rtk-gain.toml"
+
+[[items]]
+kind = "command"
+source = "commands/rtk-discover.toml"
+[items.destinations]
+vibe = ".vibe/commands/rtk-discover.toml"
+gemini = ".gemini/commands/rtk-discover.toml"
+
+[[items]]
+kind = "command"
+source = "commands/rtk-proxy.toml"
+[items.destinations]
+vibe = ".vibe/commands/rtk-proxy.toml"
+gemini = ".gemini/commands/rtk-proxy.toml"

@@ -29,8 +29,8 @@ Level sticks until changed or session end.
 | **ponytail-gain** | `/ponytail-gain` | Measured-impact scoreboard: less code, less cost, more speed. |
 | **ponytail-help** | `/ponytail-help` | This card. |
 
-Gemini CLI, Claude Code and OpenCode use the slash-command forms above (this
-Gemini extension bundles all six as commands); Codex uses `@ponytail`-style
+Vibe CLI and Gemini CLI install all six as slash commands from this pack
+(`.vibe/commands/` / `.gemini/commands/`); Codex uses `@ponytail`-style
 mentions.
 
 ## Deactivate
@@ -40,18 +40,18 @@ Say "stop ponytail" or "normal mode". Resume anytime with `/ponytail`.
 
 ## Configure Default Mode
 
-Default mode = `full`, active from session start: this extension loads its
-`AGENTS.md` context file in every Gemini CLI session. Switch mode for the
+Default mode = `full`, active from session start: this pack installs the
+ponytail rules as a rule file (`.vibe/rules/ponytail.md` /
+`.gemini/rules/ponytail.md`), loaded in every session. Switch mode for the
 current session with `/ponytail <level>`. There is no cross-session
-persistence in Gemini CLI — the Claude/Codex hooks that read
-`PONYTAIL_DEFAULT_MODE` or `~/.config/ponytail/config.json` have no Gemini
-equivalent.
+persistence — the Claude/Codex hooks that read `PONYTAIL_DEFAULT_MODE` or
+`~/.config/ponytail/config.json` have no equivalent in a pack.
 
 ## Update
 
-Run `gemini extensions update ponytail`, or re-install from the source path
-(`gemini extensions install --path=./ponytail`; for a local checkout use
-`gemini extensions link .`). Restart the session to pick up the new version.
+Update the pack in the rapm library (`rapm remove ponytail`, then
+`rapm add <dir> --name ponytail --force`), then reinstall it in the target
+repo (`rapm install ponytail --force`).
 
 ## More
 

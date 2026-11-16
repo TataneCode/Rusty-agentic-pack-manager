@@ -49,13 +49,13 @@ which rtk             # Verify correct binary
 
 ## Initialization
 
-This Gemini CLI extension already installs the hook (`hooks/hooks.json`) and the always-on instructions (`GEMINI.md`) — no `rtk init` needed.
+This pack ships the rewrite hook script (`hooks/rtk-rewrite.sh`, next to this SKILL.md) and the always-on rule (`rules/rtk.md`) — no `rtk init` needed. Wire the hook manually as described in the rtk rule for automatic rewriting.
 
 - `rtk init` targets Claude Code (`~/.claude/settings.json` / project `CLAUDE.md`); it is not used by this extension. Don't combine them: the hook would fire twice (redundant, not harmful).
 
-## How the Extension Works
+## How the Hook Works
 
-When installed as a Gemini CLI extension, RTK's `BeforeTool` hook (matcher `run_shell_command`) intercepts every shell tool call and rewrites the command through `rtk rewrite` before execution. This is transparent — commands run normally but produce compressed, token-efficient output. All rewrite and permission logic lives in the `rtk rewrite` binary. Difference vs Claude Code: Gemini's `BeforeTool` has no auto-allow decision, so a rewritten command still goes through Gemini CLI's normal confirmation; deny/ask rules from `rtk rewrite` pass through to that same confirmation. The hook fails open (stderr warning, command unchanged) if `rtk` or `jq` is missing or `rtk < 0.23.0`.
+Wired as a Gemini CLI `BeforeTool` hook (matcher `run_shell_command`), it intercepts every shell tool call and rewrites the command through `rtk rewrite` before execution. This is transparent — commands run normally but produce compressed, token-efficient output. All rewrite and permission logic lives in the `rtk rewrite` binary. Difference vs Claude Code: Gemini's `BeforeTool` has no auto-allow decision, so a rewritten command still goes through Gemini CLI's normal confirmation; deny/ask rules from `rtk rewrite` pass through to that same confirmation. The hook fails open (stderr warning, command unchanged) if `rtk` or `jq` is missing or `rtk < 0.23.0`.
 
 ## Configuration
 
