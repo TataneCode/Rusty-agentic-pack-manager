@@ -84,9 +84,12 @@ fn build_app(tmp: &TempDir) -> App {
     make_pack(&packs_dir);
     fs::create_dir_all(tmp.path().join("start/subdir")).unwrap();
     fs::write(tmp.path().join("start/file.txt"), "x").unwrap();
+    wire_app(&packs_dir, &tmp.path().join("start"))
+}
 
-    let repo = pack_repo(vec![packs_dir.clone()]);
-    let destination = FsInstallDestination::new(vec![packs_dir.clone()]);
+fn wire_app(packs_dir: &std::path::Path, start: &std::path::Path) -> App {
+    let repo = pack_repo(vec![packs_dir.to_path_buf()]);
+    let destination = FsInstallDestination::new(vec![packs_dir.to_path_buf()]);
     let pack_service = PackService::new(
         Box::new(repo),
         Box::new(destination),
@@ -94,14 +97,33 @@ fn build_app(tmp: &TempDir) -> App {
     );
     let explorer = ExplorerService::new(Box::new(FsExplorer));
     let view_service = PackViewService::new(Box::new(
-        FsPackContentRepository::new(vec![packs_dir]).unwrap(),
+        FsPackContentRepository::new(vec![packs_dir.to_path_buf()]).unwrap(),
     ));
-    App::new(
-        pack_service,
-        explorer,
-        view_service,
-        tmp.path().join("start"),
+    App::new(pack_service, explorer, view_service, start.to_path_buf())
+}
+
+/// A pack declaring both vibe and gemini, next to the single-CLI `review`.
+fn make_multi_cli_pack(packs_dir: &std::path::Path) {
+    let pack_dir = packs_dir.join("multi-cli");
+    fs::create_dir_all(pack_dir.join("skills/multi")).unwrap();
+    fs::write(pack_dir.join("skills/multi/SKILL.md"), "# Multi").unwrap();
+    fs::write(
+        pack_dir.join("pack.toml"),
+        r#"
+name = "multi-cli"
+version = "1.0.0"
+description = "Multi CLI pack"
+cli = ["vibe", "gemini"]
+
+[[items]]
+kind = "skill"
+source = "skills/multi"
+[items.destinations]
+vibe = ".agents/skills/multi"
+gemini = ".gemini/skills/multi"
+"#,
     )
+    .unwrap();
 }
 
 fn render_snapshot(app: &mut App) -> String {
@@ -139,6 +161,52 @@ fn split_screen_shows_both_panels_and_pack() {
     assert!(snapshot.contains("Vibe"), "CLI group header missing");
     assert!(snapshot.contains("review"), "pack entry missing");
     assert!(snapshot.contains("subdir"), "directory entry missing");
+}
+
+#[test]
+fn packs_panel_lists_one_row_per_target_cli_and_installs_for_the_row_cli() {
+    let tmp = TempDir::new().unwrap();
+    let packs_dir = tmp.path().join("packs");
+    fs::create_dir_all(&packs_dir).unwrap();
+    make_pack(&packs_dir);
+    make_multi_cli_pack(&packs_dir);
+    fs::create_dir_all(tmp.path().join("start")).unwrap();
+    let mut app = wire_app(&packs_dir, &tmp.path().join("start"));
+
+    let snapshot = render_snapshot(&mut app);
+    assert!(
+        snapshot.contains("Gemini"),
+        "gemini group header missing: {snapshot}"
+    );
+    assert!(snapshot.contains("Vibe"), "vibe group header missing");
+    assert_eq!(
+        snapshot.matches("Multi CLI pack").count(),
+        2,
+        "one row per target CLI: {snapshot}"
+    );
+
+    // Rows sort by CLI then name: the first row is multi-cli under gemini.
+    assert_eq!(app.packs[0].name, "multi-cli");
+    assert_eq!(app.packs[0].clis, vec!["gemini".to_string()]);
+
+    // 'A' installs for the selected row's CLI (gemini), not the pack default.
+    app.dispatch(&key(crossterm::event::KeyCode::Char('a')));
+    assert!(tmp
+        .path()
+        .join("start/.gemini/skills/multi/SKILL.md")
+        .is_file());
+    assert!(!tmp.path().join("start/.agents/skills/multi").exists());
+    assert_eq!(app.installed.items.len(), 1);
+    assert_eq!(app.installed.items[0].cli, "gemini");
+
+    // The gemini row is gone, the vibe row of the same pack remains.
+    let rows: Vec<(&str, &str)> = app
+        .packs
+        .iter()
+        .map(|p| (p.name.as_str(), p.clis[0].as_str()))
+        .collect();
+    assert!(rows.contains(&("multi-cli", "vibe")));
+    assert!(!rows.contains(&("multi-cli", "gemini")));
 }
 
 #[test]

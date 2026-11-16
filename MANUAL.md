@@ -79,7 +79,7 @@ rapm help
 Three sections, all in shared rounded boxes (rusty-console design):
 
 - **Header**: application title + selected pack.
-- **Split screen**: **Packs** (left top, available packs grouped by target CLI) / **Installed** (left bottom, packs installed in the explorer's current directory) / **Explorer** (right, host file tree — folders in blue, listed first).
+- **Split screen**: **Packs** (left top, available packs grouped by target CLI, one row per CLI) / **Installed** (left bottom, packs installed in the explorer's current directory) / **Explorer** (right, host file tree — folders in blue, listed first).
 - **Footer**: the two always-available commands — `Tab: Switch panel | Space: Help`. All contextual keys live in the Space help.
 
 The focused panel has a cyan border.
@@ -128,7 +128,7 @@ Lists the packs recorded as installed in the explorer's current directory (see [
 
 `A` on the packs panel installs immediately into the **explorer's current directory** and refreshes the explorer. Navigate the explorer first (Tab, Enter/Backspace) to choose the target directory. `P` shows the install plan as a popup before installing (no write).
 
-The install targets the **`default_cli` of the configuration file** when the pack declares it, else the **pack's first declared CLI** (all shipped packs declare `["vibe", "gemini"]` except `vibe-wise-commands`, which is Gemini-only). If a destination already exists, the install is refused (no silent overwrite) and an error message is shown.
+In the TUI, each pack is listed **once per target CLI** (the list is grouped under each CLI a pack declares), and `A` installs for the **CLI of the selected row** (all shipped packs declare `["vibe", "gemini"]` except `vibe-wise-commands`, which is Gemini-only). If a destination already exists, the install is refused (no silent overwrite) and an error message is shown.
 
 ### Installation index
 
@@ -209,4 +209,4 @@ command   = ".claude/commands/{name}.md"
 
 ## Embedded packs
 
-16 packs shipped: `tdd`, `code-review`, `debugging`, `security`, `planning`, `brainstorming`, `quality-gate`, `prd`, `work-slicing`, `karpathy`, `parallel-agents`, `focus-adhd`, `rusty-agnostic`, `learning` (feynman-learning, deep-research, fact-check, curriculum-planner), `vibe-wise` (learning mode skills with scripts), `vibe-wise-commands` (Gemini CLI slash commands for VibeWise).
+20 packs shipped: `tdd`, `code-review`, `debugging`, `security`, `planning`, `brainstorming`, `quality-gate`, `prd`, `work-slicing`, `karpathy`, `parallel-agents`, `focus-adhd`, `rusty-agnostic`, `learning` (feynman-learning, deep-research, fact-check, curriculum-planner), `vibe-wise` (learning mode skills with scripts), `vibe-wise-commands` (Gemini CLI slash commands for VibeWise), plus `ponytail`, `rtk`, `ui-ux-pro-max` and `graphify` (converted from upstream Claude Code plugins, vibe + gemini).

@@ -1,0 +1,6 @@
+description = "Run a raw shell command without RTK filtering (rtk proxy {{args}})"
+prompt = """
+Raw, unfiltered output of the command `rtk proxy {{args}}`:
+
+!{rtk proxy {{args}}}
+"""

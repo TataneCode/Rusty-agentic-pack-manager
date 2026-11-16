@@ -1,0 +1,8 @@
+description = "Show RTK token savings analytics (runs `rtk gain`)"
+prompt = """
+Token savings report from RTK (raw output below):
+
+!{rtk gain}
+
+Summarize the savings: commands routed through RTK, raw vs filtered tokens, and the top commands by savings. If the output shows rtk is not installed, say so and point to https://github.com/rtk-ai/rtk#installation.
+"""

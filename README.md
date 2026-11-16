@@ -12,7 +12,7 @@ A **pack** is a coherent combination of skills, agents and commands, applicable 
 
 ## UI — split screen
 
-- **Left column**: the available pack list, grouped by target CLI (Vibe CLI, Gemini CLI, …), and below it the **Installed** panel: packs already installed in the explorer's current directory (tracked in `packs_index.toml`).
+- **Left column**: the available pack list, grouped by target CLI (Vibe CLI, Gemini CLI, …) — one row per target CLI, so a vibe+gemini pack appears under both groups and `A` installs for the selected row's CLI; below it the **Installed** panel: packs already installed in the explorer's current directory (tracked in `packs_index.toml`).
 - **Right panel**: the file tree of the host machine.
 
 | Key | Action |

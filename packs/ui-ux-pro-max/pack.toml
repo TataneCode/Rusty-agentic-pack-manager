@@ -1,0 +1,11 @@
+name = "ui-ux-pro-max"
+version = "2.15.0"
+description = "UI/UX design intelligence for web, mobile and desktop (from nextlevelbuilder/ui-ux-pro-max-skill, MIT): 80 searchable styles, 192 product palettes, 74 font pairings, 120 UX guidelines, 105 icons, 25 chart types, 22 stacks — with a local searchable data catalog (scripts/search.py, Python 3, no deps)."
+cli = ["vibe", "gemini"]
+
+[[items]]
+kind = "skill"
+source = "skills/ui-ux-pro-max"
+[items.destinations]
+vibe = ".agents/skills/ui-ux-pro-max"
+gemini = ".gemini/skills/ui-ux-pro-max"

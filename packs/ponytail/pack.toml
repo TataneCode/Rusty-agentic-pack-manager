@@ -1,0 +1,95 @@
+name = "ponytail"
+version = "4.8.4"
+description = "Lazy senior dev mode (from SofDev007/claude_plugins ponytail, MIT): the simplest, shortest solution that actually works — YAGNI, stdlib first, no unrequested abstractions. 6 skills, one always-on rule, 6 commands."
+cli = ["vibe", "gemini"]
+
+[[items]]
+kind = "skill"
+source = "skills/ponytail/SKILL.md"
+[items.destinations]
+vibe = ".agents/skills/ponytail/SKILL.md"
+gemini = ".gemini/skills/ponytail/SKILL.md"
+
+[[items]]
+kind = "skill"
+source = "skills/ponytail-audit/SKILL.md"
+[items.destinations]
+vibe = ".agents/skills/ponytail-audit/SKILL.md"
+gemini = ".gemini/skills/ponytail-audit/SKILL.md"
+
+[[items]]
+kind = "skill"
+source = "skills/ponytail-debt/SKILL.md"
+[items.destinations]
+vibe = ".agents/skills/ponytail-debt/SKILL.md"
+gemini = ".gemini/skills/ponytail-debt/SKILL.md"
+
+[[items]]
+kind = "skill"
+source = "skills/ponytail-gain/SKILL.md"
+[items.destinations]
+vibe = ".agents/skills/ponytail-gain/SKILL.md"
+gemini = ".gemini/skills/ponytail-gain/SKILL.md"
+
+[[items]]
+kind = "skill"
+source = "skills/ponytail-help/SKILL.md"
+[items.destinations]
+vibe = ".agents/skills/ponytail-help/SKILL.md"
+gemini = ".gemini/skills/ponytail-help/SKILL.md"
+
+[[items]]
+kind = "skill"
+source = "skills/ponytail-review/SKILL.md"
+[items.destinations]
+vibe = ".agents/skills/ponytail-review/SKILL.md"
+gemini = ".gemini/skills/ponytail-review/SKILL.md"
+
+[[items]]
+kind = "rule"
+source = "rules/ponytail.md"
+[items.destinations]
+vibe = ".vibe/rules/ponytail.md"
+gemini = ".gemini/rules/ponytail.md"
+
+[[items]]
+kind = "command"
+source = "commands/ponytail.toml"
+[items.destinations]
+vibe = ".vibe/commands/ponytail.toml"
+gemini = ".gemini/commands/ponytail.toml"
+
+[[items]]
+kind = "command"
+source = "commands/ponytail-audit.toml"
+[items.destinations]
+vibe = ".vibe/commands/ponytail-audit.toml"
+gemini = ".gemini/commands/ponytail-audit.toml"
+
+[[items]]
+kind = "command"
+source = "commands/ponytail-debt.toml"
+[items.destinations]
+vibe = ".vibe/commands/ponytail-debt.toml"
+gemini = ".gemini/commands/ponytail-debt.toml"
+
+[[items]]
+kind = "command"
+source = "commands/ponytail-gain.toml"
+[items.destinations]
+vibe = ".vibe/commands/ponytail-gain.toml"
+gemini = ".gemini/commands/ponytail-gain.toml"
+
+[[items]]
+kind = "command"
+source = "commands/ponytail-help.toml"
+[items.destinations]
+vibe = ".vibe/commands/ponytail-help.toml"
+gemini = ".gemini/commands/ponytail-help.toml"
+
+[[items]]
+kind = "command"
+source = "commands/ponytail-review.toml"
+[items.destinations]
+vibe = ".vibe/commands/ponytail-review.toml"
+gemini = ".gemini/commands/ponytail-review.toml"

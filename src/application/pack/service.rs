@@ -56,15 +56,24 @@ impl PackService {
         self
     }
 
-    /// All packs, sorted by CLI then name for UI grouping.
+    /// All packs as UI rows — one row per (pack, target CLI), sorted by CLI
+    /// then name for UI grouping: a multi-CLI pack is listed once under each
+    /// CLI it declares, and each row carries exactly that one CLI (so the
+    /// group header, the availability filter and the row's install target
+    /// all use `clis.first()`).
     pub fn list(&self) -> Result<Vec<PackSummaryDto>, ApplicationError> {
-        let mut packs = self.repository.list()?;
-        packs.sort_by(|a, b| {
-            a.clis
-                .cmp(&b.clis)
-                .then_with(|| a.name.as_str().cmp(b.name.as_str()))
-        });
-        Ok(packs.iter().map(PackSummaryDto::from_pack).collect())
+        let packs = self.repository.list()?;
+        let mut rows: Vec<PackSummaryDto> = Vec::new();
+        for pack in &packs {
+            let dto = PackSummaryDto::from_pack(pack);
+            for cli in &dto.clis {
+                let mut row = dto.clone();
+                row.clis = vec![cli.clone()];
+                rows.push(row);
+            }
+        }
+        rows.sort_by(|a, b| a.clis.cmp(&b.clis).then_with(|| a.name.cmp(&b.name)));
+        Ok(rows)
     }
 
     pub fn find(&self, name: &str) -> Result<Pack, ApplicationError> {
@@ -332,23 +341,53 @@ mod tests {
         )
     }
 
+    fn sample_pack_multi(name: &str, clis: &[&str]) -> Pack {
+        let clis: Vec<CliId> = clis.iter().map(|c| CliId::new(c).unwrap()).collect();
+        Pack::new(
+            PackName::new(name).unwrap(),
+            PackVersion::new("1.0.0").unwrap(),
+            "desc".to_string(),
+            clis.clone(),
+            vec![PackItem::new(
+                PackItemKind::Skill,
+                PathBuf::from("skills/x/SKILL.md"),
+                TargetCliMap::from_pairs(&[(clis[0].clone(), ".agents/skills/x/")]),
+            )
+            .unwrap()],
+        )
+        .unwrap()
+    }
+
     #[test]
-    fn list_sorts_by_cli_then_name() {
+    fn list_expands_one_row_per_target_cli_and_sorts_by_cli_then_name() {
         let mut repo = MockPackRepository::new();
         let zeta = sample_pack("zeta", CliId::new("vibe").unwrap());
         let alpha = sample_pack("alpha", CliId::new("gemini").unwrap());
+        let multi = sample_pack_multi("multi", &["vibe", "gemini"]);
         repo.expect_list()
-            .returning(move || Ok(vec![zeta.clone(), alpha.clone()]));
+            .returning(move || Ok(vec![zeta.clone(), alpha.clone(), multi.clone()]));
         let service = PackService::new(
             Box::new(repo),
             Box::new(MockInstallDestination::new()),
             Box::new(MockInstallIndexRepository::new()),
         );
         let dtos = service.list().unwrap();
-        // CLI ids sort lexicographically (data-driven, E02): gemini < vibe.
-        assert_eq!(dtos[0].name, "alpha");
-        assert_eq!(dtos[0].clis[0], "gemini");
-        assert_eq!(dtos[1].name, "zeta");
+        // Every row carries exactly one CLI; rows sort by CLI then name
+        // (CLI ids sort lexicographically, data-driven E02: gemini < vibe).
+        assert!(dtos.iter().all(|d| d.clis.len() == 1));
+        let keys: Vec<(&str, &str)> = dtos
+            .iter()
+            .map(|d| (d.clis[0].as_str(), d.name.as_str()))
+            .collect();
+        assert_eq!(
+            keys,
+            vec![
+                ("gemini", "alpha"),
+                ("gemini", "multi"),
+                ("vibe", "multi"),
+                ("vibe", "zeta"),
+            ]
+        );
     }
 
     #[test]
