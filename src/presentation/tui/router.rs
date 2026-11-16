@@ -39,6 +39,18 @@ impl App {
             return;
         };
 
+        // Quit works from any mode/focus/popup (advertised as Ctrl-C).
+        if let AppAction::Quit = action {
+            self.quit = true;
+            return;
+        }
+        // Popup has priority over everything else (viewer included): any
+        // mapped key closes it.
+        if self.popup.is_some() {
+            self.popup = None;
+            return;
+        }
+
         if self.viewer.is_some() {
             self.handle_viewer_action(action);
             return;
@@ -48,17 +60,6 @@ impl App {
     }
 
     fn handle_action(&mut self, action: AppAction) {
-        // Quit works from any mode/focus (advertised as Ctrl-C).
-        if let AppAction::Quit = action {
-            self.quit = true;
-            return;
-        }
-        // Popup has priority: any key closes it.
-        if self.popup.is_some() {
-            self.popup = None;
-            return;
-        }
-
         // Direct panel access and reverse focus work from any panel.
         match action {
             AppAction::FocusPacks => self.focus = Focus::Packs,
@@ -299,7 +300,7 @@ impl App {
     }
 
     fn handle_input_key(&mut self, key: &crossterm::event::KeyEvent) {
-        use crossterm::event::KeyCode;
+        use crossterm::event::{KeyCode, KeyModifiers};
         if self.input.is_none() {
             return;
         }
@@ -331,6 +332,15 @@ impl App {
             }
             KeyCode::Char(c) => {
                 if let Some(input) = &mut self.input {
+                    // Same Shift+letter normalization as map_key: kitty
+                    // reports Char('p')+SHIFT, legacy Char('P'); both must
+                    // type 'P'.
+                    let c = if key.modifiers.contains(KeyModifiers::SHIFT) && c.is_ascii_lowercase()
+                    {
+                        c.to_ascii_uppercase()
+                    } else {
+                        c
+                    };
                     input.input(c);
                 }
             }
@@ -339,10 +349,6 @@ impl App {
     }
 
     fn handle_viewer_action(&mut self, action: AppAction) {
-        if let AppAction::Quit = action {
-            self.quit = true;
-            return;
-        }
         let Some(viewer) = &mut self.viewer else {
             return;
         };

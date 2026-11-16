@@ -195,6 +195,7 @@ impl App {
         match selected {
             Some(index) if index < self.pack_list.items.len() => {
                 self.pack_list.state.select(Some(index));
+                self.snap_selection_to_pack();
             }
             // Fresh list: start on the first pack row, not on a CLI header.
             _ => {
@@ -208,6 +209,31 @@ impl App {
                 }
             }
         }
+    }
+
+    /// A CLI header is not actionable ('a'/'p'/'v' are no-ops on it): after
+    /// a rebuild (refresh), move the cursor to the nearest pack row.
+    fn snap_selection_to_pack(&mut self) {
+        let Some(index) = self.pack_list.selected_index() else {
+            return;
+        };
+        if matches!(self.pack_list.items.get(index), Some(PackLine::Pack(_))) {
+            return;
+        }
+        let next = self
+            .pack_list
+            .items
+            .iter()
+            .skip(index + 1)
+            .position(|line| matches!(line, PackLine::Pack(_)))
+            .map(|offset| offset + index + 1);
+        let previous = self
+            .pack_list
+            .items
+            .iter()
+            .take(index)
+            .rposition(|line| matches!(line, PackLine::Pack(_)));
+        self.pack_list.state.select(next.or(previous));
     }
 
     /// 'c' on the packs panel: collapse the CLI group under the cursor (a

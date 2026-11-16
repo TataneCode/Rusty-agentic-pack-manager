@@ -13,7 +13,7 @@ use rusty_agentic_pack_manager::infrastructure::filesystem::explorer::{
 };
 use rusty_agentic_pack_manager::infrastructure::pack::content::FsPackContentRepository;
 use rusty_agentic_pack_manager::infrastructure::pack::index::FsInstallIndexRepository;
-use rusty_agentic_pack_manager::presentation::tui::app::{App, Focus, PackLine};
+use rusty_agentic_pack_manager::presentation::tui::app::{App, Focus, PackLine, Popup};
 use rusty_agentic_pack_manager::presentation::tui::split_view;
 use tempfile::TempDir;
 
@@ -365,6 +365,65 @@ fn ctrl_c_quits_from_the_viewer_too() {
     assert!(app.viewer.is_some());
     app.dispatch(&ctrl('c'));
     assert!(app.quit, "Ctrl+C must quit from the viewer");
+}
+
+#[test]
+fn popup_closes_with_any_key_in_the_viewer_too() {
+    let tmp = TempDir::new().unwrap();
+    let mut app = build_app(&tmp);
+    app.dispatch(&key(crossterm::event::KeyCode::Char('v')));
+    assert!(app.viewer.is_some());
+
+    // open the help inside the viewer
+    app.dispatch(&key(crossterm::event::KeyCode::Char(' ')));
+    assert!(matches!(app.popup, Some(Popup::Help)));
+    // any mapped key closes the popup, the viewer stays open
+    app.dispatch(&key(crossterm::event::KeyCode::Down));
+    assert!(
+        app.popup.is_none(),
+        "arrow must close the popup in the viewer"
+    );
+    assert!(app.viewer.is_some(), "the viewer must stay open");
+    // Space toggles: reopen, then close
+    app.dispatch(&key(crossterm::event::KeyCode::Char(' ')));
+    assert!(matches!(app.popup, Some(Popup::Help)));
+    app.dispatch(&key(crossterm::event::KeyCode::Char(' ')));
+    assert!(app.popup.is_none());
+    // Esc closes the viewer when no popup is open
+    app.dispatch(&key(crossterm::event::KeyCode::Esc));
+    assert!(app.viewer.is_none());
+}
+
+#[test]
+fn refresh_snaps_the_selection_off_a_cli_header() {
+    let tmp = TempDir::new().unwrap();
+    let packs_dir = tmp.path().join("packs");
+    fs::create_dir_all(&packs_dir).unwrap();
+    make_pack(&packs_dir);
+    make_multi_cli_pack(&packs_dir);
+    fs::create_dir_all(tmp.path().join("start")).unwrap();
+    let mut app = wire_app(&packs_dir, &tmp.path().join("start"));
+
+    // cursor on the gemini header (line 0), then a refresh (install/uninstall)
+    app.pack_list.state.select(Some(0));
+    assert!(matches!(app.pack_list.selected(), Some(PackLine::Cli(_))));
+    app.refresh_dir();
+    assert!(
+        matches!(app.pack_list.selected(), Some(PackLine::Pack(_))),
+        "after a refresh the cursor must sit on a pack row, not a CLI header"
+    );
+}
+
+#[test]
+fn input_dialog_types_uppercase_on_shift_letter_in_both_protocols() {
+    let tmp = TempDir::new().unwrap();
+    let mut app = build_app(&tmp);
+    app.focus = Focus::Explorer;
+    app.dispatch(&key(crossterm::event::KeyCode::Char('r')));
+    app.dispatch(&shifted('a')); // kitty: Char('a') + SHIFT
+    app.dispatch(&key(crossterm::event::KeyCode::Char('B'))); // legacy: Char('B')
+    app.dispatch(&key(crossterm::event::KeyCode::Char('b'))); // plain lowercase
+    assert_eq!(app.input.as_ref().unwrap().value, "ABb");
 }
 
 #[test]
