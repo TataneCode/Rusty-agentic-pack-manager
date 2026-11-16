@@ -224,20 +224,25 @@ impl App {
         }
     }
 
-    /// Preview the install plan of the selected pack (E04, 'P'): compute
-    /// the plan for the pack's default CLI in the explorer's current
-    /// directory and show it as a popup. 'A' stays the direct install.
+    /// Preview the install plan of the selected pack row (E04, 'P'): the
+    /// pack is listed once per target CLI, so the plan is computed for the
+    /// CLI of the selected row, in the explorer's current directory.
+    /// 'A' stays the direct install.
     fn preview_plan(&mut self) {
         let Some(pack) = self.selected_pack() else {
             return;
         };
         let pack_name = pack.name.clone();
-        let cli = match self.pack_service.default_cli(&pack_name) {
-            Ok(cli) => cli,
-            Err(err) => {
-                self.show_error(err.to_string());
-                return;
-            }
+        let row_cli = pack.clis.first().cloned();
+        let cli = match row_cli {
+            Some(cli) => cli,
+            None => match self.pack_service.default_cli(&pack_name) {
+                Ok(cli) => cli,
+                Err(err) => {
+                    self.show_error(err.to_string());
+                    return;
+                }
+            },
         };
         let root = self.current_dir.to_string_lossy().into_owned();
         match self.pack_service.plan_install(&pack_name, &cli, &root) {
@@ -246,21 +251,25 @@ impl App {
         }
     }
 
-    /// Install the selected pack in the explorer's current directory
-    /// (user decision: 'A' alone, no separate install mode).
+    /// Install the selected pack row in the explorer's current directory
+    /// (user decision: 'A' alone, no separate install mode). The pack is
+    /// listed once per target CLI: the row's CLI is the install target.
+    /// The headless CLI keeps the default_cli rule (application layer).
     fn install_here(&mut self) {
         let Some(pack) = self.selected_pack() else {
             return;
         };
         let pack_name = pack.name.clone();
-        // Install for the pack's default CLI (CLI picker is v1.1); the
-        // default-CLI rule lives in the application layer.
-        let cli = match self.pack_service.default_cli(&pack_name) {
-            Ok(cli) => cli,
-            Err(err) => {
-                self.show_error(err.to_string());
-                return;
-            }
+        let row_cli = pack.clis.first().cloned();
+        let cli = match row_cli {
+            Some(cli) => cli,
+            None => match self.pack_service.default_cli(&pack_name) {
+                Ok(cli) => cli,
+                Err(err) => {
+                    self.show_error(err.to_string());
+                    return;
+                }
+            },
         };
         let root = self.current_dir.to_string_lossy().into_owned();
         match self.pack_service.install(&pack_name, &cli, &root, false) {

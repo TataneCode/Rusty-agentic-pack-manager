@@ -146,9 +146,9 @@ impl App {
     }
 
     /// Reload the installations recorded for the current directory, and
-    /// re-filter the available pack list: a pack installed here (for its
-    /// first target CLI, like `A` installs it) no longer appears as
-    /// available.
+    /// re-filter the available pack rows: a (pack, CLI) row installed here
+    /// no longer appears as available (the pack stays listed under its
+    /// other target CLIs).
     pub fn refresh_installed(&mut self) {
         let root = self.current_dir.to_string_lossy().into_owned();
         let installed = self.pack_service.installed_in(&root).unwrap_or_default();
@@ -176,8 +176,9 @@ impl App {
     }
 }
 
-/// Packs still available for installation: a pack is unavailable once the
-/// index records it for its first target CLI (the CLI `A` installs for).
+/// Pack rows still available for installation: the list holds one row per
+/// (pack, target CLI) — a row is unavailable once the index records that
+/// exact (pack, CLI) couple.
 pub fn filter_available(
     packs: &[PackSummaryDto],
     installed: &[InstalledPackDto],
@@ -220,26 +221,31 @@ mod tests {
     }
 
     #[test]
-    fn filter_available_excludes_packs_installed_for_their_first_cli() {
-        let packs = vec![
+    fn filter_available_excludes_only_the_rows_installed_for_that_cli() {
+        // Rows as produced by PackService::list(): one per (pack, CLI).
+        let rows = vec![
             pack("tdd", &["vibe"]),
-            pack("review", &["vibe", "gemini"]),
+            pack("review", &["gemini"]),
+            pack("review", &["vibe"]),
             pack("free", &["gemini"]),
         ];
         let installed = vec![installed("tdd", "vibe"), installed("review", "vibe")];
-        let available = filter_available(&packs, &installed);
-        let names: Vec<&str> = available.iter().map(|p| p.name.as_str()).collect();
-        assert_eq!(names, vec!["free"]);
+        let available = filter_available(&rows, &installed);
+        let keys: Vec<(&str, &str)> = available
+            .iter()
+            .map(|p| (p.name.as_str(), p.clis[0].as_str()))
+            .collect();
+        assert_eq!(keys, vec![("review", "gemini"), ("free", "gemini")]);
     }
 
     #[test]
-    fn filter_available_keeps_pack_when_only_another_cli_is_installed() {
-        let packs = vec![pack("tdd", &["vibe", "gemini"])];
-        // The index records gemini, but `A` installs for the first CLI (vibe):
-        // the pack stays available.
+    fn filter_available_keeps_the_other_cli_rows_when_one_cli_is_installed() {
+        let rows = vec![pack("tdd", &["gemini"]), pack("tdd", &["vibe"])];
+        // The index records gemini: only the gemini row is hidden.
         let installed = vec![installed("tdd", "gemini")];
-        let available = filter_available(&packs, &installed);
+        let available = filter_available(&rows, &installed);
         assert_eq!(available.len(), 1);
+        assert_eq!(available[0].clis[0], "vibe");
     }
 
     #[test]
