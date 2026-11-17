@@ -77,25 +77,38 @@ fn render_packs_panel(frame: &mut Frame, area: Rect, app: &mut App) {
     let inner = block.inner(area);
     frame.render_widget(block, area);
 
-    let mut lines = Vec::new();
-    let mut current_cli: Option<String> = None;
-    for pack in app.packs.clone() {
-        let cli_label = pack
-            .clis
-            .first()
-            .map(|c| cli_label(c))
-            .unwrap_or_else(|| "Unknown".to_string());
-        if current_cli.as_deref() != Some(cli_label.as_str()) {
-            current_cli = Some(cli_label.to_string());
-            lines.push(Line::from(Span::styled(
-                format!(" {cli_label} "),
-                Theme::header_style(),
-            )));
+    // The panel lines come straight from app.pack_list (CLI group headers
+    // + pack rows of non-collapsed groups), so the highlight is line-aligned.
+    // Each CLI header shows the number of available packs of that CLI, even
+    // when the group is collapsed with 'c'.
+    let mut lines: Vec<Line> = Vec::new();
+    for line in app.pack_list.items.clone() {
+        match line {
+            crate::presentation::tui::app::PackLine::Cli(cli) => {
+                let label = if cli.is_empty() {
+                    "Unknown".to_string()
+                } else {
+                    cli_label(&cli)
+                };
+                let count = app
+                    .packs
+                    .iter()
+                    .filter(|p| p.clis.first().cloned().unwrap_or_default() == cli)
+                    .count();
+                let collapsed = app.collapsed_clis.contains(&cli);
+                let marker = if collapsed { "▸" } else { "▾" };
+                lines.push(Line::from(Span::styled(
+                    format!(" {label} ({count}) {marker} "),
+                    Theme::header_style(),
+                )));
+            }
+            crate::presentation::tui::app::PackLine::Pack(pack) => {
+                lines.push(Line::from(Span::raw(format!(
+                    " {} v{} — {} ({} items)",
+                    pack.name, pack.version, pack.description, pack.item_count
+                ))));
+            }
         }
-        lines.push(Line::from(Span::raw(format!(
-            " {} v{} — {} ({} items)",
-            pack.name, pack.version, pack.description, pack.item_count
-        ))));
     }
     if lines.is_empty() {
         lines.push(Line::from(Span::styled(
@@ -173,6 +186,19 @@ fn render_input(frame: &mut Frame, app: &App) {
     let area = action_bar::centered_rect(frame.area(), 60, 20);
     frame.render_widget(ratatui::widgets::Clear, area);
     input.render(frame, area, title);
+    let hint_area = Rect {
+        x: area.x,
+        y: area.y + area.height.saturating_sub(1),
+        width: area.width,
+        height: 1,
+    };
+    frame.render_widget(
+        ratatui::widgets::Paragraph::new(Line::from(Span::styled(
+            " Enter: confirm · Esc: cancel",
+            Theme::file_style(),
+        ))),
+        hint_area,
+    );
 }
 
 fn render_confirm(frame: &mut Frame, app: &App) {
@@ -207,7 +233,7 @@ fn render_confirm(frame: &mut Frame, app: &App) {
         )),
         Line::from(vec![yes, no]),
         Line::from(Span::styled(
-            " ←/→ select · Enter confirm · Esc cancel",
+            " ←/→ or Tab: select · Enter: confirm · Esc: cancel",
             Theme::file_style(),
         )),
     ];
