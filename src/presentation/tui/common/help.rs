@@ -6,10 +6,7 @@ use super::theme::Theme;
 fn focus_lines(next: &str, prev: &str) -> Vec<Line<'static>> {
     vec![
         help_line("Tab / Shift+Tab", &format!("{next} / {prev}")),
-        help_line(
-            "Shift+P / Shift+I / Shift+E",
-            "Direct access: packs / installed / explorer",
-        ),
+        help_line("Shift+P/I/E", "Direct access: packs / installed / explorer"),
     ]
 }
 

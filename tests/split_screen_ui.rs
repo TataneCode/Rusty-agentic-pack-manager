@@ -322,13 +322,21 @@ fn help_uses_lowercase_keys_and_plus_combos_in_all_windows() {
     app.dispatch(&key(crossterm::event::KeyCode::Char(' ')));
     let snapshot = render_snapshot(&mut app);
     assert!(snapshot.contains("Tab / Shift+Tab"), "{snapshot}");
-    assert!(
-        snapshot.contains("Shift+P / Shift+I / Shift+E"),
-        "{snapshot}"
-    );
+    assert!(snapshot.contains("Shift+P/I/E"), "{snapshot}");
     assert!(snapshot.contains("Ctrl+C"), "{snapshot}");
     assert!(snapshot.contains("Install the selected pack"), "{snapshot}");
     assert!(snapshot.contains("Preview the install plan"), "{snapshot}");
+    // all descriptions start at the same column, even after a long key label
+    // (compare char columns: "↑/↓" are multi-byte)
+    let column = |needle: &str| -> usize {
+        let line = snapshot.lines().find(|l| l.contains(needle)).unwrap();
+        line[..line.find(needle).unwrap()].chars().count()
+    };
+    assert_eq!(
+        column("Direct access: packs"),
+        column("Move in the pack list"),
+        "help descriptions must be aligned: {snapshot}"
+    );
     app.dispatch(&key(crossterm::event::KeyCode::Esc));
 
     // explorer help: lowercase r/m/d, Shift+D with a plus
